@@ -57,7 +57,7 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
           <img
             className="absolute w-[406px] h-[209px] top-[147px] left-[70px] aspect-[1.94] object-cover"
             alt="Screenshot"
-            src="/screenshot-2025-08-25-at-09-56-19-1.png"
+            src="/licence-logo.png"
           />
 
           <div className="absolute w-[393px] h-[106px] top-[25px] left-[77px]">

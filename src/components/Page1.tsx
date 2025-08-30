@@ -181,7 +181,7 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
                 {formData.clientName || 'C1'}
             </div>
 
-            <div className="w-full h-[17px] mt-2 [font-family:'Inter-Regular',Helvetica] font-normal text-black text-[17px] text-center tracking-[0] leading-[normal] flex items-center justify-center">
+            <div className="w-full h-[17px] mt-4 [font-family:'Inter-Regular',Helvetica] font-normal text-black text-[17px] text-center tracking-[0] leading-[normal] flex items-center justify-center">
                 {formData.clientAddress || 'a1'}
             </div>
         </div>
