@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import Page1 from './Page1';
 import Page2 from './Page2';
 import DataScraper from './DataScraper';
+import ImageCropper from './ImageCropper';
 
 export interface FormData {
   // Client Information
@@ -25,6 +26,13 @@ const MultiStepForm: React.FC = () => {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
+  const [cropData, setCropData] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Block mobile devices until they switch to desktop view
   useEffect(() => {
@@ -192,6 +200,21 @@ const MultiStepForm: React.FC = () => {
 
   const handleBackToScrape = () => {
     setCurrentStep('scrape');
+  };
+
+  const handleCropImage = () => {
+    setIsCropping(true);
+  };
+
+  const handleCropComplete = (croppedImageUrl: string) => {
+    updateFormData({ timelineCoverImage: croppedImageUrl });
+    setIsCropping(false);
+    setCropData(null);
+  };
+
+  const handleCropCancel = () => {
+    setIsCropping(false);
+    setCropData(null);
   };
 
   const handleNextPage = () => {
@@ -483,27 +506,71 @@ const MultiStepForm: React.FC = () => {
 
                   {/* House Image Upload - Only show if no timelineCoverImage exists */}
                   {!formData.timelineCoverImage && (
-                    <div>
-                      <label htmlFor="houseImageUpload" className="block text-sm font-medium text-gray-700 mb-2">
-                        Upload House Image
-                      </label>
-                      <input
-                        type="file"
-                        id="houseImageUpload"
-                        accept="image/*"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                    const imageUrl = event.target?.result as string;
-                                    updateFormData({ timelineCoverImage: imageUrl });
-                                };
-                                reader.readAsDataURL(file);
-                            }
-                        }}
-                        className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-[#722420] text-center font-medium cursor-pointer hover:border-gray-400 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#722420] file:text-white hover:file:bg-[#5a1d1a]"
-                      />
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="houseImageUpload" className="block text-sm font-medium text-gray-700 mb-2">
+                          Upload House Image
+                        </label>
+                        <input
+                          type="file"
+                          id="houseImageUpload"
+                          accept="image/*"
+                          onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                      const imageUrl = event.target?.result as string;
+                                      updateFormData({ timelineCoverImage: imageUrl });
+                                  };
+                                  reader.readAsDataURL(file);
+                              }
+                          }}
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-[#722420] text-center font-medium cursor-pointer hover:border-gray-400 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#722420] file:text-white hover:file:bg-[#5a1d1a]"
+                        />
+                      </div>
+                      
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 text-sm">OR</span>
+                        </div>
+                        <div className="text-center text-xs text-gray-500 mb-2">Enter Image URL</div>
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="imageUrlInput" className="block text-sm font-medium text-gray-700 mb-2">
+                          Image URL
+                        </label>
+                        <div className="flex space-x-2">
+                          <input
+                            type="url"
+                            id="imageUrlInput"
+                            placeholder="https://example.com/image.jpg"
+                            className="flex-1 px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-[#722420]"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                const url = (e.target as HTMLInputElement).value.trim();
+                                if (url) {
+                                  updateFormData({ timelineCoverImage: url });
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const urlInput = document.getElementById('imageUrlInput') as HTMLInputElement;
+                              const url = urlInput.value.trim();
+                              if (url) {
+                                updateFormData({ timelineCoverImage: url });
+                              }
+                            }}
+                            className="px-4 py-2 bg-[#722420] text-white rounded-lg hover:bg-[#5a1d1a] transition-colors text-sm"
+                          >
+                            Load
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -521,11 +588,19 @@ const MultiStepForm: React.FC = () => {
                           <p className="text-xs text-green-600">Image has been extracted or uploaded</p>
                         </div>
                       </div>
-                      <div className="mt-3">
+                      <div className="mt-3 flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleCropImage()}
+                          className="ml-7 p-6 py-3 text-xs bg-[#722420] text-white rounded hover:bg-[#5a1d1a] transition-colors"
+                        >
+                          ✂️ Crop Image
+                        </button>
+                        <br />
                         <button
                           type="button"
                           onClick={() => updateFormData({ timelineCoverImage: '' })}
-                          className="text-xs text-green-700 hover:text-green-800 underline"
+                          className="text-sm text-[#722420] hover:text-black underline"
                         >
                           Remove image to upload a new one
                         </button>
@@ -637,6 +712,37 @@ const MultiStepForm: React.FC = () => {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Image Cropping Modal */}
+      {isCropping && formData.timelineCoverImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Crop Image</h3>
+                  <p className="text-sm text-gray-600">Drag to move, use corners to resize. Maintains aspect ratio for optimal display.</p>
+                </div>
+                <button
+                  onClick={handleCropCancel}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-hidden p-4">
+              <ImageCropper
+                imageUrl={formData.timelineCoverImage}
+                onCropComplete={handleCropComplete}
+                onCancel={handleCropCancel}
+                aspectRatio={284/220} // Match the display dimensions in Page1
+              />
+            </div>
           </div>
         </div>
       )}

@@ -94,7 +94,7 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
 
         <div className="absolute w-[595px] h-[318px] top-[255px] left-0">
             {formData.chimneyType === "masonry" ? (
-              <div className="absolute w-[284px] h-[318px] top-0 left-[0] bg-[#d9d9d9]" style={{ position: 'relative' }}>
+              <div className={`absolute w-[284px] h-[318px] top-0 bg-[#d9d9d9] ${timelineCoverImage ? 'left-[0]' : 'left-[155px]'}`} style={{ position: 'relative' }}>
                 <img 
                   className="w-full h-full" 
                   src="/masonry.webp" 
@@ -114,29 +114,25 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
               </div>
             ) : (
               <img 
-                className="absolute w-[284px] h-[318px] top-[0] left-[0] bg-[#d9d9d9]" 
+                className={`absolute w-[284px] h-[318px] top-[0] bg-[#d9d9d9] ${timelineCoverImage ? 'left-[0]' : 'left-[155px]'}`}
                 src="/prefabricated.webp" 
                 alt="Prefabricated Chimney"
               />
             )}
 
-            {timelineCoverImage ? (
+            {timelineCoverImage && (
               <img
-                className="absolute w-[284px] h-[220px] top-[49px] left-[311px] object-cover rounded-lg"
+                className="absolute w-[284px] h-[220px] top-[49px] left-[311px] object-contain rounded-lg"
                 src={timelineCoverImage}
                 alt="Timeline Cover Image"
                 onLoad={handleImageLoad}
               />
-            ) : (
-              <div className="absolute w-[284px] h-[220px] top-[49px] left-[311px] bg-[#d9d9d9] flex items-center justify-center">
-                <span className="text-gray-500 text-sm">No image available</span>
-              </div>
             )}
         </div>
 
         <footer className="absolute w-[710px] h-[325px] top-[645px] left-[-53px] bg-transparent">
             <div className="relative w-[699px] h-[327px]">
-                <div className={`absolute h-[196px] top-0 left-[53px] bg-[#722420] rounded-t-[102px] ${
+                <div className={`absolute h-[196px] top-2 left-[53px] bg-[#722420] rounded-t-[102px] ${
                   isPDF ? 'w-[595px]' : 'w-[590px]'
                 }`} />
 
@@ -176,12 +172,12 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
             </div>
         </footer>
 
-        <div className="absolute w-[80%] h-[49px] top-[583px] left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center">
+        <div className="absolute w-[80%] h-[50px] top-[583px] left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-between">
             <div className="w-full h-[25px] [font-family:'Inter-Bold',Helvetica] font-bold text-black text-[25px] text-center tracking-[0] leading-[normal] flex items-center justify-center">
                 {formData.clientName || 'C1'}
             </div>
 
-            <div className="w-full h-[17px] mt-4 [font-family:'Inter-Regular',Helvetica] font-normal text-black text-[17px] text-center tracking-[0] leading-[normal] flex items-center justify-center">
+            <div className="w-full h-[17px] [font-family:'Inter-Regular',Helvetica] font-normal text-black text-[17px] text-center tracking-[0] leading-[normal] flex items-center justify-center">
                 {formData.clientAddress || 'a1'}
             </div>
         </div>
