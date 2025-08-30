@@ -1,27 +1,32 @@
 import React, { useState } from 'react';
 
 interface DataScraperProps {
-  onDataExtracted: (data: { clientName: string; clientAddress: string; chimneyType: string }) => void;
+  onDataExtracted: (data: { clientName: string; clientAddress: string; chimneyType: string; reportDate: string; timelineCoverImage: string }) => void;
   setCurrentStep: (step: 'scrape' | 'form') => void;
+  setFormData: (data: { clientName: string; clientAddress: string; chimneyType: string; reportDate: string; timelineCoverImage: string }) => void;
 }
 
 interface ExtractedData {
   clientName: string;
   clientAddress: string;
   chimneyType: string;
+  reportDate: string;
   timelineContent: string;
   imageUrls: string[];
+  timelineCoverImage: string;
 }
 
-const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentStep }) => {
-  const [url, setUrl] = useState('');
+const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentStep, setFormData }) => {
+  const [url, setUrl] = useState('https://app.companycam.com/timeline/ZzQLL3MY3C1dtVjb');
   const [isLoading, setIsLoading] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData>({
     clientName: '',
     clientAddress: '',
     chimneyType: '',
+    reportDate: new Date().toISOString().split('T')[0],
     timelineContent: '',
-    imageUrls: []
+    imageUrls: [],
+    timelineCoverImage: ''
   });
   const [showEditForm, setShowEditForm] = useState(false);
 
@@ -34,6 +39,17 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     let imageUrls: string[] = [];
     let address = "";
     let clientName = "";
+    let timelineCoverImage = "";
+
+    // Find timeline-cover-image specifically
+    const timelineCoverImg = doc.querySelector('img.timeline-cover-image');
+    if (timelineCoverImg) {
+      const src = timelineCoverImg.getAttribute('src');
+      if (src) {
+        timelineCoverImage = src;
+        imageUrls.push(src); // Also add to general image URLs
+      }
+    }
 
     // Find timeline-block div and extract content
     const timelineBlock = doc.querySelector('div.timeline-block');
@@ -76,8 +92,10 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       clientName,
       clientAddress: address,
       chimneyType,
+      reportDate: new Date().toISOString().split('T')[0],
       timelineContent,
-      imageUrls
+      imageUrls,
+      timelineCoverImage
     };
   };
 
@@ -122,7 +140,9 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     onDataExtracted({
       clientName: extractedData.clientName,
       clientAddress: extractedData.clientAddress,
-      chimneyType: extractedData.chimneyType
+      chimneyType: extractedData.chimneyType,
+      reportDate: extractedData.reportDate,
+      timelineCoverImage: extractedData.timelineCoverImage || '' // Use specific timeline cover image
     });
   };
 
@@ -160,7 +180,16 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
             </button>
             <button
               type="button"
-              onClick={() => setCurrentStep('form')}
+              onClick={() => {
+                setFormData({
+                  clientName: '',
+                  clientAddress: '',
+                  chimneyType: '',
+                  reportDate: new Date().toISOString().split('T')[0],
+                  timelineCoverImage: ''
+                });
+                setCurrentStep('form');
+              }}
               className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 font-medium"
             >
               Enter Manually
@@ -174,56 +203,73 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
         <div className="bg-green-50 border border-green-200 p-4 sm:p-6 rounded-lg">
           <h3 className="text-base sm:text-lg font-semibold text-green-900 mb-3 sm:mb-4">Extracted Information</h3>
           <p className="text-sm sm:text-base text-green-700 mb-3 sm:mb-4">Review and verify the extracted data. Make any necessary corrections before proceeding.</p>
-          
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <label htmlFor="extractedClientName" className="block text-sm font-medium text-gray-700 mb-2">
-                Client Name
-              </label>
-              <input
-                type="text"
-                id="extractedClientName"
-                value={extractedData.clientName}
-                onChange={(e) => handleDataChange('clientName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
-              />
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left side - House Image */}
+              {extractedData.timelineCoverImage && (
+                <div className="flex flex-col items-center lg:col-span-1">
+                  <h5 className="font-medium text-gray-700 mb-3">House Image:</h5>
+                  <img 
+                    src={extractedData.timelineCoverImage} 
+                    alt="Timeline Cover" 
+                    className="w-48 h-50 object-cover rounded-lg border-2 border-gray-200 shadow-md"
+                  />
+                </div>
+              )}
+              
+              {/* Right side - Form Fields */}
+              <div className="space-y-6 lg:col-span-2">
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Client Name</p>
+                  <h4 className="text-xl font-bold text-gray-900">
+                    {extractedData.clientName || 'Client Name Not Extracted'}
+                  </h4>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Client Address</p>
+                  <h4 className="text-xl font-bold text-gray-900">
+                    {extractedData.clientAddress || 'Address Not Extracted'}
+                  </h4>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <label htmlFor="extractedChimneyType" className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                    Chimney Type
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="extractedChimneyType"
+                      value={extractedData.chimneyType}
+                      onChange={(e) => handleDataChange('chimneyType', e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-[#722420] text-gray-900 font-medium transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300 hover:bg-gray-100"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e")`,
+                        backgroundPosition: 'right 12px center',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: '16px',
+                        paddingRight: '40px'
+                      }}
+                    >
+                      <option value="" className="text-gray-500">Select chimney type</option>
+                      <option value="masonry" className="text-gray-900 font-medium">Masonry</option>
+                      <option value="prefabricated" className="text-gray-900 font-medium">Prefabricated</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  {extractedData.chimneyType && (
+                    <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-xs text-green-700 font-medium">
+                        ✓ Selected: <span className="capitalize">{extractedData.chimneyType}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            
-            <div>
-              <label htmlFor="extractedClientAddress" className="block text-sm font-medium text-gray-700 mb-2">
-                Client Address
-              </label>
-              <input
-                type="text"
-                id="extractedClientAddress"
-                value={extractedData.clientAddress}
-                onChange={(e) => handleDataChange('clientAddress', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="extractedChimneyType" className="block text-sm font-medium text-gray-700 mb-2">
-                Chimney Type
-              </label>
-              <select
-                id="extractedChimneyType"
-                value={extractedData.chimneyType}
-                onChange={(e) => handleDataChange('chimneyType', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
-              >
-                <option value="masonry">Masonry</option>
-                <option value="prefabricated">Prefabricated</option>
-              </select>
-            </div>
-
-            {/* Display extracted timeline content and image count */}
-            <div className="bg-gray-100 p-3 sm:p-4 rounded-md">
-              <h4 className="font-medium text-gray-700 mb-2">Extracted Timeline Content:</h4>
-              <p className="text-xs sm:text-sm text-gray-600 mb-2">{extractedData.timelineContent || 'No timeline content found'}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Images found: {extractedData.imageUrls.length}</p>
-            </div>
-          </div>
           
           <div className="mt-4 sm:mt-6">
             <button

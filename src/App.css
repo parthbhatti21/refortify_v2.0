@@ -1,6 +1,185 @@
 /* Custom styles for SumoQuote v2 */
+/* Force desktop view on mobile devices for better user experience */
 .App {
   text-align: left;
+}
+
+/* Mobile-specific PDF preview styles */
+@media (max-width: 768px) {
+  [data-preview="true"] {
+    /* Ensure consistent PDF generation on mobile */
+    transform: none !important;
+    scale: 1 !important;
+    width: 595px !important;
+    height: 842px !important;
+    max-width: 595px !important;
+    max-height: 842px !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+  
+  [data-preview="true"] > div {
+    /* Force desktop-like rendering for mobile PDF generation */
+    transform: none !important;
+    scale: 1 !important;
+    width: 595px !important;
+    height: 842px !important;
+    max-width: 595px !important;
+    max-height: 842px !important;
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+  
+  /* Remove any potential spacing from child elements */
+  [data-preview="true"] * {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-spacing: 0 !important;
+    border-collapse: collapse !important;
+  }
+}
+
+/* Mobile preview optimization - Force desktop view */
+@media (max-width: 768px) {
+  [data-preview="true"] {
+    /* Force desktop layout on mobile */
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    padding: 0.5rem !important;
+  }
+  
+  [data-preview="true"] > div {
+    /* Use desktop scaling on mobile */
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 595/842 !important;
+    transform: scale(0.75) !important; /* Desktop-like scale */
+    transform-origin: center center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+  }
+}
+
+/* Small mobile devices - Force desktop view */
+@media (max-width: 480px) {
+  [data-preview="true"] > div {
+    transform: scale(0.7) !important; /* Desktop-like scale for small screens */
+  }
+}
+
+/* Medium mobile devices - Force desktop view */
+@media (min-width: 481px) and (max-width: 768px) {
+  [data-preview="true"] > div {
+    transform: scale(0.75) !important; /* Desktop-like scale for medium screens */
+  }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) and (pointer: coarse) {
+  [data-preview="true"] > div {
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+  }
+}
+
+/* Landscape mobile optimization - Force desktop view */
+@media (max-width: 768px) and (orientation: landscape) {
+  [data-preview="true"] > div {
+    transform: scale(0.65) !important; /* Desktop-like scale for landscape */
+  }
+}
+
+/* Mobile blocking overlay styles */
+.mobile-block-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #722420;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.mobile-block-content {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 28rem;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* PDF-specific styles - No padding or margins */
+.pdf-generation * {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-spacing: 0 !important;
+  border-collapse: collapse !important;
+}
+
+.pdf-generation {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* Ensure all elements in PDF have no spacing */
+[data-pdf="true"] *,
+[data-pdf="true"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-spacing: 0 !important;
+  border-collapse: collapse !important;
+}
+
+/* Force remove any remaining spacing in PDF generation */
+.pdf-generation [class*="p-"],
+.pdf-generation [class*="m-"],
+.pdf-generation [class*="px-"],
+.pdf-generation [class*="py-"],
+.pdf-generation [class*="mx-"],
+.pdf-generation [class*="my-"],
+.pdf-generation [class*="pt-"],
+.pdf-generation [class*="pb-"],
+.pdf-generation [class*="pl-"],
+.pdf-generation [class*="pr-"],
+.pdf-generation [class*="mt-"],
+.pdf-generation [class*="mb-"],
+.pdf-generation [class*="ml-"],
+.pdf-generation [class*="mr-"] {
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Additional custom styles can be added here */
