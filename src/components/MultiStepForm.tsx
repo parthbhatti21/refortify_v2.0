@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import Page1 from './Page1';
 import Page2 from './Page2';
+import Page3 from './Page3';
 import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
 
@@ -16,7 +17,7 @@ export interface FormData {
 
 const MultiStepForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'scrape' | 'form'>('scrape');
-  const [currentPage, setCurrentPage] = useState<1 | 2>(1);
+  const [currentPage, setCurrentPage] = useState<1 | 2 | 3>(1);
   const [formData, setFormData] = useState<FormData>({
     clientName: '',
     clientAddress: '',
@@ -27,6 +28,7 @@ const MultiStepForm: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
+  const [preferGoogleDocs, setPreferGoogleDocs] = useState(true); // User preference for PDF viewing
   const [cropData, setCropData] = useState<{
     x: number;
     y: number;
@@ -169,12 +171,28 @@ const MultiStepForm: React.FC = () => {
       // Generate PDF with both pages
       await generateMultiPagePDF(pdf, isMobileDevice);
       
-      // Download the PDF
-      const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
+      // Instead of downloading, open in Google Docs viewer
+      const pdfBlob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
       
-      // Show success message
-      alert('Report generated successfully!');
+      // Open PDF in Google Docs viewer
+      const googleDocsViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+      
+      // Create a new window/tab with Google Docs viewer
+      const viewerWindow = window.open(googleDocsViewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      
+      if (viewerWindow) {
+        // Show success message
+        alert('Report generated successfully! Opening in Google Docs viewer...');
+      } else {
+        // Fallback to download if popup is blocked
+        const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
+        pdf.save(fileName);
+        alert('Report generated successfully! (Popup blocked - PDF downloaded instead)');
+      }
+      
+      // Clean up the blob URL
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -218,11 +236,15 @@ const MultiStepForm: React.FC = () => {
   };
 
   const handleNextPage = () => {
-    setCurrentPage(2);
+    if (currentPage < 3) {
+      setCurrentPage((currentPage + 1) as 1 | 2 | 3);
+    }
   };
 
   const handlePrevPage = () => {
-    setCurrentPage(1);
+    if (currentPage > 1) {
+      setCurrentPage((currentPage - 1) as 1 | 2 | 3);
+    }
   };
 
   // Function to compress images before PDF generation
@@ -275,15 +297,24 @@ const MultiStepForm: React.FC = () => {
     const optimizedPage2Canvas = createOptimizedCanvas(page2Canvas, 1190, 1684); // 2x scale for quality
     const page2ImgData = await compressImage(optimizedPage2Canvas, 'JPEG', 0.85); // Compress to JPEG with 85% quality
     
-    // Add both pages to PDF
+    // Generate Page 3 with optimization
+    const page3Canvas = await generatePageCanvas(3);
+    const optimizedPage3Canvas = createOptimizedCanvas(page3Canvas, 1190, 1684); // 2x scale for quality
+    const page3ImgData = await compressImage(optimizedPage3Canvas, 'JPEG', 0.85); // Compress to JPEG with 85% quality
+    
+    // Add all three pages to PDF
     if (isMobileDevice) {
       pdf.addImage(page1ImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
       pdf.addPage();
       pdf.addImage(page2ImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
+      pdf.addPage();
+      pdf.addImage(page3ImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
     } else {
       pdf.addImage(page1ImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
       pdf.addPage();
       pdf.addImage(page2ImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      pdf.addPage();
+      pdf.addImage(page3ImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
     }
   };
 
@@ -307,10 +338,12 @@ const MultiStepForm: React.FC = () => {
     tempContainer.className = 'pdf-generation';
     tempContainer.setAttribute('data-pdf', 'true');
     
-          // Create the page component
-      const pageElement = pageNumber === 1 ? 
-        React.createElement(Page1, { formData, updateFormData, isPDF: true, timelineCoverImage: formData.timelineCoverImage }) :
-        React.createElement(Page2, { formData, updateFormData, isPDF: true });
+    // Create the page component
+    const pageElement = pageNumber === 1 ? 
+      React.createElement(Page1, { formData, updateFormData, isPDF: true, timelineCoverImage: formData.timelineCoverImage }) :
+      pageNumber === 2 ?
+      React.createElement(Page2, { formData, updateFormData, isPDF: true }) :
+      React.createElement(Page3, { formData, updateFormData, isPDF: true });
     
     // Render the page to the container
     const root = ReactDOM.createRoot(tempContainer);
@@ -318,25 +351,39 @@ const MultiStepForm: React.FC = () => {
     
     document.body.appendChild(tempContainer);
     
-    // Wait for rendering
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for rendering and CSS to be applied
+    await new Promise(resolve => setTimeout(resolve, 200));
     
-          // Use html2canvas to capture the page with optimized settings
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(tempContainer, {
-        scale: 1.5, // Lower initial scale for better compression
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        width: 595,
-        height: 842,
-        scrollX: 0,
-        scrollY: 0,
-        // Additional compression optimizations
-        removeContainer: true,
-        foreignObjectRendering: false
-      });
+    // Debug: Log the positioning of key elements
+    if (pageNumber === 3) {
+      const overlapElement = tempContainer.querySelector('.overlap') as HTMLElement;
+      const titleElement = tempContainer.querySelector('.title') as HTMLElement;
+      const clientNameElement = tempContainer.querySelector('.div') as HTMLElement;
+      const emailElement = tempContainer.querySelector('.email') as HTMLElement;
+      
+      console.log('PDF Generation Debug - Page 3:');
+      console.log('Overlap position:', overlapElement?.style.left, overlapElement?.style.top);
+      console.log('Title position:', titleElement?.style.left, titleElement?.style.top);
+      console.log('Client name position:', clientNameElement?.style.left, clientNameElement?.style.top);
+      console.log('Email position:', emailElement?.style.left, emailElement?.style.top);
+    }
+    
+    // Use html2canvas to capture the page with optimized settings
+    const { default: html2canvas } = await import('html2canvas');
+    const canvas = await html2canvas(tempContainer, {
+      scale: 1.5, // Lower initial scale for better compression
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 595,
+      height: 842,
+      scrollX: 0,
+      scrollY: 0,
+      // Additional compression optimizations
+      removeContainer: true,
+      foreignObjectRendering: false
+    });
     
     // Clean up
     document.body.removeChild(tempContainer);
@@ -391,29 +438,27 @@ const MultiStepForm: React.FC = () => {
         </p>
       </div>
 
-      {/* Step Indicator */}
-      <div className="mb-4 sm:mb-8 px-2">
-        <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-          <div className={`flex items-center ${currentStep === 'scrape' ? 'text-[#722420]' : 'text-gray-400'}`}>
-            <div className={`w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
-              currentStep === 'scrape' ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
-              1
+      {/* Step Indicator - Only show on scrape step */}
+      {currentStep === 'scrape' && (
+        <div className="mb-4 sm:mb-8 px-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <div className="flex items-center text-[#722420]">
+              <div className="w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium bg-[#722420] text-white">
+                1
+              </div>
+              <span className="ml-2 text-sm sm:text-base font-medium">Data Collection</span>
             </div>
-            <span className="ml-2 text-sm sm:text-base font-medium">Data Collection</span>
-          </div>
-          <div className="hidden sm:block w-16 h-1 bg-gray-200"></div>
-          <div className="sm:hidden w-1 h-8 bg-gray-200"></div>
-          <div className={`flex items-center ${currentStep === 'form' ? 'text-[#722420]' : 'text-gray-400'}`}>
-            <div className={`w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
-              currentStep === 'form' ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
-            }`}>
-              2
+            <div className="hidden sm:block w-16 h-1 bg-gray-200"></div>
+            <div className="sm:hidden w-1 h-8 bg-gray-200"></div>
+            <div className="flex items-center text-gray-400">
+              <div className="w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium bg-gray-200 text-gray-600">
+                2
+              </div>
+              <span className="ml-2 text-sm sm:text-base font-medium">Report Generation</span>
             </div>
-            <span className="ml-2 text-sm sm:text-base font-medium">Report Generation</span>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Content */}
       {currentStep === 'scrape' ? (
@@ -426,7 +471,7 @@ const MultiStepForm: React.FC = () => {
           <div className="card p-4 sm:p-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                {currentPage === 1 ? 'Manual Entry' : 'Page 2 - Static Content'}
+                {currentPage === 1 ? 'Manual Entry' : currentPage === 2 ? 'Page 2 - Static Content' : 'Page 3 - Service Report'}
               </h3>
               <button
                 onClick={handleBackToScrape}
@@ -608,26 +653,8 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
-                {/* Submit Button */}
-                <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-                  <button 
-                    type="submit" 
-                    className="w-full btn-primary"
-                    disabled={isGenerating}
-                  >
-                    {isGenerating ? 'Generating PDF...' : 'Generate a Report'}
-                  </button>
-                  
-                  {/* Mobile optimization note */}
-                  {isMobile && (
-                    <div className="mt-3 text-xs text-gray-500 text-center">
-                      📱 Mobile optimized: PDF will be generated with desktop-quality layout
-                    </div>
-                  )}
-                </div>
               </form>
-            ) : (
+            ) : currentPage === 2 ? (
               <div className="text-center py-8">
                 <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                   <div className="text-red-600 mb-4">
@@ -643,27 +670,44 @@ const MultiStepForm: React.FC = () => {
                     All information is pre-filled and will be included in the final PDF report.
                   </p>
                 </div>
-
-                {/* Generate Button for Page 2 */}
-                <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-                  <button 
-                    type="button"
-                    onClick={handleSubmit}
-                    className="w-full btn-primary"
-                    disabled={isGenerating}
-                  >
-                    {isGenerating ? 'Generating PDF...' : 'Generate a Report'}
-                  </button>
-                  
-                  {/* Mobile optimization note */}
-                  {isMobile && (
-                    <div className="mt-3 text-xs text-gray-500 text-center">
-                      📱 Mobile optimized: PDF will be generated with desktop-quality layout
-                    </div>
-                  )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Client Name Input for Page 3 */}
+                <div>
+                  <label htmlFor="page3ClientName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Client Name for Greeting
+                  </label>
+                  <input
+                    type="text"
+                    id="page3ClientName"
+                    value={formData.clientName}
+                    onChange={(e) => updateFormData({ clientName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                    placeholder="Enter client name for greeting"
+                  />
                 </div>
               </div>
             )}
+
+            {/* Generate Button for all pages */}
+            <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+              <button 
+                type="button"
+                onClick={handleSubmit}
+                className="w-full btn-primary"
+                disabled={isGenerating}
+              >
+                {isGenerating ? 'Generating PDF...' : 'Generate a Report'}
+              </button>
+              
+              {/* Mobile optimization note */}
+              {isMobile && (
+                <div className="mt-3 text-xs text-gray-500 text-center">
+                  📱 Mobile optimized: PDF will be generated with desktop-quality layout
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Preview Section */}
@@ -672,33 +716,37 @@ const MultiStepForm: React.FC = () => {
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
               <h3 className="text-lg font-semibold text-gray-900">Report Preview</h3>
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  ← Page 1
-                </button>
+                {currentPage > 1 && (
+                  <button
+                    onClick={handlePrevPage}
+                    className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
+                  >
+                    ← Page {currentPage === 2 ? '1' : '2'}
+                  </button>
+                )}
                 <span className="text-sm text-gray-600 font-medium">
-                  Page {currentPage} of 2
+                  Page {currentPage} of 3
                 </span>
-                <button
-                  onClick={handleNextPage}
-                  disabled={currentPage === 2}
-                  className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Page 2 →
-                </button>
+                {currentPage < 3 && (
+                  <button
+                    onClick={handleNextPage}
+                    className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
+                  >
+                    Page {currentPage === 1 ? '2' : '3'} →
+                  </button>
+                )}
               </div>
             </div>
             
             {/* Preview Content */}
             <div className="flex justify-center overflow-x-auto" data-preview="true">
-              {currentPage === 1 ? (
-                <Page1 formData={formData} updateFormData={updateFormData} timelineCoverImage={formData.timelineCoverImage} />
-              ) : (
-                <Page2 formData={formData} updateFormData={updateFormData} />
-              )}
+                          {currentPage === 1 ? (
+              <Page1 formData={formData} updateFormData={updateFormData} timelineCoverImage={formData.timelineCoverImage} />
+            ) : currentPage === 2 ? (
+              <Page2 formData={formData} updateFormData={updateFormData} />
+            ) : (
+              <Page3 formData={formData} updateFormData={updateFormData} />
+            )}
             </div>
             
             {/* Mobile preview instructions */}
@@ -724,18 +772,23 @@ const MultiStepForm: React.FC = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Crop Image</h3>
-                  <p className="text-sm text-gray-600">Drag to move, use corners to resize. Maintains aspect ratio for optimal display.</p>
+                  <p className="text-sm text-gray-600">
+                    {window.innerWidth <= 768 
+                      ? "Touch and drag to crop. Use corners to resize."
+                      : "Drag to move, use corners to resize. Maintains aspect ratio for optimal display."
+                    }
+                  </p>
                 </div>
                 <button
                   onClick={handleCropCancel}
-                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold p-2"
                 >
                   ×
                 </button>
               </div>
             </div>
             
-            <div className="flex-1 overflow-hidden p-4">
+            <div className="flex-1 overflow-hidden p-2 sm:p-4">
               <ImageCropper
                 imageUrl={formData.timelineCoverImage}
                 onCropComplete={handleCropComplete}

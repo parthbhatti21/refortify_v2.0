@@ -29,6 +29,8 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     timelineCoverImage: ''
   });
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showImageSelector, setShowImageSelector] = useState(false);
+  const [showNoImagePopup, setShowNoImagePopup] = useState(false);
 
   // Function to parse HTML content using the same logic as Python code
   const parseHtmlContent = (htmlContent: string): ExtractedData => {
@@ -205,16 +207,38 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
           <p className="text-sm sm:text-base text-green-700 mb-3 sm:mb-4">Review and verify the extracted data. Make any necessary corrections before proceeding.</p>
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Left side - House Image */}
-              {extractedData.timelineCoverImage && (
-                <div className="flex flex-col items-center lg:col-span-1">
-                  <h5 className="font-medium text-gray-700 mb-3">House Image:</h5>
-                  <img 
-                    src={extractedData.timelineCoverImage} 
-                    alt="Timeline Cover" 
-                    className="w-48 h-50 object-cover rounded-lg border-2 border-gray-200 shadow-md"
-                  />
-                </div>
-              )}
+              <div className="flex flex-col items-center lg:col-span-1">
+                <h5 className="font-medium text-gray-700 mb-3">House Image:</h5>
+                {extractedData.timelineCoverImage ? (
+                  <>
+                    <img 
+                      src={extractedData.timelineCoverImage} 
+                      alt="Timeline Cover" 
+                      className="w-48 h-50 object-cover rounded-lg border-2 border-gray-200 shadow-md"
+                    />
+                    {extractedData.imageUrls.length > 1 && (
+                      <button
+                        onClick={() => setShowImageSelector(true)}
+                        className="mt-3 px-4 py-2 bg-[#722420] text-white rounded-lg hover:bg-[#5a1d1a] transition-colors text-sm"
+                      >
+                        Change the house image
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-48 h-50 bg-gray-100 border-2 border-gray-200 rounded-lg flex items-center justify-center">
+                    <p className="text-gray-500 text-sm text-center">No image available</p>
+                  </div>
+                )}
+                
+                {/* No House Image Button */}
+                <button
+                  onClick={() => setShowNoImagePopup(true)}
+                  className="mt-3 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                >
+                  No House Image
+                </button>
+              </div>
               
               {/* Right side - Form Fields */}
               <div className="space-y-6 lg:col-span-2">
@@ -292,6 +316,102 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
           <li>Contact your supervisor if you encounter data extraction issues</li>
         </ul>
       </div>
+
+      {/* Image Selection Modal */}
+      {showImageSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Select House Image</h3>
+                <button
+                  onClick={() => setShowImageSelector(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">Choose from the available images</p>
+            </div>
+            
+            <div className="p-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {extractedData.imageUrls.map((imageUrl, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={imageUrl}
+                      alt={`House Image ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-[#722420] transition-colors"
+                      onClick={() => {
+                        handleDataChange('timelineCoverImage', imageUrl);
+                        setShowImageSelector(false);
+                      }}
+                    />
+                    {extractedData.timelineCoverImage === imageUrl && (
+                      <div className="absolute top-2 right-2 bg-[#722420] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                        ✓
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                      Click to select
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No House Image Popup */}
+      {showNoImagePopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                  <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No House Image</h3>
+                <p className="text-sm text-gray-600">Would you like to proceed without a house image or select one from the available images?</p>
+              </div>
+              
+              <div className="flex flex-col space-y-3">
+                <button
+                  onClick={() => {
+                    handleDataChange('timelineCoverImage', '');
+                    setShowNoImagePopup(false);
+                  }}
+                  className="w-full px-4 py-2 bg-[#722420] text-white rounded-lg hover:bg-[#5a1d1a] transition-colors font-medium"
+                >
+                  Proceed Without Image
+                </button>
+                
+                {extractedData.imageUrls.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setShowNoImagePopup(false);
+                      setShowImageSelector(true);
+                    }}
+                    className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  >
+                    Select from Available Images
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => setShowNoImagePopup(false)}
+                  className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -20,10 +20,20 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
     setIsLoading(false);
   };
 
+  // PDF Centering Fix: Ensure consistent centering across all pages
+  const containerStyle = isPDF ? {
+    width: '595px',
+    height: '842px',
+    maxWidth: '595px',
+    margin: '0',
+    padding: '0',
+  } : {};
+
   return (
     <div className="bg-white grid justify-items-center [align-items:start] w-full">
         <div 
       className="bg-white overflow-hidden w-full max-w-[595px] h-auto aspect-[595/842] relative rounded-lg"
+      style={containerStyle}
     >
       
       {/* Loading indicator */}

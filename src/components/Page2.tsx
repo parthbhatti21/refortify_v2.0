@@ -12,10 +12,23 @@ interface Page2Props {
 }
 
 const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }) => {
+  // PDF Centering Fix: Calculate center positions for all elements to ensure proper centering
+  // Page dimensions: 595px width x 842px height (A4)
+  // Content area: 546px width x 790px height
+  const PAGE_WIDTH = 595;
+  const CONTENT_WIDTH = 546;
+  const CONTENT_HEIGHT = 790;
+  
+  // Calculate center positions for PDF
+  const mainContainerStyle = isPDF ? {
+    top: `${(842 - CONTENT_HEIGHT) / 2}px`, // Center vertically: (842 - 790) / 2 = 26px
+    left: `${(PAGE_WIDTH - CONTENT_WIDTH) / 2}px`, // Center content: (595 - 546) / 2 = 24.5px
+  } : {};
+
   return (
     <div className="bg-white grid justify-items-center [align-items:start] w-full">
       <div className="bg-white w-[595px] h-[842px]">
-        <div className="relative w-[546px] h-[790px] top-[26px] left-[25px]">
+        <div className="relative w-[546px] h-[790px] top-[26px] left-[25px]" style={mainContainerStyle}>
           <p className="absolute w-[487px] top-[370px] left-12 [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[15px] tracking-[0] leading-[21px]">
             Virginia Class A Contractor # 2705139016 (Expires March 31,
             <br />

@@ -1,0 +1,202 @@
+.page {
+    align-items: start;
+    background-color: #ffffff;
+    display: grid;
+    justify-items: center;
+    width: 100vw;
+}
+
+.page .overlap-wrapper {
+    background-color: #ffffff;
+    height: 842px;
+    width: 595px;
+}
+
+.page .overlap {
+    height: 790px;
+    left: 25px;
+    position: relative;
+    top: 26px;
+    width: 546px;
+}
+
+.page .title {
+    height: 106px;
+    left: 31px;
+    position: absolute;
+    top: 25px;
+    width: 482px;
+}
+
+.page .overlap-group {
+    background-color: #000000;
+    border: 6px solid;
+    border-color: #722420;
+    border-radius: 36px;
+    height: 54px;
+    left: 0;
+    position: absolute;
+    top: 52px;
+    width: 480px;
+}
+
+.page .text-wrapper {
+    color: #ffffff;
+    font-family: "Inter-Bold", Helvetica;
+    font-size: 18px;
+    font-weight: 700;
+    left: 18px;
+    letter-spacing: 0.36px;
+    line-height: normal;
+    position: absolute;
+    text-align: center;
+    top: 9px;
+    width: 433px;
+}
+
+.page .logo {
+    aspect-ratio: 2.4;
+    height: 52px;
+    left: 180px;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    width: 124px;
+}
+
+.page .frame {
+    border: 2px solid;
+    border-color: #722420;
+    height: 790px;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 546px;
+}
+
+.page .rectangle {
+    border: 2px solid;
+    border-color: #722420;
+    height: 780px;
+    left: 3px;
+    position: relative;
+    top: 3px;
+    width: 536px;
+}
+
+.page .div {
+    color: #000000;
+    font-family: "Times New Roman-Regular", Helvetica;
+    font-size: 20px;
+    font-weight: 400;
+    left: 41px;
+    letter-spacing: 0.40px;
+    line-height: normal;
+    position: absolute;
+    top: 159px;
+    white-space: nowrap;
+    width: 157px;
+}
+
+.page .email {
+    aspect-ratio: 0.9;
+    height: 524px;
+    left: 37px;
+    object-fit: cover;
+    position: absolute;
+    top: 188px;
+    width: 471px;
+}
+
+/* PDF-specific overrides to ensure consistent positioning and centering */
+.pdf-generation .page .overlap {
+    left: 24.5px !important; /* Center content: (595 - 546) / 2 = 24.5px */
+    top: 15px !important; /* Move content higher on the page for better PDF layout */
+    position: absolute !important;
+}
+
+.pdf-generation .page .title {
+    left: 32px !important; /* Center title: (546 - 482) / 2 = 32px */
+    top: 5px !important; /* Position title at the top of the content area */
+}
+
+.pdf-generation .page .logo {
+    left: 211px !important; /* Center logo: (546 - 124) / 2 = 211px */
+    top: 10px !important; /* Position logo 10px below the top for better PDF layout */
+}
+
+.pdf-generation .page .div {
+    left: 194.5px !important; /* Center client name: (546 - 157) / 2 = 194.5px */
+    top: 149px !important; /* Adjust client name position for better spacing */
+}
+
+.pdf-generation .page .email {
+    left: 37.5px !important; /* Center email: (546 - 471) / 2 = 37.5px */
+    top: 178px !important; /* Adjust email position for better spacing */
+}
+
+/* PDF-specific text positioning */
+.pdf-generation .page .text-wrapper {
+    top: 2px !important; /* Move text higher in PDF */
+}
+
+/* Ensure PDF generation has no margins or padding */
+.pdf-generation .page {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 595px !important;
+}
+
+.pdf-generation .page .overlap-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Additional centering support for different PDF generation scenarios */
+[data-pdf="true"] .page .overlap {
+    left: 24.5px !important;
+    top: 15px !important; /* Move content higher on the page for better PDF layout */
+    position: absolute !important;
+}
+
+[data-pdf="true"] .page .title {
+    left: 32px !important;
+    top: 25px !important; /* Position title at the top of the content area */
+}
+
+[data-pdf="true"] .page .logo {
+    left: 180px !important;
+    top: 0px !important; /* Position logo 10px below the top for better PDF layout */
+}
+
+[data-pdf="true"] .page .div {
+    left: 41px !important;
+    top: 145px !important;
+    opacity: 0.8 !important;  /* Adjust client name position for better spacing */
+}
+
+[data-pdf="true"] .page .email {
+    left: 37.5px !important;
+    top: 178px !important; /* Adjust email position for better spacing */
+}
+
+/* PDF-specific text positioning for data-pdf selector */
+[data-pdf="true"] .page .text-wrapper {
+    top: 2px !important; /* Move text higher in PDF */
+}
+
+/* Force centering for any PDF-related rendering */
+.pdf-generation *,
+[data-pdf="true"] * {
+    box-sizing: border-box !important;
+}
+
+/* Ensure consistent font rendering in PDF */
+.pdf-generation .page *,
+[data-pdf="true"] .page * {
+    font-family: inherit !important;
+    line-height: normal !important;
+}
+
+
+
