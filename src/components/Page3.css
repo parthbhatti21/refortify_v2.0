@@ -50,7 +50,7 @@
     line-height: normal;
     position: absolute;
     text-align: center;
-    top: 9px;
+    top: 10px;
     width: 433px;
 }
 
@@ -182,7 +182,7 @@
 
 /* PDF-specific text positioning for data-pdf selector */
 [data-pdf="true"] .page .text-wrapper {
-    top: 2px !important; /* Move text higher in PDF */
+    top: 4px !important; /* Move text higher in PDF */
 }
 
 /* Force centering for any PDF-related rendering */

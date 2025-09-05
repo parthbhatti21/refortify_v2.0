@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import Page1 from './Page1';
 import Page2 from './Page2';
 import Page3 from './Page3';
+import Page4 from './Page4';
+import Page5 from './Page5';
 import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
 
@@ -13,17 +15,34 @@ export interface FormData {
   chimneyType: string;
   reportDate: string;
   timelineCoverImage?: string; // Timeline cover image from scraped data
+  invoiceData?: {
+    invoiceNumber: string;
+    paymentMethod: string;
+    paymentNumber: string;
+    rows: Array<{
+      id: string;
+      description: string;
+      unit: string;
+      price: string;
+    }>;
+  };
 }
 
 const MultiStepForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'scrape' | 'form'>('scrape');
-  const [currentPage, setCurrentPage] = useState<1 | 2 | 3>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [formData, setFormData] = useState<FormData>({
     clientName: '',
     clientAddress: '',
     chimneyType: '',
     reportDate: new Date().toISOString().split('T')[0],
-    timelineCoverImage: ''
+    timelineCoverImage: '',
+    invoiceData: {
+      invoiceNumber: '',
+      paymentMethod: '',
+      paymentNumber: '',
+      rows: []
+    }
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -69,7 +88,13 @@ const MultiStepForm: React.FC = () => {
       clientAddress: '',
       chimneyType: '',
       reportDate: new Date().toISOString().split('T')[0],
-      timelineCoverImage: ''
+      timelineCoverImage: '',
+      invoiceData: {
+        invoiceNumber: '',
+        paymentMethod: '',
+        paymentNumber: '',
+        rows: []
+      }
     });
     setCurrentStep('form');
   };
@@ -166,33 +191,14 @@ const MultiStepForm: React.FC = () => {
       
       // Convert to PDF using jsPDF
       const { default: jsPDF } = await import('jspdf');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
       
       // Generate PDF with both pages
       await generateMultiPagePDF(pdf, isMobileDevice);
       
-      // Instead of downloading, open in Google Docs viewer
-      const pdfBlob = pdf.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      
-      // Open PDF in Google Docs viewer
-      const googleDocsViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-      
-      // Create a new window/tab with Google Docs viewer
-      const viewerWindow = window.open(googleDocsViewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-      
-      if (viewerWindow) {
-        // Show success message
-        alert('Report generated successfully! Opening in Google Docs viewer...');
-      } else {
-        // Fallback to download if popup is blocked
+      // Save PDF directly (no Google Docs viewer)
         const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
         pdf.save(fileName);
-        alert('Report generated successfully! (Popup blocked - PDF downloaded instead)');
-      }
-      
-      // Clean up the blob URL
-      setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -235,15 +241,35 @@ const MultiStepForm: React.FC = () => {
     setCropData(null);
   };
 
+  // Calculate total pages including invoice pages
+  const MAX_TABLE_HEIGHT = 400; // Max height for table container
+  const ROW_HEIGHT = 50; // Estimated row height
+  
+  const maxRowsPerPage = Math.floor(MAX_TABLE_HEIGHT / ROW_HEIGHT);
+  const ITEMS_PER_PAGE = Math.max(1, maxRowsPerPage); // At least 1 row per page
+  
+  // Smart pagination: ensure no row is cut off
+  const calculateSmartInvoicePages = () => {
+    const totalRows = formData.invoiceData?.rows?.length || 0;
+    if (totalRows === 0) return 1;
+    
+    // Use 5 rows per page to ensure no cut-offs
+    const ROWS_PER_PAGE = 5;
+    return Math.ceil(totalRows / ROWS_PER_PAGE);
+  };
+  
+  const totalInvoicePages = calculateSmartInvoicePages();
+  const totalPages = 5 + Math.max(0, totalInvoicePages - 1); // 5 base pages + additional invoice pages
+
   const handleNextPage = () => {
-    if (currentPage < 3) {
-      setCurrentPage((currentPage + 1) as 1 | 2 | 3);
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
     }
   };
 
   const handlePrevPage = () => {
     if (currentPage > 1) {
-      setCurrentPage((currentPage - 1) as 1 | 2 | 3);
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -287,34 +313,28 @@ const MultiStepForm: React.FC = () => {
     const imgWidth = 210; // A4 width in mm
     const imgHeight = 297; // A4 height in mm (full page)
     
-    // Generate Page 1 with optimization
-    const page1Canvas = await generatePageCanvas(1);
-    const optimizedPage1Canvas = createOptimizedCanvas(page1Canvas, 1190, 1684); // 2x scale for quality
-    const page1ImgData = await compressImage(optimizedPage1Canvas, 'JPEG', 0.85); // Compress to JPEG with 85% quality
+    console.log('PDF Generation - Total Pages:', totalPages);
+    console.log('PDF Generation - Invoice Data Rows:', formData.invoiceData?.rows?.length || 0);
     
-    // Generate Page 2 with optimization
-    const page2Canvas = await generatePageCanvas(2);
-    const optimizedPage2Canvas = createOptimizedCanvas(page2Canvas, 1190, 1684); // 2x scale for quality
-    const page2ImgData = await compressImage(optimizedPage2Canvas, 'JPEG', 0.85); // Compress to JPEG with 85% quality
-    
-    // Generate Page 3 with optimization
-    const page3Canvas = await generatePageCanvas(3);
-    const optimizedPage3Canvas = createOptimizedCanvas(page3Canvas, 1190, 1684); // 2x scale for quality
-    const page3ImgData = await compressImage(optimizedPage3Canvas, 'JPEG', 0.85); // Compress to JPEG with 85% quality
-    
-    // Add all three pages to PDF
+    // Generate all pages dynamically
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      console.log('Generating PDF Page:', pageNum);
+      const pageCanvas = await generatePageCanvas(pageNum);
+      const optimizedCanvas = createOptimizedCanvas(pageCanvas, 842, 1190);
+      
+      // Use different compression for page 4 (chimney images)
+      const compressionQuality = pageNum === 4 ? 0.9 : 0.78;
+      const pageImgData = await compressImage(optimizedCanvas, 'JPEG', compressionQuality);
+      
+      if (pageNum > 1) {
+        pdf.addPage();
+      }
+      
     if (isMobileDevice) {
-      pdf.addImage(page1ImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
-      pdf.addPage();
-      pdf.addImage(page2ImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
-      pdf.addPage();
-      pdf.addImage(page3ImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
+        pdf.addImage(pageImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
     } else {
-      pdf.addImage(page1ImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      pdf.addPage();
-      pdf.addImage(page2ImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      pdf.addPage();
-      pdf.addImage(page3ImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+        pdf.addImage(pageImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      }
     }
   };
 
@@ -343,7 +363,15 @@ const MultiStepForm: React.FC = () => {
       React.createElement(Page1, { formData, updateFormData, isPDF: true, timelineCoverImage: formData.timelineCoverImage }) :
       pageNumber === 2 ?
       React.createElement(Page2, { formData, updateFormData, isPDF: true }) :
-      React.createElement(Page3, { formData, updateFormData, isPDF: true });
+      pageNumber === 3 ?
+      React.createElement(Page3, { formData, updateFormData, isPDF: true }) :
+      pageNumber === 4 ?
+      React.createElement(Page4, { chimneyType: formData.chimneyType, isPDF: true }) :
+      pageNumber === 5 ?
+      React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 }) :
+      pageNumber > 5 ?
+      React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: pageNumber - 4 }) :
+      React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 });
     
     // Render the page to the container
     const root = ReactDOM.createRoot(tempContainer);
@@ -371,7 +399,7 @@ const MultiStepForm: React.FC = () => {
     // Use html2canvas to capture the page with optimized settings
     const { default: html2canvas } = await import('html2canvas');
     const canvas = await html2canvas(tempContainer, {
-      scale: 1.5, // Lower initial scale for better compression
+      scale: 1.25, // reduce raster size for file size control
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
@@ -454,7 +482,7 @@ const MultiStepForm: React.FC = () => {
               <div className="w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium bg-gray-200 text-gray-600">
                 2
               </div>
-              <span className="ml-2 text-sm sm:text-base font-medium">Report Generation</span>
+              <span className="ml-2 text-sm sm:text-base font-medium">Report Generation ({totalPages} Pages)</span>
             </div>
           </div>
         </div>
@@ -466,12 +494,63 @@ const MultiStepForm: React.FC = () => {
           <DataScraper onDataExtracted={handleDataExtracted} setCurrentStep={setCurrentStep} setFormData={setFormData} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
+        <>
+          {/* Form Step Progress Indicator */}
+          <div className="mb-6 px-2">
+            <div className="flex items-center justify-center space-x-4">
+              <div className={`flex items-center ${currentPage >= 1 ? 'text-[#722420]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentPage >= 1 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {currentPage >= 1 ? '✓' : '1'}
+                </div>
+                <span className="ml-2 text-sm font-medium">Client Info</span>
+              </div>
+              <div className="w-12 h-1 bg-gray-200"></div>
+              <div className={`flex items-center ${currentPage >= 2 ? 'text-[#722420]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentPage >= 2 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {currentPage >= 2 ? '✓' : '2'}
+                </div>
+                <span className="ml-2 text-sm font-medium">Company Info</span>
+              </div>
+              <div className="w-12 h-1 bg-gray-200"></div>
+              <div className={`flex items-center ${currentPage >= 3 ? 'text-[#722420]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentPage >= 3 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {currentPage >= 3 ? '✓' : '3'}
+                </div>
+                <span className="ml-2 text-sm font-medium">Service Report</span>
+              </div>
+              <div className="w-12 h-1 bg-gray-200"></div>
+              <div className={`flex items-center ${currentPage >= 4 ? 'text-[#722420]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentPage >= 4 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {currentPage >= 4 ? '✓' : '4'}
+                </div>
+                <span className="ml-2 text-sm font-medium">Chimney Type</span>
+              </div>
+              <div className="w-12 h-1 bg-gray-200"></div>
+              <div className={`flex items-center ${currentPage === 5 ? 'text-[#722420]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentPage === 5 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  5
+                </div>
+                <span className="ml-2 text-sm font-medium">Invoice</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
           {/* Input Fields Section */}
           <div className="card p-4 sm:p-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                {currentPage === 1 ? 'Manual Entry' : currentPage === 2 ? 'Page 2 - Static Content' : 'Page 3 - Service Report'}
+                {currentPage === 1 ? 'Manual Entry' : currentPage === 2 ? 'Page 2 - Static Content' : currentPage === 3 ? 'Page 3 - Service Report' : currentPage === 4 ? 'Page 4 - Chimney Type' : 'Page 5 - Invoice'}
               </h3>
               <button
                 onClick={handleBackToScrape}
@@ -480,6 +559,27 @@ const MultiStepForm: React.FC = () => {
                 ← Back to Data Extraction
               </button>
             </div>
+            
+            {/* Final Report Generation Indicator (now on Page 5) */}
+            {currentPage === 5 && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-green-800 mb-1">Ready to Generate Report!</h4>
+                    <p className="text-sm text-green-700">
+                      You've completed all the required information. Review the preview on the right and click "Generate Report" below to create your PDF.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {currentPage === 1 ? (
               <form onSubmit={handleSubmit}>
@@ -552,35 +652,8 @@ const MultiStepForm: React.FC = () => {
                   {/* House Image Upload - Only show if no timelineCoverImage exists */}
                   {!formData.timelineCoverImage && (
                     <div className="space-y-4">
-                      <div>
-                        <label htmlFor="houseImageUpload" className="block text-sm font-medium text-gray-700 mb-2">
-                          Upload House Image
-                        </label>
-                        <input
-                          type="file"
-                          id="houseImageUpload"
-                          accept="image/*"
-                          onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                      const imageUrl = event.target?.result as string;
-                                      updateFormData({ timelineCoverImage: imageUrl });
-                                  };
-                                  reader.readAsDataURL(file);
-                              }
-                          }}
-                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-[#722420] text-center font-medium cursor-pointer hover:border-gray-400 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#722420] file:text-white hover:file:bg-[#5a1d1a]"
-                        />
-                      </div>
                       
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-gray-500 text-sm">OR</span>
-                        </div>
-                        <div className="text-center text-xs text-gray-500 mb-2">Enter Image URL</div>
-                      </div>
+                      
                       
                       <div>
                         <label htmlFor="imageUrlInput" className="block text-sm font-medium text-gray-700 mb-2">
@@ -671,9 +744,8 @@ const MultiStepForm: React.FC = () => {
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : currentPage === 3 ? (
               <div className="space-y-4">
-                {/* Client Name Input for Page 3 */}
                 <div>
                   <label htmlFor="page3ClientName" className="block text-sm font-medium text-gray-700 mb-2">
                     Client Name for Greeting
@@ -688,21 +760,254 @@ const MultiStepForm: React.FC = () => {
                   />
                 </div>
               </div>
+            ) : currentPage === 4 ? (
+              <div className="text-center py-8">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <div className="text-red-600 mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-black mb-2">Page 4 - Static Content</h4>
+                  <p className="text-black mb-4">
+                    This page summarizes the chimney type selection and is not editable.
+                  </p>
+                  <p className="text-sm text-black">
+                    The content is pre-filled and will be included in the final PDF report.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Invoice Number */}
+                <div>
+                  <label htmlFor="invoiceNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                    Invoice Number
+                  </label>
+                  <input
+                    type="text"
+                    id="invoiceNumber"
+                    value={formData.invoiceData?.invoiceNumber || ''}
+                    onChange={(e) => updateFormData({ 
+                      invoiceData: { 
+                        invoiceNumber: e.target.value,
+                        paymentMethod: formData.invoiceData?.paymentMethod || '',
+                        paymentNumber: formData.invoiceData?.paymentNumber || '',
+                        rows: formData.invoiceData?.rows || []
+                      } 
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                    placeholder="Enter invoice number"
+                  />
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method
+                  </label>
+                  <select
+                    id="paymentMethod"
+                    value={formData.invoiceData?.paymentMethod || ''}
+                    onChange={(e) => updateFormData({ 
+                      invoiceData: { 
+                        invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                        paymentMethod: e.target.value,
+                        paymentNumber: formData.invoiceData?.paymentNumber || '',
+                        rows: formData.invoiceData?.rows || []
+                      } 
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                  >
+                    <option value="">Select payment method</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Check">Check</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                {/* Payment Number */}
+                <div>
+                  <label htmlFor="paymentNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Number (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="paymentNumber"
+                    value={formData.invoiceData?.paymentNumber || ''}
+                    onChange={(e) => updateFormData({ 
+                      invoiceData: { 
+                        invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                        paymentMethod: formData.invoiceData?.paymentMethod || '',
+                        paymentNumber: e.target.value,
+                        rows: formData.invoiceData?.rows || []
+                      } 
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                    placeholder="Enter payment number (check #, transaction ID, etc.)"
+                  />
+                </div>
+
+                {/* Invoice Items */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Invoice Items
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRow = {
+                          id: Date.now().toString(),
+                          description: '',
+                          unit: '',
+                          price: ''
+                        };
+                        updateFormData({ 
+                          invoiceData: { 
+                            invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                            paymentMethod: formData.invoiceData?.paymentMethod || '',
+                            paymentNumber: formData.invoiceData?.paymentNumber || '',
+                            rows: [...(formData.invoiceData?.rows || []), newRow]
+                          } 
+                        });
+                      }}
+                      className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {(formData.invoiceData?.rows || []).map((row, index) => (
+                      <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={row.description}
+                          onChange={(e) => {
+                            const updatedRows = (formData.invoiceData?.rows || []).map(r => 
+                              r.id === row.id ? { ...r, description: e.target.value } : r
+                            );
+                            updateFormData({ 
+                              invoiceData: { 
+                                invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                rows: updatedRows
+                              } 
+                            });
+                          }}
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Unit"
+                          value={row.unit}
+                          onChange={(e) => {
+                            const updatedRows = (formData.invoiceData?.rows || []).map(r => 
+                              r.id === row.id ? { ...r, unit: e.target.value } : r
+                            );
+                            updateFormData({ 
+                              invoiceData: { 
+                                invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                rows: updatedRows
+                              } 
+                            });
+                          }}
+                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Price"
+                          value={row.price}
+                          onChange={(e) => {
+                            const updatedRows = (formData.invoiceData?.rows || []).map(r => 
+                              r.id === row.id ? { ...r, price: e.target.value } : r
+                            );
+                            updateFormData({ 
+                              invoiceData: { 
+                                invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                rows: updatedRows
+                              } 
+                            });
+                          }}
+                          className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedRows = (formData.invoiceData?.rows || []).filter(r => r.id !== row.id);
+                            updateFormData({
+                              invoiceData: {
+                                invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                rows: updatedRows
+                              }
+                            });
+                          }}
+                          className="px-2 py-1 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-sm flex items-center justify-center"
+                          title="Delete item"
+                        >
+                          <svg 
+                            width="14" 
+                            height="14" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3,6 5,6 21,6"></polyline>
+                            <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    {(!formData.invoiceData?.rows || formData.invoiceData.rows.length === 0) && (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        No items added yet. Click "Add Item" to add invoice items.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* Generate Button for all pages */}
+            {/* Generate Button - Only show on Page 5 (last page) */}
             <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-              <button 
-                type="button"
-                onClick={handleSubmit}
-                className="w-full btn-primary"
-                disabled={isGenerating}
-              >
-                {isGenerating ? 'Generating PDF...' : 'Generate a Report'}
-              </button>
+              {currentPage === 5 ? (
+                <button 
+                  type="button"
+                  onClick={handleSubmit}
+                  className="w-full btn-primary"
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? 'Generating PDF...' : 'Generate Report'}
+                </button>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-600 mb-3">
+                    {currentPage === 1 ? 'Fill in the client information above' : currentPage === 2 ? 'Review the static content' : currentPage === 3 ? 'Review service report details' : 'Review chimney type details'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Navigate to Page 5 to generate your report
+                  </p>
+                </div>
+              )}
               
               {/* Mobile optimization note */}
-              {isMobile && (
+              {isMobile && currentPage === 5 && (
                 <div className="mt-3 text-xs text-gray-500 text-center">
                   📱 Mobile optimized: PDF will be generated with desktop-quality layout
                 </div>
@@ -714,25 +1019,28 @@ const MultiStepForm: React.FC = () => {
           <div className="card p-0">
             {/* Page Navigation */}
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900">Report Preview</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Report Preview
+                
+              </h3>
               <div className="flex items-center space-x-2">
                 {currentPage > 1 && (
                   <button
                     onClick={handlePrevPage}
                     className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
                   >
-                    ← Page {currentPage === 2 ? '1' : '2'}
+                    ← Page {currentPage - 1}
                   </button>
                 )}
                 <span className="text-sm text-gray-600 font-medium">
-                  Page {currentPage} of 3
+                  Page {currentPage} of {totalPages}
                 </span>
-                {currentPage < 3 && (
+                {currentPage < totalPages && (
                   <button
                     onClick={handleNextPage}
                     className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
                   >
-                    Page {currentPage === 1 ? '2' : '3'} →
+                    Page {currentPage + 1} →
                   </button>
                 )}
               </div>
@@ -744,9 +1052,23 @@ const MultiStepForm: React.FC = () => {
               <Page1 formData={formData} updateFormData={updateFormData} timelineCoverImage={formData.timelineCoverImage} />
             ) : currentPage === 2 ? (
               <Page2 formData={formData} updateFormData={updateFormData} />
-            ) : (
+              ) : currentPage === 3 ? (
               <Page3 formData={formData} updateFormData={updateFormData} />
-            )}
+              ) : currentPage === 4 ? (
+                <Page4 chimneyType={formData.chimneyType} />
+              ) : currentPage === 5 ? (
+                <Page5 
+                  invoiceData={formData.invoiceData} 
+                  updateInvoiceData={(data) => updateFormData({ invoiceData: data })}
+                  currentInvoicePage={1}
+                />
+              ) : currentPage > 5 ? (
+                <Page5 
+                  invoiceData={formData.invoiceData} 
+                  updateInvoiceData={(data) => updateFormData({ invoiceData: data })}
+                  currentInvoicePage={currentPage - 4}
+                />
+              ) : null}
             </div>
             
             {/* Mobile preview instructions */}
@@ -762,6 +1084,7 @@ const MultiStepForm: React.FC = () => {
             )}
           </div>
         </div>
+        </>
       )}
 
       {/* Image Cropping Modal */}

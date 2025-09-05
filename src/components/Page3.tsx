@@ -19,7 +19,7 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
   const PAGE_WIDTH = 595;
   const CONTENT_WIDTH = 546;
   const CONTENT_HEIGHT = 790;
-  
+
   // Calculate center positions for PDF
   const centerContent = isPDF ? {
     left: `${(PAGE_WIDTH - CONTENT_WIDTH) / 2}px`, // Center the content area
@@ -47,8 +47,20 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
     top: '178px', // Adjust email position for better spacing
   } : {};
 
+  // Add a prominent header for the final page (only visible in preview, not in PDF)
+  const renderPreviewHeader = () => {
+    if (isPDF) return null;
+
+    return (
+      <div></div>
+    )
+  };
+
   return (
     <div className="page">
+      {/* Preview Header - Only shown in preview mode */}
+      {renderPreviewHeader()}
+
       <div className="overlap-wrapper" >
         <div className="overlap" style={centerContent}>
           <div className="title" style={titleStyle}>
@@ -65,7 +77,12 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
             <div className="rectangle" />
           </div>
 
-          <div className="div" style={clientNameStyle}>Dear {formData.clientName || 'c1'},</div>
+          <div
+            className="div"
+            style={{ fontFamily: 'Times New Roman, Times, serif', opacity: 0.87 }}
+          >
+            Dear {formData.clientName || 'c1'},
+          </div>
 
           <img className="email" alt="Email" src="/email.webp" style={emailStyle} />
         </div>

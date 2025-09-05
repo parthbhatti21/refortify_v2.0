@@ -95,7 +95,7 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
         <div className="absolute w-[465px] h-[67px] top-[175px] left-[66px]">
             <div className="relative w-[463px] h-[67px] bg-black rounded-[36px] border-[12px] border-solid border-[#722420]">
                 <div className={`absolute w-[402px] left-[19px] [font-family:'Inter-Bold',Helvetica] font-bold text-white text-[25px] text-center tracking-[0] leading-[normal] whitespace-nowrap ${
-                  isPDF ? 'top-[-3px]' : 'top-[7px]'
+                  isPDF ? 'top-[-1px]' : 'top-[7px]'
                 }`}>
                     Chimney&nbsp;&nbsp;Inspection&nbsp;&nbsp;Report
                 </div>
@@ -104,7 +104,7 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
 
         <div className="absolute w-[595px] h-[318px] top-[255px] left-0">
             {formData.chimneyType === "masonry" ? (
-              <div className={`absolute w-[284px] h-[318px] top-0 bg-[#d9d9d9] ${timelineCoverImage ? 'left-[0]' : 'left-[155px]'}`} style={{ position: 'relative' }}>
+              <div className={`absolute w-[284px] h-[318px] top-0  ${timelineCoverImage ? 'left-[0]' : 'left-[155px]'}`} style={{ position: 'relative' }}>
                 <img 
                   className="w-full h-full" 
                   src="/masonry.webp" 
@@ -124,7 +124,7 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
               </div>
             ) : (
               <img 
-                className={`absolute w-[284px] h-[318px] top-[0] bg-[#d9d9d9] ${timelineCoverImage ? 'left-[0]' : 'left-[155px]'}`}
+                className={`absolute w-[284px] h-[318px] top-[0]  ${timelineCoverImage ? 'left-[0]' : 'left-[155px]'}`}
                 src="/prefabricated.webp" 
                 alt="Prefabricated Chimney"
               />

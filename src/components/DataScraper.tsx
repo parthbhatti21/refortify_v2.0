@@ -151,8 +151,8 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="text-center mb-4 sm:mb-8 px-2">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Data Extraction Tool</h2>
-        <p className="text-sm sm:text-base text-gray-600">Extract client information from inspection reports, customer portals, or other company data sources</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Report generation made easy by ChimneySweep</h2>
+        <p className="text-sm sm:text-base text-gray-600"> Builds electronics inspection reports in minutes</p>
       </div>
 
       {/* URL Input */}

@@ -10,15 +10,18 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row justify-between items-center py-4 sm:py-6">
             <div className="flex items-center mb-4 sm:mb-0">
-              <div className="flex-shrink-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#722420] text-center sm:text-left">
-                  ChimneySweep
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">Professional Report Builder - v2.0</p>
+              <div className="flex-shrink-0 flex items-center">
+                <img src="/logo.webp" alt="ChimneySweeps" className="w-10 h-10 mr-3" />
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-[#722420] text-left">
+                    ChimneySweeps
+                  </h1>
+                  <p className="text-xs sm:text-sm text-gray-500 text-left">Professional Report Builder - v2.0</p>
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-xs sm:text-sm text-gray-500 text-center">Business Reports Made Simple</span>
+              <span className="text-xs sm:text-sm text-gray-500 text-center"> Quick report generator</span>
             </div>
           </div>
         </div>

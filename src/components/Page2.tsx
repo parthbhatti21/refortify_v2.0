@@ -76,7 +76,7 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
           <div className="absolute w-[393px] h-[106px] top-[25px] left-[77px]">
             <div className="absolute w-[391px] h-[54px] top-[52px] left-0 bg-black rounded-[36px] border-[6px] border-solid border-[#722420]">
               <div className={`absolute w-[344px] left-4 [font-family:'Inter-Bold',Helvetica] font-bold text-white text-2xl text-center tracking-[0.48px] leading-[normal] whitespace-nowrap ${
-                isPDF ? 'top-[-3px]' : 'top-[7px]'
+                isPDF ? 'top-[-1px]' : 'top-[7px]'
               }`}>
                 Service Provided By:
               </div>
