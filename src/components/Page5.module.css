@@ -1,318 +1,112 @@
-.page5 {
-	width: 100%;
-	position: relative;
-	background-color: #fff;
-	height: 842px;
-	overflow: hidden;
-	text-align: center;
-	font-size: 21px;
-	color: #fff;
-	font-family: Inter;
+.page {
+    align-items: start;
+    background-color: #ffffff;
+    display: grid;
+    justify-items: center;
+    width: 100%;
 }
-.title {
-	position: absolute;
-	top: 51px;
-	left: calc(50% - 195.5px);
-	width: 391px;
-	height: 106px;
+
+.overlapWrapper {
+    background-color: #ffffff;
+    height: 842px;
+    width: 595px;
 }
-.titleChild {
-	position: absolute;
-	top: 52px;
-	left: calc(50% - 195.5px);
-	border-radius: 36px;
-	background-color: #000;
-	border: 6px solid #722420;
-	box-sizing: border-box;
-	width: 391px;
-	height: 54px;
+
+.overlap {
+    height: 790px;
+    left: 25px;
+    position: relative;
+    top: 26px;
+    width: 546px;
 }
-.logoIcon {
-	position: absolute;
-	top: 0px;
-	left: 134px;
-	width: 124px;
-	height: 52px;
-	object-fit: cover;
-}
-.todaysInovice {
-	position: absolute;
-	top: 117px;
-	left: 116px;
-	letter-spacing: 0.02em;
-	display: inline-block;
-	width: 364px;
-	height: 25px;
-}
-.frame {
-	position: absolute;
-	top: 26px;
-	left: 25px;
-	width: 546px;
-	height: 790px;
-}
-.frameChild {
-	position: absolute;
-	top: 0px;
-	left: 0px;
-	border: 2px solid #722420;
-	box-sizing: border-box;
-	width: 546px;
-	height: 790px;
-}
-.rectangle {
-	position: absolute;
-	top: 5px;
-	left: 5px;
-	border: 2px solid #722420;
-	box-sizing: border-box;
-	width: 536px;
-	height: 780px;
-}
-.invoiceId {
-	position: absolute;
-	top: 171px;
-	left: 54px;
-	font-size: 15px;
-	font-weight: 600;
-	color: #000;
-	text-align: left;
-	display: inline-block;
-	width: 162px;
-	height: 27px;
-}
+
 .paymentMethod {
-	position: absolute;
-	left: 54px;
-	font-size: 14px;
-	font-weight: 600;
-	color: #000;
-	text-align: left;
-	display: inline-block;
-	width: 300px;
-	height: 25px;
-}
-.rectangleParent {
-	position: absolute;
-	top: 203px;
-	left: 54px;
-	width: 487px;
-	height: 42px;
-	font-size: 18px;
-}
-.groupChild {
-	position: absolute;
-	top: 0px;
-	left: 0px;
-	background-color: #722420;
-	border-right: 2px solid #fffcfc;
-	box-sizing: border-box;
-	width: 200px;
-	height: 42px;
-}
-.groupItem {
-	position: absolute;
-	top: 0px;
-	left: 390px;
-	background-color: #722420;
-	border-left: 2px solid #fffcfc;
-	box-sizing: border-box;
-	width: 97px;
-	height: 42px;
-}
-.groupInner {
-	position: absolute;
-	top: 0px;
-	left: 200px;
-	background-color: #722420;
-	width: 95px;
-	height: 42px;
-	border-right: 2px solid #fffcfc;
-}
-.groupPrice {
-	position: absolute;
-	top: 0px;
-	left: 295px;
-	background-color: #722420;
-	width: 95px;
-	height: 42px;
-	border-right: 2px solid #fffcfc;
-}
-.description {
-	position: absolute;
-	top: 0px;
-	left: 0px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 200px;
-	height: 42px;
-}
-.unit {
-	position: absolute;
-	top: 0px;
-	left: 200px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 95px;
-	height: 42px;
-}
-.price {
-	position: absolute;
-	top: 0px;
-	left: 295px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 95px;
-	height: 42px;
-}
-.total {
-	position: absolute;
-	top: 0px;
-	left: 390px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 97px;
-	height: 42px;
-}
-.paymentNumber {
-	position: absolute;
-	top: 520px;
-	left: 54px;
-	font-size: 15px;
-	font-weight: 600;
-	color: #000;
-	text-align: left;
-	display: inline-block;
-	width: 200px;
-	height: 27px;
-}
-.tableRowsContainer {
-	position: absolute;
-	top: 245px;
-	left: 54px;
-	width: 487px;
-	max-height: 400px;
-	border: 1px solid #000;
-	border-top: none;
-	background-color: white;
-	overflow: hidden;
+    color: #000000;
+    font-family: "Inter", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    left: 29px;
+    letter-spacing: 0;
+    line-height: normal;
+    position: absolute;
+    bottom: 90px;
+    width: 400px;
 }
 
-.tableRow {
-	width: 100%;
-	min-height: 30px;
-	display: flex;
-	align-items: stretch;
-	border-bottom: 1px solid #000;
-	background-color: white;
-	padding: 8px 0;
+.invoiceId {
+    color: #000000;
+    font-family: "Inter", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    left: 29px;
+    letter-spacing: 0;
+    line-height: normal;
+    position: absolute;
+    top: 144px;
+    width: 300px;
 }
 
-.tableRow:last-child {
-	border-bottom: none;
+.title {
+    height: 106px;
+    left: 77px;
+    position: absolute;
+    top: 25px;
+    width: 393px;
 }
 
-.rowDescription {
-	width: 200px;
-	padding: 8px;
-	font-size: 14px;
-	color: #000;
-	text-align: center;
-	word-wrap: break-word;
-	white-space: pre-wrap;
-	min-height: 30px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-right: 1px solid #000;
-	line-height: 1.4;
-	overflow-wrap: break-word;
-	hyphens: auto;
-	flex: 1;
+.overlapGroup {
+    background-color: #000000;
+    border: 6px solid;
+    border-color: #722420;
+    border-radius: 36px;
+    height: 54px;
+    left: 0;
+    position: absolute;
+    top: 52px;
+    width: 391px;
 }
 
-.rowUnit {
-	width: 95px;
-	padding: 8px;
-	font-size: 14px;
-	color: #000;
-	text-align: center;
-	border-right: 1px solid #000;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 30px;
-	flex-shrink: 0;
+.textWrapper2 {
+    color: #ffffff;
+    font-family: "Inter", Helvetica, Arial, sans-serif;
+    font-size: 21px;
+    font-weight: 700;
+    left: 8px;
+    letter-spacing: 0.42px;
+    line-height: normal;
+    position: absolute;
+    text-align: center;
+    top: 4px;
+    white-space: nowrap;
+    width: 364px;
 }
 
-.rowPrice {
-	width: 95px;
-	padding: 8px;
-	font-size: 14px;
-	color: #000;
-	text-align: center;
-	border-right: 1px solid #000;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 30px;
-	flex-shrink: 0;
+.logo {
+    aspect-ratio: 2.4;
+    height: 52px;
+    left: 134px;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    width: 124px;
 }
 
-.rowTotal {
-	width: 97px;
-	padding: 8px;
-	font-size: 14px;
-	color: #000;
-	text-align: center;
-	font-weight: bold;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 30px;
-	flex-shrink: 0;
+.frame {
+    border: 2px solid;
+    border-color: #722420;
+    height: 790px;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 546px;
 }
 
-.totalRow {
-	width: 100%;
-	min-height: 40px;
-	display: flex;
-	align-items: stretch;
-	background-color: #f0f0f0;
-	border-top: 2px solid #000;
-	font-weight: bold;
-}
-
-.totalLabel {
-	flex: 1;
-	padding: 8px;
-	font-size: 16px;
-	color: #000;
-	text-align: right;
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
-}
-
-.totalValue {
-	width: 97px;
-	padding: 8px;
-	font-size: 16px;
-	color: #000;
-	text-align: center;
-	font-weight: bold;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,600;0,700&display=swap');
-
-body {
-	margin: 0; line-height: normal;
+.rectangle {
+    border: 2px solid;
+    border-color: #722420;
+    height: 780px;
+    left: 3px;
+    position: relative;
+    top: 3px;
+    width: 536px;
 }

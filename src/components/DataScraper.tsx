@@ -1,9 +1,29 @@
 import React, { useState } from 'react';
 
+interface ImageItem {
+  id: string;
+  url: string;
+  alt?: string;
+}
+
 interface DataScraperProps {
-  onDataExtracted: (data: { clientName: string; clientAddress: string; chimneyType: string; reportDate: string; timelineCoverImage: string }) => void;
+  onDataExtracted: (data: { 
+    clientName: string; 
+    clientAddress: string; 
+    chimneyType: string; 
+    reportDate: string; 
+    timelineCoverImage: string;
+    scrapedImages: ImageItem[];
+  }) => void;
   setCurrentStep: (step: 'scrape' | 'form') => void;
-  setFormData: (data: { clientName: string; clientAddress: string; chimneyType: string; reportDate: string; timelineCoverImage: string }) => void;
+  setFormData: (data: { 
+    clientName: string; 
+    clientAddress: string; 
+    chimneyType: string; 
+    reportDate: string; 
+    timelineCoverImage: string;
+    scrapedImages: ImageItem[];
+  }) => void;
 }
 
 interface ExtractedData {
@@ -14,6 +34,7 @@ interface ExtractedData {
   timelineContent: string;
   imageUrls: string[];
   timelineCoverImage: string;
+  scrapedImages: ImageItem[];
 }
 
 const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentStep, setFormData }) => {
@@ -26,7 +47,8 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     reportDate: new Date().toISOString().split('T')[0],
     timelineContent: '',
     imageUrls: [],
-    timelineCoverImage: ''
+    timelineCoverImage: '',
+    scrapedImages: []
   });
   const [showEditForm, setShowEditForm] = useState(false);
   const [showImageSelector, setShowImageSelector] = useState(false);
@@ -90,6 +112,13 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       chimneyType = "prefabricated";
     }
 
+    // Convert imageUrls to ImageItem format
+    const scrapedImages: ImageItem[] = imageUrls.map((url, index) => ({
+      id: `scraped-${index}-${Date.now()}`,
+      url: url,
+      alt: `Scraped image ${index + 1}`
+    }));
+
     return {
       clientName,
       clientAddress: address,
@@ -97,7 +126,8 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       reportDate: new Date().toISOString().split('T')[0],
       timelineContent,
       imageUrls,
-      timelineCoverImage
+      timelineCoverImage,
+      scrapedImages
     };
   };
 
@@ -144,7 +174,8 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       clientAddress: extractedData.clientAddress,
       chimneyType: extractedData.chimneyType,
       reportDate: extractedData.reportDate,
-      timelineCoverImage: extractedData.timelineCoverImage || '' // Use specific timeline cover image
+      timelineCoverImage: extractedData.timelineCoverImage || '', // Use specific timeline cover image
+      scrapedImages: extractedData.scrapedImages || []
     });
   };
 
@@ -188,7 +219,8 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
                   clientAddress: '',
                   chimneyType: '',
                   reportDate: new Date().toISOString().split('T')[0],
-                  timelineCoverImage: ''
+                  timelineCoverImage: '',
+                  scrapedImages: []
                 });
                 setCurrentStep('form');
               }}

@@ -5,8 +5,15 @@ import Page2 from './Page2';
 import Page3 from './Page3';
 import Page4 from './Page4';
 import Page5 from './Page5';
+import Page6 from './Page6';
 import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
+
+export interface ImageItem {
+  id: string;
+  url: string;
+  alt?: string;
+}
 
 export interface FormData {
   // Client Information
@@ -15,6 +22,8 @@ export interface FormData {
   chimneyType: string;
   reportDate: string;
   timelineCoverImage?: string; // Timeline cover image from scraped data
+  scrapedImages?: ImageItem[]; // All images from DataScraper
+  selectedImages?: ImageItem[]; // Selected images for Page6
   invoiceData?: {
     invoiceNumber: string;
     paymentMethod: string;
@@ -37,6 +46,8 @@ const MultiStepForm: React.FC = () => {
     chimneyType: '',
     reportDate: new Date().toISOString().split('T')[0],
     timelineCoverImage: '',
+    scrapedImages: [],
+    selectedImages: [],
     invoiceData: {
       invoiceNumber: '',
       paymentMethod: '',
@@ -77,8 +88,28 @@ const MultiStepForm: React.FC = () => {
     setFormData(prev => ({ ...prev, ...data }));
   };
 
-  const handleDataExtracted = (data: FormData) => {
-    setFormData(data);
+  const handleImageSelection = (selectedImages: ImageItem[]) => {
+    setFormData(prev => ({ ...prev, selectedImages }));
+  };
+
+  const handleDataExtracted = (data: {
+    clientName: string;
+    clientAddress: string;
+    chimneyType: string;
+    reportDate: string;
+    timelineCoverImage: string;
+    scrapedImages: ImageItem[];
+  }) => {
+    setFormData({
+      ...formData,
+      clientName: data.clientName,
+      clientAddress: data.clientAddress,
+      chimneyType: data.chimneyType,
+      reportDate: data.reportDate,
+      timelineCoverImage: data.timelineCoverImage,
+      scrapedImages: data.scrapedImages,
+      selectedImages: [] // Initialize empty selection
+    });
     setCurrentStep('form');
   };
 
@@ -89,6 +120,8 @@ const MultiStepForm: React.FC = () => {
       chimneyType: '',
       reportDate: new Date().toISOString().split('T')[0],
       timelineCoverImage: '',
+      scrapedImages: [],
+      selectedImages: [],
       invoiceData: {
         invoiceNumber: '',
         paymentMethod: '',
@@ -259,7 +292,26 @@ const MultiStepForm: React.FC = () => {
   };
   
   const totalInvoicePages = calculateSmartInvoicePages();
-  const totalPages = 5 + Math.max(0, totalInvoicePages - 1); // 5 base pages + additional invoice pages
+  const totalPages = 5 + totalInvoicePages; // 5 base pages + invoice pages + 1 image page
+  
+  // Helper function to determine the logical step (1-6) based on current page
+  const getLogicalStep = (pageNum: number): number => {
+    if (pageNum <= 4) return pageNum; // Pages 1-4 are steps 1-4
+    if (pageNum <= 4 + totalInvoicePages) return 5; // All invoice pages are step 5
+    return 6; // Image page is step 6
+  };
+  
+  // Helper function to check if we're on an invoice page
+  const isInvoicePage = (pageNum: number): boolean => {
+    return pageNum >= 5 && pageNum <= 4 + totalInvoicePages;
+  };
+  
+  // Helper function to check if we're on the image page
+  const isImagePage = (pageNum: number): boolean => {
+    return pageNum === totalPages;
+  };
+  
+  const currentLogicalStep = getLogicalStep(currentPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -367,10 +419,14 @@ const MultiStepForm: React.FC = () => {
       React.createElement(Page3, { formData, updateFormData, isPDF: true }) :
       pageNumber === 4 ?
       React.createElement(Page4, { chimneyType: formData.chimneyType, isPDF: true }) :
-      pageNumber === 5 ?
-      React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 }) :
-      pageNumber > 5 ?
+      pageNumber >= 5 && pageNumber <= 4 + totalInvoicePages ?
       React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: pageNumber - 4 }) :
+      pageNumber === totalPages ?
+      React.createElement(Page6, { 
+        isPDF: true, 
+        scrapedImages: formData.scrapedImages || [], 
+        selectedImages: formData.selectedImages || [] 
+      }) :
       React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 });
     
     // Render the page to the container
@@ -498,49 +554,58 @@ const MultiStepForm: React.FC = () => {
           {/* Form Step Progress Indicator */}
           <div className="mb-6 px-2">
             <div className="flex items-center justify-center space-x-4">
-              <div className={`flex items-center ${currentPage >= 1 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div className={`flex items-center ${currentLogicalStep >= 1 ? 'text-[#722420]' : 'text-gray-400'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentPage >= 1 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  currentLogicalStep >= 1 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentPage >= 1 ? '✓' : '1'}
+                  {currentLogicalStep > 1 ? '✓' : '1'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Client Info</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentPage >= 2 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div className={`flex items-center ${currentLogicalStep >= 2 ? 'text-[#722420]' : 'text-gray-400'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentPage >= 2 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  currentLogicalStep >= 2 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentPage >= 2 ? '✓' : '2'}
+                  {currentLogicalStep > 2 ? '✓' : '2'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Company Info</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentPage >= 3 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div className={`flex items-center ${currentLogicalStep >= 3 ? 'text-[#722420]' : 'text-gray-400'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentPage >= 3 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  currentLogicalStep >= 3 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentPage >= 3 ? '✓' : '3'}
+                  {currentLogicalStep > 3 ? '✓' : '3'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Service Report</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentPage >= 4 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div className={`flex items-center ${currentLogicalStep >= 4 ? 'text-[#722420]' : 'text-gray-400'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentPage >= 4 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  currentLogicalStep >= 4 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentPage >= 4 ? '✓' : '4'}
+                  {currentLogicalStep > 4 ? '✓' : '4'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Chimney Type</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentPage === 5 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div className={`flex items-center ${currentLogicalStep >= 5 ? 'text-[#722420]' : 'text-gray-400'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentPage === 5 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  currentLogicalStep >= 5 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  5
+                  {currentLogicalStep > 5 ? '✓' : '5'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Invoice</span>
+              </div>
+              <div className="w-12 h-1 bg-gray-200"></div>
+              <div className={`flex items-center ${currentLogicalStep >= 6 ? 'text-[#722420]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentLogicalStep >= 6 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  6
+                </div>
+                <span className="ml-2 text-sm font-medium">Images</span>
               </div>
             </div>
           </div>
@@ -550,7 +615,12 @@ const MultiStepForm: React.FC = () => {
           <div className="card p-4 sm:p-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                {currentPage === 1 ? 'Manual Entry' : currentPage === 2 ? 'Page 2 - Static Content' : currentPage === 3 ? 'Page 3 - Service Report' : currentPage === 4 ? 'Page 4 - Chimney Type' : 'Page 5 - Invoice'}
+                {currentLogicalStep === 1 ? 'Manual Entry' : 
+                 currentLogicalStep === 2 ? 'Page 2 - Static Content' : 
+                 currentLogicalStep === 3 ? 'Page 3 - Service Report' : 
+                 currentLogicalStep === 4 ? 'Page 4 - Chimney Type' : 
+                 currentLogicalStep === 5 ? `Page ${currentPage} - Invoice${totalInvoicePages > 1 ? ` (${currentPage - 4}/${totalInvoicePages})` : ''}` : 
+                 'Page 6 - Project Images'}
               </h3>
               <button
                 onClick={handleBackToScrape}
@@ -561,25 +631,7 @@ const MultiStepForm: React.FC = () => {
             </div>
             
             {/* Final Report Generation Indicator (now on Page 5) */}
-            {currentPage === 5 && (
-              <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-green-800 mb-1">Ready to Generate Report!</h4>
-                    <p className="text-sm text-green-700">
-                      You've completed all the required information. Review the preview on the right and click "Generate Report" below to create your PDF.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+           
             
             {currentPage === 1 ? (
               <form onSubmit={handleSubmit}>
@@ -777,7 +829,7 @@ const MultiStepForm: React.FC = () => {
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : isInvoicePage(currentPage) ? (
               <div className="space-y-4">
                 {/* Invoice Number */}
                 <div>
@@ -982,11 +1034,111 @@ const MultiStepForm: React.FC = () => {
                   </div>
                 </div>
               </div>
+            ) : (
+              // Page 6 - Image Selection Interface
+              <div className="space-y-4">
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                    Select Project Images (Max 4)
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Selected: {formData.selectedImages?.length || 0}/4
+                  </p>
+                </div>
+                
+                {(formData.scrapedImages?.length || 0) > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                    {formData.scrapedImages?.map((image) => {
+                      const isSelected = formData.selectedImages?.some(img => img.id === image.id) || false;
+                      const canSelect = (formData.selectedImages?.length || 0) < 4 || isSelected;
+                      
+                      return (
+                        <div
+                          key={image.id}
+                          className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                            isSelected
+                              ? 'border-[#722420] shadow-lg scale-105'
+                              : 'border-gray-200 hover:border-gray-400'
+                          } ${!canSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          onClick={() => {
+                            if (!canSelect) return;
+                            
+                            const currentSelected = formData.selectedImages || [];
+                            let newSelection: ImageItem[];
+
+                            if (isSelected) {
+                              // Remove image from selection
+                              newSelection = currentSelected.filter(img => img.id !== image.id);
+                            } else {
+                              // Add image to selection
+                              newSelection = [...currentSelected, image];
+                            }
+
+                            handleImageSelection(newSelection);
+                          }}
+                        >
+                          <div className="aspect-square bg-gray-100">
+                            <img
+                              src={image.url}
+                              alt={image.alt || 'Scraped image'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                          
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 bg-[#722420] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                              ✓
+                            </div>
+                          )}
+                          
+                          {isSelected && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-[#722420] text-white text-xs p-1 text-center">
+                              Selected #{(formData.selectedImages?.findIndex(img => img.id === image.id) || 0) + 1}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                    <div className="text-center">
+                      <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-lg mb-2">No images available</p>
+                      <p className="text-sm">Images will appear here after data scraping</p>
+                    </div>
+                  </div>
+                )}
+
+                {(formData.selectedImages?.length || 0) > 0 && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="text-green-600">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          {formData.selectedImages?.length} image{(formData.selectedImages?.length || 0) !== 1 ? 's' : ''} selected for PDF
+                        </p>
+                        <p className="text-xs text-green-600">Selected images will appear in the final report</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
-            {/* Generate Button - Only show on Page 5 (last page) */}
+            {/* Generate Button - Only show on Page 6 (last page) */}
             <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-              {currentPage === 5 ? (
+              {currentPage === totalPages ? (
                 <button 
                   type="button"
                   onClick={handleSubmit}
@@ -998,10 +1150,15 @@ const MultiStepForm: React.FC = () => {
               ) : (
                 <div className="text-center py-4">
                   <p className="text-sm text-gray-600 mb-3">
-                    {currentPage === 1 ? 'Fill in the client information above' : currentPage === 2 ? 'Review the static content' : currentPage === 3 ? 'Review service report details' : 'Review chimney type details'}
+                    {currentLogicalStep === 1 ? 'Fill in the client information above' : 
+                     currentLogicalStep === 2 ? 'Review the static content' : 
+                     currentLogicalStep === 3 ? 'Review service report details' : 
+                     currentLogicalStep === 4 ? 'Review chimney type details' : 
+                     currentLogicalStep === 5 ? 'Review invoice details' : 
+                     'Select project images for the report'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Navigate to Page 5 to generate your report
+                    {currentPage < totalPages ? 'Navigate through all pages to complete your report' : 'All pages completed - ready to generate report'}
                   </p>
                 </div>
               )}
@@ -1062,11 +1219,19 @@ const MultiStepForm: React.FC = () => {
                   updateInvoiceData={(data) => updateFormData({ invoiceData: data })}
                   currentInvoicePage={1}
                 />
-              ) : currentPage > 5 ? (
+              ) : isInvoicePage(currentPage) ? (
                 <Page5 
                   invoiceData={formData.invoiceData} 
                   updateInvoiceData={(data) => updateFormData({ invoiceData: data })}
                   currentInvoicePage={currentPage - 4}
+                  isPDF={false}
+                />
+              ) : isImagePage(currentPage) ? (
+                <Page6 
+                  scrapedImages={formData.scrapedImages || []}
+                  selectedImages={formData.selectedImages || []}
+                  onImageSelection={handleImageSelection}
+                  isPDF={false}
                 />
               ) : null}
             </div>

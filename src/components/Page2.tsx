@@ -29,41 +29,34 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
     <div className="bg-white grid justify-items-center [align-items:start] w-full">
       <div className="bg-white w-[595px] h-[842px]">
         <div className="relative w-[546px] h-[790px] top-[26px] left-[25px]" style={mainContainerStyle}>
-          <p className="absolute w-[487px] top-[370px] left-12 [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[15px] tracking-[0] leading-[21px]">
-            Virginia Class A Contractor # 2705139016 (Expires March 31,
+          <p className="absolute w-[487px] top-[370px] left-12 leading-relaxed [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[15px] tracking-[0] leading-[21px]">
+            Virginia Class A Contractor # 2705139016 (Expires March 31,2027)
             <br />
-            2027) Master H.V.A.C. # 2710076347 (Expires September 30,
+             Master H.V.A.C. # 2710076347 (Expires September 30,2027)
             <br />
-            2027)
+            License Professional Engineer # 0402032901 (Expires January 31,2027)
             <br />
-            License Professional Engineer # 0402032901 (Expires January 31,
+            Business Engineering Entity # 0407004891 (Expires December 31,2027)
             <br />
-            2027)
+            Fireplace Research Investigation Research &amp; Education Certified Inspector
             <br />
-            Business Engineering Entity # 0407004891 (Expires December 31,
+            Workers Comp: Brickfield Mutual Insurance Co. WCS3014610 (Expires July 1, 2027)
             <br />
-            2027)
-            <br />
-            Fireplace Research Investigation Research &amp; Education Certified
-            Inspector
-            <br />
-            Workers Comp: Brickfield Mutual Insurance Co. WCS3014610
-            <br />
-            (Expires July 1, 2027)
-            <br />
+           
+            
             Commercial General Liability Insurance: Selective Insurance
-            <br />S 2447314 (Expires July 1, 2027)
+            S 2447314 (Expires July 1, 2027)
             <br />
             Automobile Liability Insurance: Selective Insurance S 2447314
-            <br />
+
             (Expires July 1, 2027)
             <br />
             Umbrella Liability Insurance: Selective Insurance S 2447314
-            <br />
+           
             (Expires July 1, 2027)
             <br />
             State Corporation Commission: Entity ID: 05700364: A Step in
-            <br />
+            
             Time, Incorporate
           </p>
 
