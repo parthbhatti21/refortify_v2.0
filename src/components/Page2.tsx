@@ -29,36 +29,18 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
     <div className="bg-white grid justify-items-center [align-items:start] w-full">
       <div className="bg-white w-[595px] h-[842px]">
         <div className="relative w-[546px] h-[790px] top-[26px] left-[25px]" style={mainContainerStyle}>
-          <p className="absolute w-[487px] top-[370px] left-12 leading-relaxed [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[15px] tracking-[0] leading-[21px]">
-            Virginia Class A Contractor # 2705139016 (Expires March 31,2027)
-            <br />
-             Master H.V.A.C. # 2710076347 (Expires September 30,2027)
-            <br />
-            License Professional Engineer # 0402032901 (Expires January 31,2027)
-            <br />
-            Business Engineering Entity # 0407004891 (Expires December 31,2027)
-            <br />
-            Fireplace Research Investigation Research &amp; Education Certified Inspector
-            <br />
-            Workers Comp: Brickfield Mutual Insurance Co. WCS3014610 (Expires July 1, 2027)
-            <br />
-           
-            
-            Commercial General Liability Insurance: Selective Insurance
-            S 2447314 (Expires July 1, 2027)
-            <br />
-            Automobile Liability Insurance: Selective Insurance S 2447314
-
-            (Expires July 1, 2027)
-            <br />
-            Umbrella Liability Insurance: Selective Insurance S 2447314
-           
-            (Expires July 1, 2027)
-            <br />
-            State Corporation Commission: Entity ID: 05700364: A Step in
-            
-            Time, Incorporate
-          </p>
+          <div className="absolute w-[487px] top-[370px] left-12 [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[14px] tracking-[0] space-y-4">
+            <div>Virginia Class A Contractor # 2705139016 (Expires March 31,2027)</div>
+            <div>Master H.V.A.C. # 2710076347 (Expires September 30,2027)</div>
+            <div>License Professional Engineer # 0402032901 (Expires January 31,2027)</div>
+            <div>Business Engineering Entity # 0407004891 (Expires December 31,2027)</div>
+            <div>Fireplace Research Investigation Research &amp; Education Certified Inspector</div>
+            <div>Workers Comp: Brickfield Mutual Insurance Co. WCS3014610 (Expires July 1, 2027)</div>
+            <div>Commercial General Liability Insurance: Selective Insurance S 2447314 (Expires July 1, 2027)</div>
+            <div>Automobile Liability Insurance: Selective Insurance S 2447314 (Expires July 1, 2027)</div>
+            <div>Umbrella Liability Insurance: Selective Insurance S 2447314 (Expires July 1, 2027)</div>
+            <div>State Corporation Commission: Entity ID: 05700364: A Step in Time, Incorporate</div>
+          </div>
 
           <img
             className="absolute w-[406px] h-[209px] top-[147px] left-[70px] aspect-[1.94] object-cover"

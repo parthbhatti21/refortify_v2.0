@@ -107,7 +107,7 @@ export const Page6: React.FC<Page6Props> = ({
               className={isPDF ? "" : "absolute top-[200px] bottom-[120px] left-[60px] right-[60px]"}
               style={isPDF ? {
                 position: 'absolute',
-                top: '200px',
+                top: '100px',
                 bottom: '120px',
                 left: '70px',
                 right: '40px',
@@ -119,7 +119,7 @@ export const Page6: React.FC<Page6Props> = ({
                 <div 
                   className="w-full h-full"
                   style={{
-                    padding: isPDF ? '20px' : '16px',
+                    padding: isPDF ? '10px' : '16px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
@@ -127,7 +127,14 @@ export const Page6: React.FC<Page6Props> = ({
                 >
                 {localSelectedImages.length === 1 ? (
                   // Single image - centered
-                  <div className="relative" style={{ maxWidth: isPDF ? '100%' : '80%', maxHeight: isPDF ? '100%' : '80%' }}>
+                  <div 
+                    className="relative" 
+                    style={{ 
+                      maxWidth: isPDF ? '80%' : '70%', 
+                      maxHeight: isPDF ? '80%' : '70%',
+                      marginTop: isPDF ? '70px' : '0'
+                    }}
+                  >
                     <img
                       src={localSelectedImages[0].url}
                       alt={localSelectedImages[0].alt || 'Project image 1'}
@@ -137,9 +144,6 @@ export const Page6: React.FC<Page6Props> = ({
                         target.style.display = 'none';
                       }}
                     />
-                    <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                      Image 1
-                    </div>
                   </div>
                 ) : localSelectedImages.length === 2 ? (
                   // Two images - stacked vertically centered
@@ -149,18 +153,20 @@ export const Page6: React.FC<Page6Props> = ({
                       maxWidth: isPDF ? '85%' : '70%',
                       maxHeight: isPDF ? '95%' : '90%',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      marginTop: isPDF ? '40px' : '0'
                     }}
                   >
                     {localSelectedImages.map((image, index) => (
-                      <div key={image.id} className="relative">
+                      <div key={image.id} className="relative top-[10px]" style={{ top: isPDF ? '25px': '0'}}>
                         <img
                           src={image.url}
                           alt={image.alt || `Project image ${index + 1}`}
                           className="shadow-md rounded-lg object-cover"
                           style={{
-                            maxWidth: isPDF ? '400px' : '500px',
-                            maxHeight: isPDF ? '200px' : '250px',
+                            maxWidth: isPDF ? '450px' : '500px',
+                            maxHeight: isPDF ? '250px' : '250px',
+                        
                             width: 'auto',
                             height: 'auto'
                           }}
@@ -169,9 +175,6 @@ export const Page6: React.FC<Page6Props> = ({
                             target.style.display = 'none';
                           }}
                         />
-                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                          Image {index + 1}
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -200,9 +203,6 @@ export const Page6: React.FC<Page6Props> = ({
                             target.style.display = 'none';
                           }}
                         />
-                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                          Image {index + 1}
-                        </div>
                       </div>
                     ))}
                     {/* Empty space for 4th position */}
@@ -233,9 +233,6 @@ export const Page6: React.FC<Page6Props> = ({
                             target.style.display = 'none';
                           }}
                         />
-                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                          Image {index + 1}
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -264,8 +261,7 @@ export const Page6: React.FC<Page6Props> = ({
             style={isPDF ? {
               position: 'absolute',
               top: '0',
-              left: '50%',
-              transform: 'translateX(-50%)'
+              left: '22.5px'
             } : {}}
           >
             <div className="relative w-[536px] h-[780px] top-[3px] left-[3px] border-2 border-solid border-[#722420]" />

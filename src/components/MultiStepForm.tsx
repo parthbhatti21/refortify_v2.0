@@ -6,6 +6,7 @@ import Page3 from './Page3';
 import Page4 from './Page4';
 import Page5 from './Page5';
 import Page6 from './Page6';
+import Page7 from './Page7';
 import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
 
@@ -35,11 +36,88 @@ export interface FormData {
       price: string;
     }>;
   };
+  repairEstimatePages?: Array<{
+    id: string;
+    reviewImage: string;
+    repairEstimateData: {
+      manualEntry: boolean;
+      rows: Array<{
+        id: string;
+        srNo: number;
+        description: string;
+        unit: number;
+        price: number;
+        isManual: boolean; // Individual row entry mode
+        recommendation?: string; // Recommendation text for predefined items
+      }>;
+    };
+  }>;
+  usedReviewImages?: string[]; // Track used images to remove from available list
 }
+
+const dropdownOptions = [
+  {
+    id: '1',
+    srNo: 1,
+    description: 'Install Multi-Flue Chimney Cap With Manf Lifetime Warranty',
+    unit: 1,
+    price: 340,
+    recommendation: 'REPLACE SINGLE FLUE CHIMNEY CAP Virginia Residential code R1003.9.1 states: Chimney caps. Masonry chimneys shall have a concrete, metal or stone cap….Chimney caps are designed to keep animals, rain, leaves and wind induced downdrafts from entering the chimney. They also help prevent hot embers from drafting out of the flue and landing on the roof. Chimney caps are required by modern building codes.A Step in Time recommends replacing chimney caps that are missing, rusted, damaged, improperly sized, improperly bolted or improperly screened as required by Virginia building codes.'
+  },
+  {
+    id: '2',
+    srNo: 2,
+    description: 'Replace Top Flue Tile',
+    unit: 1,
+    price: 990,
+    recommendation: 'INSTALL MUILTFLUE CHIMNEY CAPVirginia Residential code R1003.9.1 states: Chimney caps. Masonry chimneys shall have a concrete, metal or stone cap….Chimney caps are designed to keep animals, rain, leaves and wind induced downdrafts from entering the chimney. They also help prevent hot embers from drafting out of the flue and landing on the roof. Chimney caps are required by modern building codes.A Step in Time recommends replacing chimney caps that are missing, rusted, damaged, improperly sized, improperly bolted or improperly screened as required by Virginia building codes.'
+  },
+  {
+    id: '3',
+    srNo: 3,
+    description: 'Parge Top Flue Tile Joint With Refractory Mortar',
+    unit: 1,
+    price: 890,
+    recommendation: 'REPLACE TOP FLUE LINER Virginia Residential code G2427.5.2 require masonry chimneys to be installed in accordance with NFPA 211. Virginia Residential Code R1003.9.1 require flue liners to be installed in accordance with ASTM C1283. NFPA 211 14.9 require damaged or deteriorated liners to be replaced, repaired or relined. NFPA 211 7.2.13.3 requires the top flue liner to extend above the crown at least 2 inches. ASTM C1283 8.5 specifies the flue shall not extend father than 4 inches above the chimney crown.A Step in Time recommends replacement of top flue liners if the liner is less than 2 inches above the crown so that chimney caps can be properly fastened to the flue tile. A Step in Time recommends replacing flues that extend above 4 inches if they are part of a multiflued chimney so a proper cap can be installed to allow appropriate draft. A Step in Time recommends replacement of damaged or deteriorated top flue liners, depending on the extent of damage and the ability to contain combustion and house a chimney cap.'
+  },
+  {
+    id: '4',
+    srNo: 4,
+    description: 'Fireguard All Flue Liner Joints',
+    unit: 1,
+    price: 290,
+    recommendation: 'REPAIR GAPPED VOIDED JOINT BETWEEN 1ST AND 2ND FLUE TILESVirginia Building code R1003.12 require clay flue liners to be installed in accordance with ASTM C1283. ASTM C1283 states  "Flue liners shall be maintained by filling any voids in the interior, or hot face, with medium duty water insoluble refractory mortar conforming to Test Method C199."A Step in Time recommends repairing any voids between flue liners with approved material. This material may be products like FIREGUARD LINER REPAIR or refractory mortar conforming to C199.'
+  },
+  {
+    id: '5',
+    srNo: 5,
+    description: 'Install Stainless Steel Chimney Liner',
+    unit: 1,
+    price: 3500,
+    recommendation: 'REPAIR GAPPED VOIDED JOINTS BETWEEN FLUE LINERSVirginia Building code R1003.12 require clay flue liners to be installed in accordance with ASTM C1283. ASTM C1283 states  "Flue liners shall be maintained by filling any voids in the interior, or hot face, with medium duty water insoluble refractory mortar conforming to Test Method C199."A Step in Time recommends repairing any voids between flue liners with approved material. This material may be products like FIREGUARD LINER REPAIR or refractory mortar conforming to C199.'
+  },
+  {
+    id: '6',
+    srNo: 6,
+    description: 'Install Stainless Steel Chimney Liner To Repair Damaged Chimney Fire Liner',
+    unit: 1,
+    price: 4900,
+    recommendation: 'CHIMNEY LINERS ARE OFFSET & REQUIRE RELININGVirginia Building code R1003.12 require clay flue liners to be installed in accordance with ASTM C1283. ASTM C1283 5.4 states: Flue Liners shall be installed each flue liner carefully bedded on the previous one, using water insoluble refractory mortar complying with Test Method C199 (medium duty). All joints of the flue liner shall be 1/16 inch to 1/8 inch thick and struck flush to produce a straight, smooth, fully aligned flue. Liners shall be placed in such a manner as to minimize ledges or steps within the flue passageway.The flue liners are offset which can cause creosote and flue gases to escape into the chimney chase. This can lead to fire hazards and CO migration into the residence. A Step in Time recommends relining with a UL listed stainless steel chimney liner.'
+  },
+  {
+    id: '7',
+    srNo: 7,
+    description: 'Repair Chimney Fire Damaged Flue Tiles With Fireguard Chimney Liner Repair',
+    unit: 1,
+    price: 4900,
+    recommendation: 'EVIDENCE OF CHIMNEY FIRE - OFFSET TILESVirginia Building code R1003.12 require clay flue liners to be installed in accordance with ASTM C1283. ASTM C1283 5.4 states: Flue Liners shall be installed each flue liner carefully bedded on the previous one, using water insoluble refractory mortar complying with Test Method C199 (medium duty). All joints of the flue liner shall be 1/16 inch to 1/8 inch thick and struck flush to produce a straight, smooth, fully aligned flue. Liners shall be placed in such a manner as to minimize ledges or steps within the flue passageway.CHIMNEY FIRES OVERHEAT THE CHIMNEY LINER. If the chimney liner overheats, the thermal expansion of the chimney liner causes the liners to offset. The bottom of the liner is pressed on the supporting brick at the top of the smoke chamber. The top of the chimney liner is encased by the chimney crown. When the liner overheats from a chimney fire, it thermally expands and causes the entire liner to buckle, which results in offset flue tiles.Flue liners are designed to contain creosote and flue gases to safely expel to the atmosphere. Offset tiles will allow gases and creosote to transfer to the inner chimney chase, which can result in potential fire hazards and CO poisoning into the residence. A Step in Time recommends the installation of a stainless steel chimney liner to repair the damaged offset flue liners. '
+  }
+];
 
 const MultiStepForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'scrape' | 'form'>('scrape');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentRecommendationPageIndex, setCurrentRecommendationPageIndex] = useState<number>(0);
   const [formData, setFormData] = useState<FormData>({
     clientName: '',
     clientAddress: '',
@@ -53,18 +131,25 @@ const MultiStepForm: React.FC = () => {
       paymentMethod: '',
       paymentNumber: '',
       rows: []
-    }
+    },
+    repairEstimatePages: [],
+    usedReviewImages: []
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [preferGoogleDocs, setPreferGoogleDocs] = useState(true); // User preference for PDF viewing
+  const [includeRepairEstimate, setIncludeRepairEstimate] = useState(true); // Page 7 is always included
   const [cropData, setCropData] = useState<{
     x: number;
     y: number;
     width: number;
     height: number;
   } | null>(null);
+  const [showReviewImageSelector, setShowReviewImageSelector] = useState(false);
+  const [showAddRowModal, setShowAddRowModal] = useState(false);
+  const [showChangeImageModal, setShowChangeImageModal] = useState(false);
+  const [imageChangePageIndex, setImageChangePageIndex] = useState<number>(-1);
 
   // Block mobile devices until they switch to desktop view
   useEffect(() => {
@@ -86,6 +171,108 @@ const MultiStepForm: React.FC = () => {
 
   const updateFormData = (data: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...data }));
+  };
+
+  // Helper functions for managing recommendation pages
+  const getCurrentRecommendationPage = () => {
+    const pages = formData.repairEstimatePages || [];
+    if (isRecommendationPage(currentPage)) {
+      const pageIndex = getRecommendationPageIndex(currentPage);
+      return pages[pageIndex];
+    }
+    return pages[currentRecommendationPageIndex];
+  };
+
+  const addNewRecommendationPage = (reviewImage: string) => {
+    const newPage = {
+      id: Date.now().toString(),
+      reviewImage,
+      repairEstimateData: {
+        manualEntry: false,
+        rows: []
+      }
+    };
+
+    const updatedPages = [...(formData.repairEstimatePages || []), newPage];
+    const usedImages = [...(formData.usedReviewImages || []), reviewImage];
+
+    updateFormData({
+      repairEstimatePages: updatedPages,
+      usedReviewImages: usedImages
+    });
+
+    setCurrentRecommendationPageIndex(updatedPages.length - 1);
+  };
+
+  const updateCurrentRecommendationPage = (updates: any) => {
+    const pages = [...(formData.repairEstimatePages || [])];
+    if (pages[currentRecommendationPageIndex]) {
+      pages[currentRecommendationPageIndex] = {
+        ...pages[currentRecommendationPageIndex],
+        ...updates
+      };
+      updateFormData({ repairEstimatePages: pages });
+    }
+  };
+
+  const getAvailableImages = () => {
+    const usedImages = formData.usedReviewImages || [];
+    return (formData.scrapedImages || []).filter((img: any) => !usedImages.includes(img.url));
+  };
+
+  const deleteRecommendationPage = (pageIndex: number) => {
+    const pages = formData.repairEstimatePages || [];
+    const pageToDelete = pages[pageIndex];
+    
+    if (pageToDelete) {
+      // Remove the page
+      const updatedPages = pages.filter((_, index) => index !== pageIndex);
+      
+      // Remove the image from used images
+      const updatedUsedImages = (formData.usedReviewImages || []).filter(
+        img => img !== pageToDelete.reviewImage
+      );
+      
+      updateFormData({
+        repairEstimatePages: updatedPages,
+        usedReviewImages: updatedUsedImages
+      });
+      
+      // Adjust current page index if needed
+      if (currentRecommendationPageIndex >= updatedPages.length && updatedPages.length > 0) {
+        setCurrentRecommendationPageIndex(updatedPages.length - 1);
+      } else if (updatedPages.length === 0) {
+        setCurrentRecommendationPageIndex(0);
+      }
+    }
+  };
+
+  const changePageImage = (pageIndex: number, newImageUrl: string) => {
+    const pages = [...(formData.repairEstimatePages || [])];
+    const oldImageUrl = pages[pageIndex]?.reviewImage;
+    
+    if (pages[pageIndex]) {
+      // Update the page image
+      pages[pageIndex].reviewImage = newImageUrl;
+      
+      // Update used images list
+      let updatedUsedImages = [...(formData.usedReviewImages || [])];
+      
+      // Remove old image from used list
+      if (oldImageUrl) {
+        updatedUsedImages = updatedUsedImages.filter(img => img !== oldImageUrl);
+      }
+      
+      // Add new image to used list
+      if (!updatedUsedImages.includes(newImageUrl)) {
+        updatedUsedImages.push(newImageUrl);
+      }
+      
+      updateFormData({
+        repairEstimatePages: pages,
+        usedReviewImages: updatedUsedImages
+      });
+    }
   };
 
   const handleImageSelection = (selectedImages: ImageItem[]) => {
@@ -127,7 +314,9 @@ const MultiStepForm: React.FC = () => {
         paymentMethod: '',
         paymentNumber: '',
         rows: []
-      }
+      },
+      repairEstimatePages: [],
+      usedReviewImages: []
     });
     setCurrentStep('form');
   };
@@ -292,13 +481,16 @@ const MultiStepForm: React.FC = () => {
   };
   
   const totalInvoicePages = calculateSmartInvoicePages();
-  const totalPages = 5 + totalInvoicePages; // 5 base pages + invoice pages + 1 image page
+    const totalRecommendationPages = formData.repairEstimatePages?.length || 0;
+    // Always include at least one page for step 7 (recommendation setup), plus any additional recommendation pages
+    const totalPages = 4 + totalInvoicePages + 1 + Math.max(1, totalRecommendationPages); // Pages 1-4 + invoice pages + Page 6 (images) + recommendation pages (min 1)
   
-  // Helper function to determine the logical step (1-6) based on current page
+  // Helper function to determine the logical step (1-7) based on current page
   const getLogicalStep = (pageNum: number): number => {
     if (pageNum <= 4) return pageNum; // Pages 1-4 are steps 1-4
     if (pageNum <= 4 + totalInvoicePages) return 5; // All invoice pages are step 5
-    return 6; // Image page is step 6
+    if (pageNum === 4 + totalInvoicePages + 1) return 6; // Image page is step 6
+    return 7; // Recommendation pages are step 7
   };
   
   // Helper function to check if we're on an invoice page
@@ -308,7 +500,23 @@ const MultiStepForm: React.FC = () => {
   
   // Helper function to check if we're on the image page
   const isImagePage = (pageNum: number): boolean => {
-    return pageNum === totalPages;
+    return pageNum === 4 + totalInvoicePages + 1;
+  };
+  
+  // Helper function to check if we're on a recommendation page
+  const isRecommendationPage = (pageNum: number): boolean => {
+    return pageNum > 4 + totalInvoicePages + 1; // After image page
+  };
+  
+  // Helper function to get recommendation page index
+  const getRecommendationPageIndex = (pageNum: number): number => {
+    const index = pageNum - (4 + totalInvoicePages + 1) - 1; // Zero-based index
+    return Math.max(0, index); // Ensure non-negative
+  };
+  
+  // Helper function to check if we're on the first recommendation page (setup page)
+  const isRecommendationSetupPage = (pageNum: number): boolean => {
+    return pageNum === 4 + totalInvoicePages + 2 && totalRecommendationPages === 0; // First page after images, no pages created
   };
   
   const currentLogicalStep = getLogicalStep(currentPage);
@@ -421,11 +629,19 @@ const MultiStepForm: React.FC = () => {
       React.createElement(Page4, { chimneyType: formData.chimneyType, isPDF: true }) :
       pageNumber >= 5 && pageNumber <= 4 + totalInvoicePages ?
       React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: pageNumber - 4 }) :
-      pageNumber === totalPages ?
+      pageNumber === 4 + totalInvoicePages + 1 ?
       React.createElement(Page6, { 
         isPDF: true, 
         scrapedImages: formData.scrapedImages || [], 
         selectedImages: formData.selectedImages || [] 
+      }) :
+      isRecommendationPage(pageNumber) ?
+      React.createElement(Page7, { 
+        isPDF: true, 
+        scrapedImages: formData.scrapedImages || [], 
+        selectedImages: formData.selectedImages || [],
+        repairEstimateData: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.repairEstimateData || { manualEntry: false, rows: [] },
+        reviewImage: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.reviewImage || ''
       }) :
       React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 });
     
@@ -603,9 +819,18 @@ const MultiStepForm: React.FC = () => {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   currentLogicalStep >= 6 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  6
+                  {currentLogicalStep > 6 ? '✓' : '6'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Images</span>
+              </div>
+              <div className="w-12 h-1 bg-gray-200"></div>
+              <div className={`flex items-center ${currentLogicalStep >= 7 ? 'text-[#722420]' : 'text-gray-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentLogicalStep >= 7 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  7
+                </div>
+                <span className="ml-2 text-sm font-medium">Repair Est.</span>
               </div>
             </div>
           </div>
@@ -620,7 +845,8 @@ const MultiStepForm: React.FC = () => {
                  currentLogicalStep === 3 ? 'Page 3 - Service Report' : 
                  currentLogicalStep === 4 ? 'Page 4 - Chimney Type' : 
                  currentLogicalStep === 5 ? `Page ${currentPage} - Invoice${totalInvoicePages > 1 ? ` (${currentPage - 4}/${totalInvoicePages})` : ''}` : 
-                 'Page 6 - Project Images'}
+                 currentLogicalStep === 6 ? 'Page 6 - Project Images' :
+                 'Page 7 - Repair Estimate'}
               </h3>
               <button
                 onClick={handleBackToScrape}
@@ -1034,7 +1260,7 @@ const MultiStepForm: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : isImagePage(currentPage) ? (
               // Page 6 - Image Selection Interface
               <div className="space-y-4">
                 <div className="mb-4">
@@ -1133,10 +1359,292 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Generate Button - Only show on Page 6 (last page) */}
+              </div>
+            ) : currentLogicalStep === 7 ? (
+              // Page 7 - Repair Estimate Interface
+              <div className="space-y-4">
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                    Repair Estimate Configuration
+                  </h4>
+                  
+                  {/* Multiple Pages Navigation */}
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-medium text-gray-700">Recommendation Pages</h5>
+                      <button
+                        onClick={() => setShowReviewImageSelector(true)}
+                        disabled={getAvailableImages().length === 0}
+                        className={`px-3 py-1.5 rounded text-sm transition-colors ${
+                          getAvailableImages().length > 0
+                            ? 'bg-[#722420] text-white hover:bg-[#5a1d1a]' 
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        + Add New Page
+                      </button>
+                    </div>
+                    
+                    {formData.repairEstimatePages && formData.repairEstimatePages.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {formData.repairEstimatePages.map((page, index) => (
+                          <div key={page.id} className="relative group">
+                            <button
+                              onClick={() => setCurrentRecommendationPageIndex(index)}
+                              className={`px-3 py-2 rounded text-sm transition-colors ${
+                                index === currentRecommendationPageIndex
+                                  ? 'bg-[#722420] text-white'
+                                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              Page {index + 1}
+                              <div className="text-xs opacity-75 mt-1">
+                                {page.repairEstimateData.rows.length} items
+                              </div>
+                            </button>
+                            
+                            {/* Page Actions */}
+                            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setImageChangePageIndex(index);
+                                  setShowChangeImageModal(true);
+                                }}
+                                className="w-6 h-6 bg-blue-500 text-white rounded-full text-xs hover:bg-blue-600 flex items-center justify-center"
+                                title="Change Image"
+                              >
+                                🔄
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm('Are you sure you want to delete this page?')) {
+                                    deleteRecommendationPage(index);
+                                  }
+                                }}
+                                className="w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 flex items-center justify-center"
+                                title="Delete Page"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No recommendation pages created yet.</p>
+                        <p className="text-sm mt-1">Click "Add New Page" to create your first recommendation page.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Table Management */}
+                {getCurrentRecommendationPage() && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h5 className="font-medium text-gray-700">Add Items</h5>
+                      <button
+                        onClick={() => setShowAddRowModal(true)}
+                        className="px-3 py-1.5 bg-[#722420] text-white rounded text-sm hover:bg-[#5a1d1a] transition-colors"
+                      >
+                        + Add Row
+                      </button>
+                    </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Description</th>
+                          <th className="px-3 py-2 text-left">Unit</th>
+                          <th className="px-3 py-2 text-left">Price</th>
+                          <th className="px-3 py-2 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(getCurrentRecommendationPage()?.repairEstimateData.rows || []).map((row: any, index: number) => (
+                          <tr key={row.id}>
+                            <td className="px-3 py-2">
+                              {row.isManual ? (
+                                <input
+                                  type="text"
+                                  value={row.description}
+                                  onChange={(e) => {
+                                    const currentPage = getCurrentRecommendationPage();
+                                    if (currentPage) {
+                                      const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                        r.id === row.id ? { ...r, description: e.target.value } : r
+                                      );
+                                      updateCurrentRecommendationPage({
+                                        repairEstimateData: {
+                                          ...currentPage.repairEstimateData,
+                                          rows: updatedRows
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  className="w-full p-1 border rounded text-sm"
+                                  placeholder="Enter description"
+                                />
+                              ) : (
+                                <select
+                                  value={row.description ? dropdownOptions.find(opt => opt.description === row.description)?.id || "" : ""}
+                                  onChange={(e) => {
+                                    const selectedOption = dropdownOptions.find(opt => opt.id === e.target.value);
+                                    const currentPage = getCurrentRecommendationPage();
+                                    if (selectedOption && currentPage) {
+                                      const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                        r.id === row.id ? { 
+                                          ...r, 
+                                          description: selectedOption.description,
+                                          unit: selectedOption.unit,
+                                          price: selectedOption.price,
+                                          recommendation: selectedOption.recommendation
+                                        } : r
+                                      );
+                                      updateCurrentRecommendationPage({
+                                        repairEstimateData: {
+                                          ...currentPage.repairEstimateData,
+                                          rows: updatedRows
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  className="w-full p-1 border rounded text-sm"
+                                >
+                                  <option value="">Select option...</option>
+                                  {dropdownOptions.map((option) => (
+                                    <option key={option.id} value={option.id}>
+                                      {option.description}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                value={row.unit}
+                            onChange={(e) => {
+                              const currentPage = getCurrentRecommendationPage();
+                              if (currentPage) {
+                                const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                  r.id === row.id ? { ...r, unit: parseInt(e.target.value) || 0 } : r
+                                );
+                                updateCurrentRecommendationPage({
+                                  repairEstimateData: {
+                                    ...currentPage.repairEstimateData,
+                                    rows: updatedRows
+                                  }
+                                });
+                              }
+                            }}
+                                className="w-full p-1 border rounded text-sm"
+                                min="0"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                value={row.price}
+                            onChange={(e) => {
+                              const currentPage = getCurrentRecommendationPage();
+                              if (currentPage) {
+                                const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                  r.id === row.id ? { ...r, price: parseInt(e.target.value) || 0 } : r
+                                );
+                                updateCurrentRecommendationPage({
+                                  repairEstimateData: {
+                                    ...currentPage.repairEstimateData,
+                                    rows: updatedRows
+                                  }
+                                });
+                              }
+                            }}
+                                className="w-full p-1 border rounded text-sm"
+                                min="0"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                            onClick={() => {
+                              const currentPage = getCurrentRecommendationPage();
+                              if (currentPage) {
+                                const updatedRows = currentPage.repairEstimateData.rows.filter((r: any) => r.id !== row.id);
+                                updateCurrentRecommendationPage({
+                                  repairEstimateData: {
+                                    ...currentPage.repairEstimateData,
+                                    rows: updatedRows
+                                  }
+                                });
+                              }
+                            }}
+                                className="px-2 py-1 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-xs"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {(!getCurrentRecommendationPage()?.repairEstimateData.rows || getCurrentRecommendationPage()?.repairEstimateData.rows.length === 0) && (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+                              No items added yet. Click "Add Row" to add repair items.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                )}
+
+                {/* Review Image Selection */}
+                <div className="space-y-3">
+                  <h5 className="font-medium text-gray-700">Review Image</h5>
+                  <div className="flex gap-4 items-center">
+                    <button
+                      onClick={() => setShowReviewImageSelector(true)}
+                      className="px-4 py-2 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] transition-colors"
+                      disabled={!formData.scrapedImages || formData.scrapedImages.length === 0}
+                    >
+                      Select Image for Review
+                    </button>
+                    {false && (
+                      <button
+                        onClick={() => {}}
+                        className="px-3 py-1 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-sm"
+                      >
+                        Remove Image
+                      </button>
+                    )}
+                  </div>
+                  {false ? (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-green-600">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-800">Review image selected</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                      <p>No images available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Generate Button - Only show on last page */}
             <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
               {currentPage === totalPages ? (
                 <button 
@@ -1155,7 +1663,8 @@ const MultiStepForm: React.FC = () => {
                      currentLogicalStep === 3 ? 'Review service report details' : 
                      currentLogicalStep === 4 ? 'Review chimney type details' : 
                      currentLogicalStep === 5 ? 'Review invoice details' : 
-                     'Select project images for the report'}
+                     currentLogicalStep === 6 ? 'Select project images for the report' :
+                     'Configure repair estimate table'}
                   </p>
                   <p className="text-xs text-gray-500">
                     {currentPage < totalPages ? 'Navigate through all pages to complete your report' : 'All pages completed - ready to generate report'}
@@ -1233,6 +1742,27 @@ const MultiStepForm: React.FC = () => {
                   onImageSelection={handleImageSelection}
                   isPDF={false}
                 />
+              ) : isRecommendationPage(currentPage) ? (
+                getCurrentRecommendationPage() ? (
+                  <Page7 
+                    scrapedImages={formData.scrapedImages || []}
+                    selectedImages={formData.selectedImages || []}
+                    onImageSelection={handleImageSelection}
+                    isPDF={false}
+                    repairEstimateData={getCurrentRecommendationPage()?.repairEstimateData}
+                    reviewImage={getCurrentRecommendationPage()?.reviewImage}
+                  />
+                ) : (
+                  // Show empty Page7 when no recommendation pages exist
+                  <Page7 
+                    scrapedImages={formData.scrapedImages || []}
+                    selectedImages={formData.selectedImages || []}
+                    onImageSelection={handleImageSelection}
+                    isPDF={false}
+                    repairEstimateData={{ manualEntry: false, rows: [] }}
+                    reviewImage=""
+                  />
+                )
               ) : null}
             </div>
             
@@ -1283,6 +1813,209 @@ const MultiStepForm: React.FC = () => {
                 onCancel={handleCropCancel}
                 aspectRatio={284/220} // Match the display dimensions in Page1
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Image Selection Modal */}
+      {showReviewImageSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Select Image for New Recommendation Page</h3>
+                <button
+                  onClick={() => setShowReviewImageSelector(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">Choose an image to create a new recommendation page</p>
+              {formData.usedReviewImages && formData.usedReviewImages.length > 0 && (
+                <p className="text-xs text-orange-600 mt-1">
+                  {formData.usedReviewImages.length} image(s) already used in other pages
+                </p>
+              )}
+            </div>
+            
+            <div className="p-4">
+              {getAvailableImages().length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {getAvailableImages().map((image, index) => (
+                    <div key={image.id} className="relative group">
+                      <img
+                        src={image.url}
+                        alt={`Available Image ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-[#722420] transition-colors"
+                        onClick={() => {
+                          addNewRecommendationPage(image.url);
+                          setShowReviewImageSelector(false);
+                        }}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to create page
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-lg mb-2">No more images available</p>
+                  <p className="text-sm">All scraped images have been used for recommendation pages</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Image Modal */}
+      {showChangeImageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Change Image for Page {imageChangePageIndex + 1}</h3>
+                <button
+                  onClick={() => {
+                    setShowChangeImageModal(false);
+                    setImageChangePageIndex(-1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">Choose a different image for this recommendation page</p>
+            </div>
+            
+            <div className="p-4">
+              {getAvailableImages().length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {getAvailableImages().map((image: any, index: number) => (
+                    <div key={image.id} className="relative group">
+                      <img
+                        src={image.url}
+                        alt={`Available Image ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-[#722420] transition-colors"
+                        onClick={() => {
+                          changePageImage(imageChangePageIndex, image.url);
+                          setShowChangeImageModal(false);
+                          setImageChangePageIndex(-1);
+                        }}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to change
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-lg mb-2">No available images</p>
+                  <p className="text-sm">All scraped images are currently in use</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Row Modal */}
+      {showAddRowModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Add Repair Item</h3>
+                <button
+                  onClick={() => setShowAddRowModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">Choose how you want to add the repair item</p>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <button
+                onClick={() => {
+                        const currentPage = getCurrentRecommendationPage();
+                        if (currentPage) {
+                          const newRow = {
+                            id: Date.now().toString(),
+                            srNo: currentPage.repairEstimateData.rows.length + 1,
+                            description: '',
+                            unit: 1,
+                            price: 0,
+                            isManual: true
+                          };
+                          updateCurrentRecommendationPage({
+                            repairEstimateData: {
+                              ...currentPage.repairEstimateData,
+                              rows: [...currentPage.repairEstimateData.rows, newRow]
+                            }
+                          });
+                        }
+                  setShowAddRowModal(false);
+                }}
+                className="w-full p-4 text-left border-2 border-gray-200 rounded-lg hover:border-[#722420] hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Custom Entry</h4>
+                    <p className="text-sm text-gray-600 mt-1">Enter your own description, unit, and price manually</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                        const currentPage = getCurrentRecommendationPage();
+                        if (currentPage) {
+                          const newRow = {
+                            id: Date.now().toString(),
+                            srNo: currentPage.repairEstimateData.rows.length + 1,
+                            description: '',
+                            unit: 1,
+                            price: 0,
+                            isManual: false
+                          };
+                          updateCurrentRecommendationPage({
+                            repairEstimateData: {
+                              ...currentPage.repairEstimateData,
+                              rows: [...currentPage.repairEstimateData.rows, newRow]
+                            }
+                          });
+                        }
+                  setShowAddRowModal(false);
+                }}
+                className="w-full p-4 text-left border-2 border-gray-200 rounded-lg hover:border-[#722420] hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">From Predefined List</h4>
+                    <p className="text-sm text-gray-600 mt-1">Choose from common repair items with preset pricing</p>
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
         </div>

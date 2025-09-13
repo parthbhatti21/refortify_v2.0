@@ -86,7 +86,7 @@ const Page5: FunctionComponent<Page5Props> = ({
 
           {/* Invoice ID */}
           <div className={styles.invoiceId}>
-          Invoice_id: {localData.invoiceNumber || ''}
+          Invoice: {localData.invoiceNumber || ''}
         </div>
 
           {/* Invoice Table */}
@@ -167,31 +167,31 @@ const Page5: FunctionComponent<Page5Props> = ({
                 return (
                   <div key={row.id} style={{ 
                     display: 'flex',
-                    minHeight: '40px',
+                    height: '30px',
                     marginBottom: '4px',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
                   }}>
                     <div style={{ 
                       flex: '1',
-                      padding: '12px 10px', 
-                      minHeight: '30px',
+                      padding: '8px 10px', 
+                      height: '30px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      lineHeight: '1.4',
+                      lineHeight: '1.2',
                       textAlign: 'center',
-                      wordWrap: 'break-word',
-                      whiteSpace: 'normal',
-                      maxWidth: '250px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                       backgroundColor: 'inherit'
                     }}>
                       {row.description}
                     </div>
                     <div style={{ 
                       width: '80px',
-                      padding: '12px 10px', 
+                      padding: '8px 10px', 
                       textAlign: 'center',
-                      minHeight: '30px',
+                      height: '30px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -201,9 +201,9 @@ const Page5: FunctionComponent<Page5Props> = ({
                     </div>
                     <div style={{ 
                       width: '100px',
-                      padding: '12px 10px', 
+                      padding: '8px 10px', 
                       textAlign: 'center', 
-                      minHeight: '30px',
+                      height: '30px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -213,9 +213,9 @@ const Page5: FunctionComponent<Page5Props> = ({
                     </div>
                     <div style={{ 
                       width: '100px',
-                      padding: '12px 10px', 
+                      padding: '8px 10px', 
                       textAlign: 'center', 
-                      minHeight: '30px',
+                      height: '30px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -232,40 +232,48 @@ const Page5: FunctionComponent<Page5Props> = ({
               {currentPageRows.length > 0 && currentInvoicePage === totalPages && (
                 <div style={{ 
                   display: 'flex',
+                  height: '25px',
                   backgroundColor: '#722420', 
                   color: 'white',
                   borderTop: '2px solid #722420',
                   fontWeight: '700'
                 }}>
-                  <div style={{ display: 'flex' , width: '50px', flex: '1'}}></div>
-                  <div style={{ display: 'flex' , width: '50px', flex: '1'}}></div>
                   <div style={{ 
                     flex: '1',
-                    padding: '15px 12px', 
+                    height: '30px',
+                    backgroundColor: '#722420'
+                  }}></div>
+                  <div style={{ 
+                    width: '80px',
+                    height: '30px',
+                    backgroundColor: '#722420'
+                  }}></div>
+                  <div style={{ 
+                    width: '100px',
+                    padding: '2px 6px', 
                     textAlign: 'right', 
-                    minHeight: '40px',
+                    height: '30px',
                     letterSpacing: '0.42px',
                     display: 'flex',
-                    alignItems: 'right',
-                    justifyContent: 'right',
-                    fontSize: '14px',
-                    fontWeight: '700',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    fontSize: '11px',
+                    fontWeight: '600',
                     backgroundColor: '#722420',
                     color: '#ffffff'
                   }}>
                     TOTAL :
                   </div>
                   <div style={{ 
-                    flex: '1',
                     width: '100px',
-                    padding: '15px 16px', 
+                    padding: '2px 6px', 
                     textAlign: 'center', 
-                    minHeight: '40px',
+                    height: '30px',
                     display: 'flex',
-                    alignItems: 'right',
+                    alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: '700',
+                    fontSize: '11px',
+                    fontWeight: '600',
                     backgroundColor: '#722420',
                     color: '#ffffff'
                   }}>
