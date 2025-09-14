@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useState, useRef, useEffect } from 'react';
-import styles from './Page5.module.css';
+import styles from './Step5.module.css';
 
 type InvoiceRow = {
   id: string;

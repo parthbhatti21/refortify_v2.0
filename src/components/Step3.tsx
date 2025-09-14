@@ -1,5 +1,5 @@
 import React from 'react';
-import './Page3.css';
+import './Step3.css';
 
 interface Page3Props {
   formData: {

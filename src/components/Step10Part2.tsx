@@ -7,12 +7,12 @@ interface Step10Part2Props {
 
 export const Step10Part2: React.FC<Step10Part2Props> = ({ isPDF = false, chimneyType = 'masonry' }) => {
   return (
-    <div className="bg-white grid justify-items-center [align-items:start] w-screen">
+    <div className="bg-white grid justify-items-center [align-items:start] w-full">
       <div className="bg-white w-[595px] h-[842px]">
         <div 
           className="relative w-[546px] h-[790px] top-[26px]"
           style={isPDF ? {
-            left: '-405px'
+            left: '22.5px'
           } : {
             left: '25px'
           }}
@@ -23,30 +23,11 @@ export const Step10Part2: React.FC<Step10Part2Props> = ({ isPDF = false, chimney
 
           <div 
             className="absolute w-[511px] h-[700px] top-[45px] left-[19px] flex items-center justify-center"
-            style={isPDF ? {
-              position: 'absolute',
-              width: '480px',
-              height: '669px',
-              top: '50px',
-              left: '33px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            } : {
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
           >
             <img 
               src="/Step10-2.png" 
               alt="Step 10 Part 2 documentation"
-              className="w-[120%] h-[120%] object-contain"
-              style={isPDF ? {
-                maxWidth: '120%',
-                maxHeight: '120%',
-                objectFit: 'contain'
-              } : {}}
+              className="w-[100%] h-[100%] object-contain"
             />
           </div>
         </div>

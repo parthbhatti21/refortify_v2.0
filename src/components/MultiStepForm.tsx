@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import Page1 from './Page1';
-import Page2 from './Page2';
-import Page3 from './Page3';
-import Page4 from './Page4';
-import Page5 from './Page5';
-import Page6 from './Page6';
-import Page7 from './Page7';
-import Page8 from './Page8';
-import Page9Part1 from './Page9-part1';
-import Page9Part2 from './Page9-part2';
-import Page9Part3 from './Page9-part3';
-import Page9Part4 from './Page9-part4';
+import Step1 from './Step1';
+import Step2 from './Step2';
+import Step3 from './Step3';
+import Step4 from './Step4';
+import Step5 from './Step5';
+import Step6 from './Step6';
+import Step7 from './Step7';
+import Step8 from './Step8';
+import Step9Part1 from './Step9-part1';
+import Step9Part2 from './Step9-part2';
+import Step9Part3 from './Step9-part3';
+import Step9Part4 from './Step9-part4';
 import Step10Part1 from './Step10Part1';
 import Step10Part2 from './Step10Part2';
 import DataScraper from './DataScraper';
@@ -403,7 +403,8 @@ const MultiStepForm: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [preferGoogleDocs, setPreferGoogleDocs] = useState(true); // User preference for PDF viewing
-  const [includeRepairEstimate, setIncludeRepairEstimate] = useState(true); // Page 7 is always included
+  const [includeRepairEstimate, setIncludeRepairEstimate] = useState(true); // Step 7 is always included
+  const [includedPages, setIncludedPages] = useState<Set<number>>(new Set()); // Will be initialized in useEffect
   const [cropData, setCropData] = useState<{
     x: number;
     y: number;
@@ -414,6 +415,106 @@ const MultiStepForm: React.FC = () => {
   const [showAddRowModal, setShowAddRowModal] = useState(false);
   const [showPredefinedModal, setShowPredefinedModal] = useState(false);
   const [showChangeImageModal, setShowChangeImageModal] = useState(false);
+
+  // Toggle page inclusion in PDF
+  const togglePageInclusion = (logicalStep: number) => {
+    setIncludedPages(prev => {
+      const newSet = new Set(prev);
+      
+      // For Steps 9 and 10, toggle all their parts
+      if (logicalStep === 9) {
+        // Toggle all Step 9 parts
+        const step9Pages = [];
+        for (let page = 1; page <= totalPages; page++) {
+          if (getLogicalStep(page) === 9) {
+            step9Pages.push(page);
+          }
+        }
+        
+        const isCurrentlyIncluded = step9Pages.some(page => newSet.has(page));
+        step9Pages.forEach(page => {
+          if (isCurrentlyIncluded) {
+            newSet.delete(page);
+          } else {
+            newSet.add(page);
+          }
+        });
+      } else if (logicalStep === 10) {
+        // Toggle all Step 10 parts
+        const step10Pages = [];
+        for (let page = 1; page <= totalPages; page++) {
+          if (getLogicalStep(page) === 10) {
+            step10Pages.push(page);
+          }
+        }
+        
+        const isCurrentlyIncluded = step10Pages.some(page => newSet.has(page));
+        step10Pages.forEach(page => {
+          if (isCurrentlyIncluded) {
+            newSet.delete(page);
+          } else {
+            newSet.add(page);
+          }
+        });
+      } else {
+        // For other steps, toggle the page for this logical step
+        const stepPage = getPageForLogicalStep(logicalStep);
+        if (newSet.has(stepPage)) {
+          newSet.delete(stepPage);
+        } else {
+          newSet.add(stepPage);
+        }
+      }
+      
+      return newSet;
+    });
+  };
+
+  // Check if a page is included in PDF
+  const isPageIncluded = (pageNumber: number) => {
+    return includedPages.has(pageNumber);
+  };
+
+  // Get the page number for a logical step
+  const getPageForLogicalStep = (logicalStep: number) => {
+    switch (logicalStep) {
+      case 1: return 1;
+      case 2: return 2;
+      case 3: return 3;
+      case 4: return 4;
+      case 5: return 5; // First invoice page
+      case 6: return 6; // First project image page
+      case 7: return 7; // First repair estimate page
+      case 8: return 8; // First inspection image page
+      case 9: return totalPages - (formData.chimneyType === 'prefabricated' ? 5 : 4); // First Step 9 page
+      case 10: return totalPages - 1; // First Step 10 page
+      default: return 1;
+    }
+  };
+
+  // Check if a logical step is included in PDF
+  const isLogicalStepIncluded = (logicalStep: number) => {
+    if (logicalStep === 9) {
+      // Check if any Step 9 part is included
+      for (let page = 1; page <= totalPages; page++) {
+        if (getLogicalStep(page) === 9 && includedPages.has(page)) {
+          return true;
+        }
+      }
+      return false;
+    } else if (logicalStep === 10) {
+      // Check if any Step 10 part is included
+      for (let page = 1; page <= totalPages; page++) {
+        if (getLogicalStep(page) === 10 && includedPages.has(page)) {
+          return true;
+        }
+      }
+      return false;
+    } else {
+      // For other steps, check the current page
+      return includedPages.has(currentPage);
+    }
+  };
 
   // Block mobile devices until they switch to desktop view
   useEffect(() => {
@@ -432,6 +533,7 @@ const MultiStepForm: React.FC = () => {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
 
   const updateFormData = (data: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...data }));
@@ -786,6 +888,15 @@ const MultiStepForm: React.FC = () => {
     const totalImagePages = getTotalImagePages();
     const totalPages = 4 + totalInvoicePages + 1 + Math.max(1, totalRecommendationPages) + totalImagePages + (formData.chimneyType === 'prefabricated' ? 4 : 3) + 2; // Pages 1-4 + invoice pages + Page 6 (images) + recommendation pages (min 1) + image pages + Page9 parts (3 for masonry, 4 for prefabricated) + Step10 parts (2 for both types)
   
+  // Initialize all pages as included by default
+  useEffect(() => {
+    const allPages = new Set<number>();
+    for (let page = 1; page <= totalPages; page++) {
+      allPages.add(page);
+    }
+    setIncludedPages(allPages);
+  }, [totalPages]);
+
   // Helper function to determine the logical step (1-10) based on current page
   const getLogicalStep = (pageNum: number): number => {
     if (pageNum <= 4) return pageNum; // Pages 1-4 are steps 1-4
@@ -803,7 +914,7 @@ const MultiStepForm: React.FC = () => {
     return pageNum >= 5 && pageNum <= 4 + totalInvoicePages;
   };
   
-  // Helper function to check if we're on the image page (Page 6)
+  // Helper function to check if we're on the image page (Step 6)
   const isImagePage6 = (pageNum: number): boolean => {
     return pageNum === 4 + totalInvoicePages + 1;
   };
@@ -1050,8 +1161,15 @@ const MultiStepForm: React.FC = () => {
     console.log('PDF Generation - Total Pages:', totalPages);
     console.log('PDF Generation - Invoice Data Rows:', formData.invoiceData?.rows?.length || 0);
     
-    // Generate all pages dynamically
+    // Generate only included pages
+    let pageCount = 0;
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      // Check if this page should be included in PDF
+      if (!isPageIncluded(pageNum)) {
+        console.log('Skipping PDF Page:', pageNum, '(excluded by user)');
+        continue;
+      }
+      
       console.log('Generating PDF Page:', pageNum);
       const pageCanvas = await generatePageCanvas(pageNum);
       const optimizedCanvas = createOptimizedCanvas(pageCanvas, 842, 1190);
@@ -1060,9 +1178,10 @@ const MultiStepForm: React.FC = () => {
       const compressionQuality = pageNum === 4 ? 0.9 : 0.78;
       const pageImgData = await compressImage(optimizedCanvas, 'JPEG', compressionQuality);
       
-      if (pageNum > 1) {
+      if (pageCount > 0) {
         pdf.addPage();
       }
+      pageCount++;
       
     if (isMobileDevice) {
         pdf.addImage(pageImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
@@ -1094,23 +1213,23 @@ const MultiStepForm: React.FC = () => {
     
     // Create the page component
     const pageElement = pageNumber === 1 ? 
-      React.createElement(Page1, { formData, updateFormData, isPDF: true, timelineCoverImage: formData.timelineCoverImage }) :
+      React.createElement(Step1, { formData, updateFormData, isPDF: true, timelineCoverImage: formData.timelineCoverImage }) :
       pageNumber === 2 ?
-      React.createElement(Page2, { formData, updateFormData, isPDF: true }) :
+      React.createElement(Step2, { formData, updateFormData, isPDF: true }) :
       pageNumber === 3 ?
-      React.createElement(Page3, { formData, updateFormData, isPDF: true }) :
+      React.createElement(Step3, { formData, updateFormData, isPDF: true }) :
       pageNumber === 4 ?
-      React.createElement(Page4, { chimneyType: formData.chimneyType, isPDF: true }) :
+      React.createElement(Step4, { chimneyType: formData.chimneyType, isPDF: true }) :
       pageNumber >= 5 && pageNumber <= 4 + totalInvoicePages ?
-      React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: pageNumber - 4 }) :
+      React.createElement(Step5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: pageNumber - 4 }) :
       pageNumber === 4 + totalInvoicePages + 1 ?
-      React.createElement(Page6, { 
+      React.createElement(Step6, { 
         isPDF: true, 
         scrapedImages: formData.scrapedImages || [], 
         selectedImages: formData.selectedImages || [] 
       }) :
       isRecommendationPage(pageNumber) ?
-      React.createElement(Page7, { 
+      React.createElement(Step7, { 
         isPDF: true, 
         scrapedImages: formData.scrapedImages || [], 
         selectedImages: formData.selectedImages || [],
@@ -1119,25 +1238,25 @@ const MultiStepForm: React.FC = () => {
         customRecommendation: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.customRecommendation || ''
       }) :
       isImagePage(pageNumber) ?
-      React.createElement(Page8, { 
+      React.createElement(Step8, { 
         isPDF: true, 
         unusedImages: getUnusedImages(),
         currentPage: getImagePageIndex(pageNumber) + 1,
         totalPages: getTotalImagePages()
       }) :
       pageNumber === totalPages - (formData.chimneyType === 'prefabricated' ? 5 : 4) ?
-      React.createElement(Page9Part1, { isPDF: true, chimneyType: formData.chimneyType }) :
+      React.createElement(Step9Part1, { isPDF: true, chimneyType: formData.chimneyType }) :
       pageNumber === totalPages - (formData.chimneyType === 'prefabricated' ? 4 : 3) ?
-      React.createElement(Page9Part2, { isPDF: true, chimneyType: formData.chimneyType }) :
+      React.createElement(Step9Part2, { isPDF: true, chimneyType: formData.chimneyType }) :
       pageNumber === totalPages - (formData.chimneyType === 'prefabricated' ? 3 : 2) ?
-      React.createElement(Page9Part3, { isPDF: true, chimneyType: formData.chimneyType }) :
+      React.createElement(Step9Part3, { isPDF: true, chimneyType: formData.chimneyType }) :
       formData.chimneyType === 'prefabricated' && pageNumber === totalPages - 2 ?
-      React.createElement(Page9Part4, { isPDF: true, chimneyType: formData.chimneyType }) :
+      React.createElement(Step9Part4, { isPDF: true, chimneyType: formData.chimneyType }) :
       pageNumber === totalPages - 1 ?
       React.createElement(Step10Part1, { isPDF: true, chimneyType: formData.chimneyType }) :
       pageNumber === totalPages ?
       React.createElement(Step10Part2, { isPDF: true, chimneyType: formData.chimneyType }) :
-      React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 });
+      React.createElement(Step5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 });
     
     // Render the page to the container
     const root = ReactDOM.createRoot(tempContainer);
@@ -1155,7 +1274,7 @@ const MultiStepForm: React.FC = () => {
       const clientNameElement = tempContainer.querySelector('.div') as HTMLElement;
       const emailElement = tempContainer.querySelector('.email') as HTMLElement;
       
-      console.log('PDF Generation Debug - Page 3:');
+      console.log('PDF Generation Debug - Step 3:');
       console.log('Overlap position:', overlapElement?.style.left, overlapElement?.style.top);
       console.log('Title position:', titleElement?.style.left, titleElement?.style.top);
       console.log('Client name position:', clientNameElement?.style.left, clientNameElement?.style.top);
@@ -1394,18 +1513,20 @@ const MultiStepForm: React.FC = () => {
           {/* Input Fields Section */}
           <div className="card p-4 sm:p-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                {currentLogicalStep === 1 ? 'Manual Entry' : 
-                 currentLogicalStep === 2 ? 'Page 2 - Static Content' : 
-                 currentLogicalStep === 3 ? 'Page 3 - Service Report' : 
-                 currentLogicalStep === 4 ? 'Page 4 - Chimney Type' : 
-                 currentLogicalStep === 5 ? `Page ${currentPage} - Invoice${totalInvoicePages > 1 ? ` (${currentPage - 4}/${totalInvoicePages})` : ''}` : 
-                 currentLogicalStep === 6 ? 'Page 6 - Project Images' :
-                 currentLogicalStep === 7 ? 'Page 7 - Repair Estimate' :
-                 currentLogicalStep === 8 ? 'Page 8 - Inspection Images' :
-                 currentLogicalStep === 9 ? 'Page 9 - Documentation' :
-                 'Step 10 - Final Steps'}
-              </h3>
+              <div className="flex items-center space-x-4">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                  {currentLogicalStep === 1 ? 'Step 1 - Manual Entry' : 
+                   currentLogicalStep === 2 ? 'Step 2 - Static Content' : 
+                   currentLogicalStep === 3 ? 'Step 3 - Service Report' : 
+                   currentLogicalStep === 4 ? 'Step 4 - Chimney Type' : 
+                   currentLogicalStep === 5 ? `Step 5 - Invoice${totalInvoicePages > 1 ? ` (${currentPage - 4}/${totalInvoicePages})` : ''}` : 
+                   currentLogicalStep === 6 ? 'Step 6 - Project Images' :
+                   currentLogicalStep === 7 ? 'Step 7 - Repair Estimate' :
+                   currentLogicalStep === 8 ? 'Step 8 - Inspection Images' :
+                   currentLogicalStep === 9 ? 'Step 9 - Documentation' :
+                   'Step 10 - Final Steps'}
+                </h3>
+              </div>
               <button
                 onClick={handleBackToScrape}
                 className="text-[#722420] hover:text-[#5a1d1a] text-sm font-medium"
@@ -1414,7 +1535,7 @@ const MultiStepForm: React.FC = () => {
               </button>
             </div>
             
-            {/* Final Report Generation Indicator (now on Page 5) */}
+            {/* Final Report Generation Indicator (now on Step 5) */}
            
             
             {currentPage === 1 ? (
@@ -1571,7 +1692,7 @@ const MultiStepForm: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Page 2 - Static Content</h4>
+                  <h4 className="text-lg font-semibold text-black mb-2">Step 2 - Static Content</h4>
                   <p className="text-black mb-4">
                     This page contains company credentials and insurance information that cannot be edited.
                   </p>
@@ -1604,7 +1725,7 @@ const MultiStepForm: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Page 4 - Static Content</h4>
+                  <h4 className="text-lg font-semibold text-black mb-2">Step 4 - Static Content</h4>
                   <p className="text-black mb-4">
                     This page summarizes the chimney type selection and is not editable.
                   </p>
@@ -1819,7 +1940,7 @@ const MultiStepForm: React.FC = () => {
                 </div>
               </div>
             ) : isImagePage6(currentPage) ? (
-              // Page 6 - Image Selection Interface
+              // Step 6 - Image Selection Interface
               <div className="space-y-4">
                 <div className="mb-4">
                   <h4 className="text-lg font-semibold text-gray-800 mb-2">
@@ -1920,7 +2041,7 @@ const MultiStepForm: React.FC = () => {
 
               </div>
             ) : currentLogicalStep === 7 ? (
-              // Page 7 - Repair Estimate Interface
+              // Step 7 - Repair Estimate Interface
               <div className="space-y-4">
                 <div className="mb-4">
                   <h4 className="text-lg font-semibold text-gray-800 mb-2">
@@ -1950,7 +2071,7 @@ const MultiStepForm: React.FC = () => {
                               disabled={getAvailableImages().length === 0}
                               className={`px-3 py-1.5 rounded text-sm transition-colors ${
                                 getAvailableImages().length > 0
-                                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                  ? 'bg-gray-800 text-white hover:bg-[black]' 
                                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                               }`}
                             >
@@ -1962,7 +2083,7 @@ const MultiStepForm: React.FC = () => {
                                   deleteRecommendationPage(currentRecommendationPageIndex);
                                 }
                               }}
-                              className="px-3 py-1.5 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                              className="px-3 py-1.5 bg-[#722420] text-white rounded text-sm hover:bg-[#5a1d1a] transition-colors"
                             >
                               Delete Current Page
                             </button>
@@ -1988,7 +2109,7 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   <div className="border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-red-50">
                         <tr>
                           <th className="px-3 py-2 text-left">Description</th>
                           <th className="px-3 py-2 text-left">Unit</th>
@@ -2164,7 +2285,7 @@ const MultiStepForm: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Page 8 - Inspection Images</h4>
+                  <h4 className="text-lg font-semibold text-black mb-2">Step 8 - Inspection Images</h4>
                   <p className="text-black mb-4">
                     This page displays inspection images in a static format. Images are automatically arranged and cannot be modified in this view.
                   </p>
@@ -2181,7 +2302,7 @@ const MultiStepForm: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Page 9 - Documentation (Part 1)</h4>
+                  <h4 className="text-lg font-semibold text-black mb-2">Step 9 - Documentation (Part 1)</h4>
                   <p className="text-black mb-4">
                     This page contains chimney documentation information that cannot be edited.
                   </p>
@@ -2198,7 +2319,7 @@ const MultiStepForm: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Page 9 - Documentation (Part 2)</h4>
+                  <h4 className="text-lg font-semibold text-black mb-2">Step 9 - Documentation (Part 2)</h4>
                   <p className="text-black mb-4">
                     This page contains additional chimney documentation information that cannot be edited.
                   </p>
@@ -2215,7 +2336,7 @@ const MultiStepForm: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Page 9 - Documentation (Part 3)</h4>
+                  <h4 className="text-lg font-semibold text-black mb-2">Step 9 - Documentation (Part 3)</h4>
                   <p className="text-black mb-4">
                     This page contains final chimney documentation information that cannot be edited.
                   </p>
@@ -2232,7 +2353,7 @@ const MultiStepForm: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-black mb-2">Page 9 - Documentation (Part 4)</h4>
+                  <h4 className="text-lg font-semibold text-black mb-2">Step 9 - Documentation (Part 4)</h4>
                   <p className="text-black mb-4">
                     This page contains additional prefabricated chimney documentation that cannot be edited.
                   </p>
@@ -2280,14 +2401,32 @@ const MultiStepForm: React.FC = () => {
              {/* Generate Button - Only show on last page */}
              <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
                {currentPage === totalPages ? (
-                <button 
-                  type="button"
-                  onClick={handleSubmit}
-                  className="w-full btn-primary"
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? 'Generating PDF...' : 'Generate Report'}
-                </button>
+                <>
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Pages included in PDF:</span>
+                      <span className="font-semibold text-[#722420]">
+                        {Array.from(includedPages).length} of {totalPages}
+                      </span>
+                    </div>
+                    <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-[#722420] h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${(Array.from(includedPages).length / totalPages) * 100}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={handleSubmit}
+                    className="w-full btn-primary"
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? 'Generating PDF...' : 'Generate Report'}
+                  </button>
+                </>
               ) : (
                 <div className="text-center py-4">
                   <p className="text-sm text-gray-600 mb-3">
@@ -2320,12 +2459,43 @@ const MultiStepForm: React.FC = () => {
 
           {/* Preview Section */}
           <div className="card p-0">
-            {/* Page Navigation */}
+            {/* Combined Header Section */}
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Report Preview
-                
-              </h3>
+              {/* Left: Preview Label */}
+              <h3 className="text-lg font-semibold text-gray-900">Preview</h3>
+              
+              {/* Center: Toggle */}
+              <div className="flex items-center space-x-3">
+                <span className="text-sm font-medium text-gray-700">Include in PDF:</span>
+                <button
+                  onClick={() => togglePageInclusion(currentLogicalStep)}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#722420] focus:ring-offset-2 ${
+                    isLogicalStepIncluded(currentLogicalStep) 
+                      ? 'bg-[#722420] shadow-inner' 
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  role="switch"
+                  aria-checked={isLogicalStepIncluded(currentLogicalStep)}
+                  aria-label={`${isLogicalStepIncluded(currentLogicalStep) ? 'Include' : 'Exclude'} this step from PDF`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all duration-300 ease-in-out ${
+                      isLogicalStepIncluded(currentLogicalStep) 
+                        ? 'translate-x-6' 
+                        : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-xs font-semibold transition-colors duration-200 ${
+                  isLogicalStepIncluded(currentLogicalStep) 
+                    ? 'text-[#722420]' 
+                    : 'text-gray-500'
+                }`}>
+                  {isLogicalStepIncluded(currentLogicalStep) ? 'ON' : 'OFF'}
+                </span>
+              </div>
+              
+              {/* Right: Navigation */}
               <div className="flex items-center space-x-2">
                 {(() => {
                   // Calculate the actual page number being displayed
@@ -2368,28 +2538,28 @@ const MultiStepForm: React.FC = () => {
             {/* Preview Content */}
             <div className="flex justify-center overflow-x-auto" data-preview="true">
                           {currentPage === 1 ? (
-              <Page1 formData={formData} updateFormData={updateFormData} timelineCoverImage={formData.timelineCoverImage} />
+              <Step1 formData={formData} updateFormData={updateFormData} timelineCoverImage={formData.timelineCoverImage} />
             ) : currentPage === 2 ? (
-              <Page2 formData={formData} updateFormData={updateFormData} />
+              <Step2 formData={formData} updateFormData={updateFormData} />
               ) : currentPage === 3 ? (
-              <Page3 formData={formData} updateFormData={updateFormData} />
+              <Step3 formData={formData} updateFormData={updateFormData} />
               ) : currentPage === 4 ? (
-                <Page4 chimneyType={formData.chimneyType} />
+                <Step4 chimneyType={formData.chimneyType} />
               ) : currentPage === 5 ? (
-                <Page5 
+                <Step5 
                   invoiceData={formData.invoiceData} 
                   updateInvoiceData={(data) => updateFormData({ invoiceData: data })}
                   currentInvoicePage={1}
                 />
               ) : isInvoicePage(currentPage) ? (
-                <Page5 
+                <Step5 
                   invoiceData={formData.invoiceData} 
                   updateInvoiceData={(data) => updateFormData({ invoiceData: data })}
                   currentInvoicePage={currentPage - 4}
                   isPDF={false}
                 />
               ) : isImagePage6(currentPage) ? (
-                <Page6 
+                <Step6 
                   scrapedImages={formData.scrapedImages || []}
                   selectedImages={formData.selectedImages || []}
                   onImageSelection={handleImageSelection}
@@ -2397,7 +2567,7 @@ const MultiStepForm: React.FC = () => {
                 />
               ) : isRecommendationPage(currentPage) ? (
                 getCurrentRecommendationPage() ? (
-                  <Page7 
+                  <Step7 
                     scrapedImages={formData.scrapedImages || []}
                     selectedImages={formData.selectedImages || []}
                     onImageSelection={handleImageSelection}
@@ -2407,8 +2577,8 @@ const MultiStepForm: React.FC = () => {
                     customRecommendation={getCurrentRecommendationPage()?.customRecommendation || ''}
                   />
                 ) : (
-                  // Show empty Page7 when no recommendation pages exist
-                  <Page7 
+                  // Show empty Step7 when no recommendation pages exist
+                  <Step7 
                     scrapedImages={formData.scrapedImages || []}
                     selectedImages={formData.selectedImages || []}
                     onImageSelection={handleImageSelection}
@@ -2419,20 +2589,20 @@ const MultiStepForm: React.FC = () => {
                   />
                  )
                ) : isImagePage(currentPage) ? (
-                 <Page8 
+                 <Step8 
                    isPDF={false} 
                    unusedImages={getUnusedImages()} 
                    currentPage={getImagePageIndex(currentPage) + 1}
                    totalPages={getTotalImagePages()}
                  />
                 ) : currentPage === totalPages - (formData.chimneyType === 'prefabricated' ? 5 : 4) ? (
-                  <Page9Part1 isPDF={false} chimneyType={formData.chimneyType} />
+                  <Step9Part1 isPDF={false} chimneyType={formData.chimneyType} />
                 ) : currentPage === totalPages - (formData.chimneyType === 'prefabricated' ? 4 : 3) ? (
-                  <Page9Part2 isPDF={false} chimneyType={formData.chimneyType} />
+                  <Step9Part2 isPDF={false} chimneyType={formData.chimneyType} />
                 ) : currentPage === totalPages - (formData.chimneyType === 'prefabricated' ? 3 : 2) ? (
-                  <Page9Part3 isPDF={false} chimneyType={formData.chimneyType} />
+                  <Step9Part3 isPDF={false} chimneyType={formData.chimneyType} />
                 ) : formData.chimneyType === 'prefabricated' && currentPage === totalPages - 2 ? (
-                  <Page9Part4 isPDF={false} chimneyType={formData.chimneyType} />
+                  <Step9Part4 isPDF={false} chimneyType={formData.chimneyType} />
                 ) : currentPage === totalPages - 1 ? (
                   <Step10Part1 isPDF={false} chimneyType={formData.chimneyType} />
                 ) : currentPage === totalPages ? (

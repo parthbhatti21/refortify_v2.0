@@ -8,16 +8,20 @@ interface Page9Part4Props {
 export const Page9Part4: React.FC<Page9Part4Props> = ({ isPDF = false, chimneyType = 'masonry' }) => {
   // Only show this page for prefabricated chimneys
   if (chimneyType !== 'prefabricated') {
+    // For PDF generation, return an empty div instead of null to avoid issues
+    if (isPDF) {
+      return <div className="bg-white w-[595px] h-[842px]" />;
+    }
     return null;
   }
 
   return (
-    <div className="bg-white grid justify-items-center [align-items:start] w-screen">
+    <div className="bg-white grid justify-items-center [align-items:start] w-full">
     <div className="bg-white w-[595px] h-[842px]">
       <div 
         className="relative w-[546px] h-[790px] top-[26px]"
         style={isPDF ? {
-          left: '-405px'
+          left: '22.5px'
         } : {
           left: '25px'
         }}
@@ -30,30 +34,11 @@ export const Page9Part4: React.FC<Page9Part4Props> = ({ isPDF = false, chimneyTy
 
         <div 
           className="absolute w-[511px] h-[700px] top-[45px] left-[19px] flex items-center justify-center"
-          style={isPDF ? {
-            position: 'absolute',
-            width: '480px',
-            height: '669px',
-            top: '50px',
-            left: '33px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          } : {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
         >
           <img 
             src='/Prefeb-4.png'
             alt={`${chimneyType} chimney documentation`}
             className="max-w-full max-h-full object-contain"
-            style={isPDF ? {
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
-            } : {}}
           />
         </div>
       </div>

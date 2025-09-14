@@ -1,5 +1,5 @@
 import { FunctionComponent } from 'react';
-import styles from './Page4.module.css';
+import styles from './Step4.module.css';
 
 interface Page4Props {
   chimneyType?: string;

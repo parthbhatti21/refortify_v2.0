@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import styles from "./Page6.module.css";
+import styles from "./Step6.module.css";
 
 interface ImageItem {
   id: string;
