@@ -25,7 +25,7 @@ export const Step10Part2: React.FC<Step10Part2Props> = ({ isPDF = false, chimney
             className="absolute w-[511px] h-[700px] top-[45px] left-[19px] flex items-center justify-center"
           >
             <img 
-              src="/Step10-2.png" 
+              src="/Step10-2.webp" 
               alt="Step 10 Part 2 documentation"
               className="w-[100%] h-[100%] object-contain"
             />

@@ -11,7 +11,7 @@ function App() {
           <div className="flex flex-col sm:flex-row justify-between items-center py-4 sm:py-6">
             <div className="flex items-center mb-4 sm:mb-0">
               <div className="flex-shrink-0 flex items-center">
-                <img src="/logo.webp" alt="ChimneySweeps" className="w-10 h-10 mr-3" />
+                <img src="/logo-1.webp" alt="ChimneySweeps" className="w-10 h-10 mr-3" />
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-[#722420] text-left">
                     ChimneySweeps

@@ -385,6 +385,7 @@ const MultiStepForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'scrape' | 'form'>('scrape');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentRecommendationPageIndex, setCurrentRecommendationPageIndex] = useState<number>(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     clientName: '',
     clientAddress: '',
@@ -956,6 +957,23 @@ const MultiStepForm: React.FC = () => {
   
   const currentLogicalStep = getLogicalStep(currentPage);
 
+  // Mark current step as completed when page changes
+  useEffect(() => {
+    if (currentLogicalStep >= 1 && currentLogicalStep <= 10) {
+      markStepCompleted(currentLogicalStep);
+    }
+  }, [currentPage, currentLogicalStep]);
+
+  // Function to mark a step as completed
+  const markStepCompleted = (stepNumber: number) => {
+    setCompletedSteps(prev => new Set([...Array.from(prev), stepNumber]));
+  };
+
+  // Function to check if a step is completed
+  const isStepCompleted = (stepNumber: number): boolean => {
+    return completedSteps.has(stepNumber);
+  };
+
   // Debug helper to understand page structure
   const debugPageStructure = () => {
     console.log('=== PAGE STRUCTURE DEBUG ===');
@@ -991,6 +1009,9 @@ const MultiStepForm: React.FC = () => {
   const navigateToStep = (targetStep: number) => {
     if (targetStep < 1 || targetStep > 10) return;
     
+    // Mark the target step as completed when navigating to it
+    markStepCompleted(targetStep);
+    
     // Calculate Step 9 and Step 10 page ranges based on chimney type
     const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
     const step10Pages = 5;
@@ -1019,6 +1040,9 @@ const MultiStepForm: React.FC = () => {
   };
 
   const handleNextPage = () => {
+    // Mark current step as completed when moving to next page
+    markStepCompleted(currentLogicalStep);
+    
     // Debug page structure when navigating
     if (currentLogicalStep >= 7) {
       debugPageStructure();
@@ -1393,7 +1417,7 @@ const MultiStepForm: React.FC = () => {
               <div className="w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium bg-gray-200 text-gray-600">
                 2
               </div>
-              <span className="ml-2 text-sm sm:text-base font-medium">Report Generation ({totalPages} Pages)</span>
+              <span className="ml-2 text-sm sm:text-base font-medium">Report Generation</span>
             </div>
           </div>
         </div>
@@ -1411,61 +1435,61 @@ const MultiStepForm: React.FC = () => {
             {/* First Row - Steps 1-5 */}
             <div className="flex items-center justify-center space-x-4 mb-4">
               <div 
-                className={`flex items-center cursor-pointer ${currentLogicalStep >= 1 ? 'text-[#722420]' : 'text-gray-400'}`}
+                className={`flex items-center cursor-pointer ${isStepCompleted(1) ? 'text-[#722420]' : 'text-gray-400'}`}
                 onClick={() => navigateToStep(1)}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentLogicalStep >= 1 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  isStepCompleted(1) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentLogicalStep > 1 ? '✓' : '1'}
+                  {isStepCompleted(1) ? '✓' : '1'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Client Info</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
               <div 
-                className={`flex items-center cursor-pointer ${currentLogicalStep >= 2 ? 'text-[#722420]' : 'text-gray-400'}`}
+                className={`flex items-center cursor-pointer ${isStepCompleted(2) ? 'text-[#722420]' : 'text-gray-400'}`}
                 onClick={() => navigateToStep(2)}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentLogicalStep >= 2 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  isStepCompleted(2) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentLogicalStep > 2 ? '✓' : '2'}
+                  {isStepCompleted(2) ? '✓' : '2'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Company Info</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
               <div 
-                className={`flex items-center cursor-pointer ${currentLogicalStep >= 3 ? 'text-[#722420]' : 'text-gray-400'}`}
+                className={`flex items-center cursor-pointer ${isStepCompleted(3) ? 'text-[#722420]' : 'text-gray-400'}`}
                 onClick={() => navigateToStep(3)}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentLogicalStep >= 3 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  isStepCompleted(3) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentLogicalStep > 3 ? '✓' : '3'}
+                  {isStepCompleted(3) ? '✓' : '3'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Service Report</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
               <div 
-                className={`flex items-center cursor-pointer ${currentLogicalStep >= 4 ? 'text-[#722420]' : 'text-gray-400'}`}
+                className={`flex items-center cursor-pointer ${isStepCompleted(4) ? 'text-[#722420]' : 'text-gray-400'}`}
                 onClick={() => navigateToStep(4)}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentLogicalStep >= 4 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  isStepCompleted(4) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentLogicalStep > 4 ? '✓' : '4'}
+                  {isStepCompleted(4) ? '✓' : '4'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Chimney Type</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
               <div 
-                className={`flex items-center cursor-pointer ${currentLogicalStep >= 5 ? 'text-[#722420]' : 'text-gray-400'}`}
+                className={`flex items-center cursor-pointer ${isStepCompleted(5) ? 'text-[#722420]' : 'text-gray-400'}`}
                 onClick={() => navigateToStep(5)}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentLogicalStep >= 5 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  isStepCompleted(5) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentLogicalStep > 5 ? '✓' : '5'}
+                  {isStepCompleted(5) ? '✓' : '5'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Invoice</span>
               </div>
@@ -1474,61 +1498,61 @@ const MultiStepForm: React.FC = () => {
             {/* Second Row - Steps 6-10 */}
             <div className="flex items-center justify-center space-x-4">
               <div 
-                className={`flex items-center cursor-pointer ${currentLogicalStep >= 6 ? 'text-[#722420]' : 'text-gray-400'}`}
+                className={`flex items-center cursor-pointer ${isStepCompleted(6) ? 'text-[#722420]' : 'text-gray-400'}`}
                 onClick={() => navigateToStep(6)}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentLogicalStep >= 6 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                  isStepCompleted(6) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
-                  {currentLogicalStep > 6 ? '✓' : '6'}
+                  {isStepCompleted(6) ? '✓' : '6'}
                 </div>
                 <span className="ml-2 text-sm font-medium">Images</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
                <div 
-                 className={`flex items-center cursor-pointer ${currentLogicalStep >= 7 ? 'text-[#722420]' : 'text-gray-400'}`}
+                 className={`flex items-center cursor-pointer ${isStepCompleted(7) ? 'text-[#722420]' : 'text-gray-400'}`}
                  onClick={() => navigateToStep(7)}
                >
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                   currentLogicalStep >= 7 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                   isStepCompleted(7) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                  }`}>
-                   {currentLogicalStep > 7 ? '✓' : '7'}
+                   {isStepCompleted(7) ? '✓' : '7'}
                  </div>
                  <span className="ml-2 text-sm font-medium">Repair Est.</span>
                </div>
                <div className="w-12 h-1 bg-gray-200"></div>
                <div 
-                 className={`flex items-center cursor-pointer ${currentLogicalStep >= 8 ? 'text-[#722420]' : 'text-gray-400'}`}
+                 className={`flex items-center cursor-pointer ${isStepCompleted(8) ? 'text-[#722420]' : 'text-gray-400'}`}
                  onClick={() => navigateToStep(8)}
                >
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                   currentLogicalStep >= 8 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                   isStepCompleted(8) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                  }`}>
-                   8
+                   {isStepCompleted(8) ? '✓' : '8'}
                  </div>
                  <span className="ml-2 text-sm font-medium">Inspection Images</span>
                </div>
                <div className="w-12 h-1 bg-gray-200"></div>
                <div 
-                 className={`flex items-center cursor-pointer ${currentLogicalStep >= 9 ? 'text-[#722420]' : 'text-gray-400'}`}
+                 className={`flex items-center cursor-pointer ${isStepCompleted(9) ? 'text-[#722420]' : 'text-gray-400'}`}
                  onClick={() => navigateToStep(9)}
                >
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                   currentLogicalStep >= 9 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                   isStepCompleted(9) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                  }`}>
-                   9
+                   {isStepCompleted(9) ? '✓' : '9'}
                  </div>
                  <span className="ml-2 text-sm font-medium">Documentation</span>
                </div>
                <div className="w-12 h-1 bg-gray-200"></div>
                <div 
-                 className={`flex items-center cursor-pointer ${currentLogicalStep >= 10 ? 'text-[#722420]' : 'text-gray-400'}`}
+                 className={`flex items-center cursor-pointer ${isStepCompleted(10) ? 'text-[#722420]' : 'text-gray-400'}`}
                  onClick={() => navigateToStep(10)}
                >
                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                   currentLogicalStep >= 10 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                   isStepCompleted(10) ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                  }`}>
-                   10
+                   {isStepCompleted(10) ? '✓' : '10'}
                  </div>
                  <span className="ml-2 text-sm font-medium">Final Steps</span>
                </div>

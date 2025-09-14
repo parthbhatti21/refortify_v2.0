@@ -27,7 +27,7 @@ export const Page9Part2: React.FC<Page9Part2Props> = ({ isPDF = false, chimneyTy
           className="absolute w-[511px] h-[700px] top-[45px] left-[19px] flex items-center justify-center"
         >
           <img 
-            src={chimneyType === 'prefabricated' ? '/Prefeb-2.png' : '/Masonry-2.png'} 
+            src={chimneyType === 'prefabricated' ? '/Prefeb-2.webp' : '/Masonry-2.webp'} 
             alt={`${chimneyType} chimney documentation`}
             className="max-w-full max-h-full object-contain"
           />

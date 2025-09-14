@@ -36,7 +36,7 @@ export const Page9Part4: React.FC<Page9Part4Props> = ({ isPDF = false, chimneyTy
           className="absolute w-[511px] h-[700px] top-[45px] left-[19px] flex items-center justify-center"
         >
           <img 
-            src='/Prefeb-4.png'
+            src='/Prefeb-4.webp'
             alt={`${chimneyType} chimney documentation`}
             className="max-w-full max-h-full object-contain"
           />
