@@ -39,6 +39,7 @@ export interface FormData {
   repairEstimatePages?: Array<{
     id: string;
     reviewImage: string;
+    customRecommendation?: string; // Custom recommendation text
     repairEstimateData: {
       manualEntry: boolean;
       rows: Array<{
@@ -111,6 +112,262 @@ const dropdownOptions = [
     unit: 1,
     price: 4900,
     recommendation: 'EVIDENCE OF CHIMNEY FIRE - OFFSET TILESVirginia Building code R1003.12 require clay flue liners to be installed in accordance with ASTM C1283. ASTM C1283 5.4 states: Flue Liners shall be installed each flue liner carefully bedded on the previous one, using water insoluble refractory mortar complying with Test Method C199 (medium duty). All joints of the flue liner shall be 1/16 inch to 1/8 inch thick and struck flush to produce a straight, smooth, fully aligned flue. Liners shall be placed in such a manner as to minimize ledges or steps within the flue passageway.CHIMNEY FIRES OVERHEAT THE CHIMNEY LINER. If the chimney liner overheats, the thermal expansion of the chimney liner causes the liners to offset. The bottom of the liner is pressed on the supporting brick at the top of the smoke chamber. The top of the chimney liner is encased by the chimney crown. When the liner overheats from a chimney fire, it thermally expands and causes the entire liner to buckle, which results in offset flue tiles.Flue liners are designed to contain creosote and flue gases to safely expel to the atmosphere. Offset tiles will allow gases and creosote to transfer to the inner chimney chase, which can result in potential fire hazards and CO poisoning into the residence. A Step in Time recommends the installation of a stainless steel chimney liner to repair the damaged offset flue liners. '
+  },
+  {
+    id: '8',  
+    srNo: 8,
+    description: 'Fireguard Repair Of Chimney Fire Damaged Liner Joints',
+    unit: 1,
+    price: 4900,
+    recommendation: "EVIDENCE OF CHIMNEY FIRE - CRACKED TILESVirginia Residential code G2427.5.2 require masonry chimneys to be installed in accordance with NFPA 211. NFPA 211 14.9 discuss Damaged or Deteriorated Liners. If the flue liner in a chimney has softened, cracked, or otherwise deteriorated so that it no longer has the continued ability to contain the products of combustion, the liner shall be either removed and replaced, repaired, or relined with a listed liner system or other approved material that will resist corrosion, softening, or cracking from flue gases at temperatures appropriate to the class of chimney service.The specific reason why chimney liners crack is documented by many white papers. Basically, the chimney fire causes a quick increase in flue gas temperature. The interior of the chimney liner quickly thermally expands, and the exterior portion of the chimney liner is at a lower temperature. This causes the liner to experience a thermal shock, where the exterior is in extreme tension, and the interior of the liner is in extreme compression. Vitrified clay flue tiles are very weak in tension, and this causes thermal cracks. These thermal cracks open during hot flue gases and return to a nearly hairline crack when the liner cools. This crack opening results in the loss of the liner's continued ability to contain the products of combustion.A Step in Time recommends repairing the chimney liner with FIREGUARD liner repair material."
+  },
+  {
+    id: '9',
+    srNo: 9,
+    description: 'Install Stainless Steel Chimney Liner To Repair Damaged Chimney Fire Liner',
+    unit: 1,
+    price: 3500,
+    recommendation: "EVIDENCE OF CHIMNEY FIRE - CRACKED TILESVirginia Residential code G2427.5.2 require masonry chimneys to be installed in accordance with NFPA 211. NFPA 211 14.9 discuss Damaged or Deteriorated Liners. If the flue liner in a chimney has softened, cracked, or otherwise deteriorated so that it no longer has the continued ability to contain the products of combustion (i.e., heat, moisture, creosote, and flue gases), the liner shall be either removed and replaced, repaired, or relined with a listed liner system or other approved material that will resist corrosion, softening, or cracking from flue gases at temperatures appropriate to the class of chimney service.The specific reason why chimney liners crack is documented by many white papers. Basically, the chimney fire causes a quick increase in flue gas temperature. The interior of the chimney liner quickly thermally expands, and the exterior portion of the chimney liner is at a lower temperature. This causes the liner to experience a thermal shock, where the exterior is in extreme tension, and the interior of the liner is in extreme compression. Vitrified clay flue tiles are very weak in tension, and this causes thermal cracks. These thermal cracks open during hot flue gases and return to a nearly hairline crack when the liner cools. This crack opening results in the loss of the liner's continued ability to contain the products of combustion.A Step in Time recommends replacing the chimney liner with a UL listed stainless steel liner."
+  },
+  {
+    id: '10',
+    srNo: 10,
+    description: 'No Wythe Wall',
+    unit: 1,
+    price: 4900,
+    recommendation: "EVIDENCE OF CHIMNEY FIRE - CRACKED TILESVirginia Residential code G2427.5.2 require masonry chimneys to be installed in accordance with NFPA 211. NFPA 211 14.9 discuss Damaged or Deteriorated Liners. If the flue liner in a chimney has softened, cracked, or otherwise deteriorated so that it no longer has the continued ability to contain the products of combustion (i.e., heat, moisture, creosote, and flue gases), the liner shall be either removed and replaced, repaired, or relined with a listed liner system or other approved material that will resist corrosion, softening, or cracking from flue gases at temperatures appropriate to the class of chimney service.The specific reason why chimney liners crack is documented by many white papers. Basically, the chimney fire causes a quick increase in flue gas temperature. The interior of the chimney liner quickly thermally expands, and the exterior portion of the chimney liner is at a lower temperature. This causes the liner to experience a thermal shock, where the exterior is in extreme tension, and the interior of the liner is in extreme compression. Vitrified clay flue tiles are very weak in tension, and this causes thermal cracks. These thermal cracks open during hot flue gases and return to a nearly hairline crack when the liner cools. This crack opening results in the loss of the liner's continued ability to contain the products of combustion.A Step in Time recommends replacing the chimney liner with a UL listed stainless steel liner."
+  },
+  {
+    id: '11',
+    srNo: 11,
+    description: 'Cracked Crown Pmp',
+    unit: 1,
+    price: 790,
+    recommendation: "CHIMNEY CROWN IS CRACKED AND LEAKINGVirginia Building Code R1003.9.1 requires chimney crowns to be built according to ASTM C1283. This type of construction specifically requires drip edges, thermal expansion joints, and the crown being thick enough to prevent water leakage into the chase. Many crowns have been improperly constructed, and thus, A Step in Time recommends the following: If the crown has a drip edge and is cracked, which now allows thermal expansion, then we recommend sealing the crown with PMP crown repair material to prevent leakage. If the crown does not have a drip edge, then we recommend replacement with an ASTM C1283 crown. If the crown is bonded and not cracked, then we recommend masonry cut separation between the crown and flue tile to allow for thermal expansion and seal with PMP to prevent leakage."
+  },
+  {
+    id: '12',
+    srNo: 12,
+    description: 'CrownNew Rebuild',
+    unit: 1,
+    price: 790,
+    recommendation: "CHIMNEY CROWN IS CRACKED AND NO DRIP EDGEVirginia Building Code R1003.9.1 requires chimney crowns to be built according to ASTM C1283. This type of construction specifically requires drip edges, thermal expansion joints, and the crown being thick enough to prevent water leakage into the chase. Many crowns have been improperly constructed, and thus, A Step in Time recommends the following: If the crown has a drip edge and is cracked, which now allows thermal expansion, then we recommend sealing the crown with PMP crown repair material to prevent leakage. If the crown does not have a drip edge, then we recommend replacement with an ASTM C1283 crown. If the crown is bonded and not cracked, then we recommend masonry cut separation between the crown and flue tile to allow for thermal expansion and seal with PMP to prevent leakage"
+  },
+  {
+    id: '13',
+    srNo: 13,
+    description: 'Crown Cut Seperation',
+    unit: 1,
+    price: 2100,
+    recommendation: "CHIMNEY CROWN IS BONDED TO FLUE TILEVirginia Building Code R1003.9.1 requires chimney crowns to be built according to ASTM C1283. This type of construction specifically requires drip edges, thermal expansion joints, and the crown being thick enough to prevent water leakage into the chase. Many crowns have been improperly constructed, and thus, A Step in Time recommends the following: If the crown has a drip edge and is cracked, which now allows thermal expansion, then we recommend sealing the crown with PMP crown repair material to prevent leakage. If the crown does not have a drip edge, then we recommend replacement with an ASTM C1283 crown. If the crown is bonded and not cracked, then we recommend masonry cut separation between the crown and flue tile to allow for thermal expansion and seal with PMP to prevent leakage."
+  },
+  {
+    id: '14',
+    srNo: 14,
+    description: 'Seal Drip Edge',
+    unit: 1,
+        price: 1100,
+    recommendation: "DRIP EDGE IS LEAKINGVirginia Building code R1003.9.1 requires masonry chimneys to have a drip edge. The drip edge is designed to have water that flows off the top of the chimney to drip off the chimney instead of cascading. Water that saturates the exterior of the chimney will damage mortar joints and lead to leaks.A Step in Time recommends sealing drip edges with elastomeric sealant to prevent water from entering the horizontal mortar joint above the drip edge. This helps prevent water from damaging underlying mortar joints below the drip edge."
+  },
+  {
+    id: '15',
+    srNo: 15,
+    description: 'Flex Shot Brick Joints',
+    unit: 1,
+    price: 390,
+    recommendation: "BRICK JOINTS GAPPED, VOIDED AND LEAKINGTight well tooled brick joints prevent leaks in brick joints. When water enters gapped brick joints, the water can freeze and thaw and make the voids worse. The expansion of the ice will deteriorate mortar joints. When brick joints develop these voids, the solution is to try to keep it from getting worse. The best ways to keep water from entering these voids is to inject clear rubber material and coat the masonry brick with industrial strength \"breathable\" masonry water repellant. This helps to prevent water from entering that masonry."
+  },
+  {
+    id: '16',
+    srNo: 16,
+    description: 'Rust Inhibit Flashing',
+    unit: 1,
+    price: 690,
+    recommendation: "CHIMNEY FLASHING IS RUSTEDVirginia Building Code R507.2.4 requires that \"flashing shall be corrosion-resistant.\"The flashing that has been installed is rusted and will soon leak.A Step in Time recommends to either rust inhibit the existing flashing or replace it with new flashing. Rust inhibiting the flashing will simply add life but cannot change the underlying material composition."
+  },
+  {
+    id: '17',
+    srNo: 17,
+    description: 'Replace Chimney Flashing',
+    unit: 1,
+    price: 290,
+    recommendation: "CHIMNEY FLASHING HAS BEEN IMPROPERLY INSTALLEDVirginia Building Code R905.2.8.4 Other Flashing: chimney flashing shall be applied in accordance with the asphalt manufacture's printed instructions.GAF requires counterflashing to extend over the base step flashing and to be completely sealed with elastomeric polyurethane sealant.A Step in Time recommends replacing the chimney flashing."
+  },
+  {
+    id: '18',
+    srNo: 18,
+    description: 'Reseal Flashing',
+    unit: 1,
+    price: 1500,
+    recommendation: "CHIMNEY FLASHING REQUIRES RESEALINGVirginia Building Code R905.2.8.4 Other Flashing: chimney flashing shall be applied in accordance with the asphalt manufacture's printed instructions.GAF requires counterflashing to extend over the base step flashing and to be completely sealed with elastomeric polyurethane sealant."
+  },
+  {
+    id: '19',
+    srNo: 19,
+    description: 'Install Cricket',
+    unit: 1,
+    price: 290,
+    recommendation: "CHIMNEY REQUIRES A CRICKETVirginia Building code R1003.20 Chimney Crickets. Chimneys shall be provided with crickets where the dimensions parallel to the ridgeline are greater than 30 inches.Chimney crickets are designed to divert water around the chimney and can prevent leaks around the chimney. The installation of chimney crickets requires complete removal of chimney flashing, removal of shingles and underlayment, rebuilding the roof,  reinstallation of underlayment and chimney flashing, and the installation of a code compliant chimney cricket."
+  },
+  {
+    id: '20',
+          srNo: 20,
+    description: 'Profile Seams Exterior Caulking',
+    unit: 1,
+    price: 2100,
+    recommendation: "SEAL CHIMNEY TO SIDING LIFETIME CAULK Virginia Maintenance code requires sealing all exposed opening that can be exposed to weather. The joint between the chimney and the residence requires sealing to prevent sideways rain from entering between the chimney and the residence./ A Step in Time recommends sealing from ground to roofline with lifetime caulk."
+  },
+  {
+    id: '21',
+    srNo: 21,
+    description: 'Repair Shoulders',
+    unit: 1,
+    price: 590,
+    recommendation: "CHIMNEY SHOULDERS REQUIRE REPAIRVirginia Building code R1003.5 Corbeling: The projection of a single course shall not exceed half the unit height or one third the unit bed depth, whichever is less.Many times, shoulders are not properly corbeled, and brick holes are exposed, or the chimney shoulders can leak into the smoke chamber. Rebuilding an improperly built chimney is not practical, but parging or repairing exposed chimney shoulders can help prevent water leakage into the chimney."
+  },
+  {
+    id: '22',
+    srNo: 22,
+    description: 'Cut And Reinstall Thermal Damaged Bricks Behind Smoke Chamber',
+    unit: 1,
+    price: 890,
+    recommendation: "THERMAL CRACKS ARE LOCATED BEHIND THE SMOKE CHAMBERVirginia Building Code R1001.8 requires the smoke chamber wall to be a minimum of 8 inches thick and parged with refractory mortar. The exposed side of the smoke chamber will crack if the wall is too thin and not properly parged with refractory mortar. The exact reason is that the inner smoke chamber is heated during use, and the opposite side of the exposed wall is cool from the outside air. This change in temperature of the brick will cause the brick to expand on the heated inner surface and contract on cooler outer surface. This thermal expansion difference causes stresses in the brick, which causes vertical cracks. Coating the inner smoke chamber with thick refractory mortar helps prevent this noticeable change in temperatures problems."
+  },
+  {
+    id: '23',
+    srNo: 23,
+    description: 'Install Stainless Steel Chimney Liner To Replace Unsupported Liner',
+    unit: 1,
+    price: 1800,
+    recommendation: "BOTTOM FLUE TILE IS NOT PROPERLY SUPPORTEDVirginia Building code R1003.12 states: \"Flue liners shall be supported on all sides.\"If the flue liner is not supported by all sides,  when the inner portion of the liners heat, the liner can extend into the smoke chamber, and ultimately may collapse into the smoke chamber.A Step in Time recommends removal of all the vitrified clay flue tiles and installation of a stainless steel chimney liner."
+  },
+  {
+    id: '24',
+    srNo: 24,
+    description: 'Parge Lower Flue Tile Gape With Refractory Mortar',
+    unit: 1,
+    price: 4900,
+    recommendation: "BOTTOM FLUE TILE IS NOT PROPERLY SUPPORTEDVirginia Building code R1003.12 states: \"Flue liners shall be supported on all sides.\"If the flue liner is not supported by all sides, then gas and creosote can migrate between the flue liner and the enclosed chimney. This can cause a fire hazard and can also allow CO to escape through the chimney and into the residence.A Step in Time recommend sealing the voids where the liner is not supported with high temperature refractory mortar."
+  },
+  {
+    id: '25',
+    srNo: 25,
+    description: 'Parge Smoke Chamber With Chambertech 2000',
+    unit: 1,
+    price: 690,
+    recommendation: "SMOKE CHAMBER REQUIRES PARGINGVirginia Building Code R1001.8.1 Smoke Chamber: requires \"The inside surface shall be parged smooth with refractory mortar.\" Smoke chambers are required to be parged smooth with refractory mortar to provide a smooth draft through the smoke chambers and prevent creosote and heat from transferring through the corbeled brick, which can lead to heating of surrounding timber structural members.A Step in Time recommends parging the smoke chamber with refractory mortar conforming with ASTM C199."
+  },
+  {
+    id: '26',
+    srNo: 26,
+    description: 'Fill Voided Smoke Shelf With Fireclay Mortar',
+    unit: 1,
+    price: 1500,
+    recommendation: "SMOKE SHELF IS MISSING AND REQUIRES INSTALLATIONVirginia Building Code Figure R1001.1 (Fireplace and Chimney Details) shows the curved smoke shelf next to detail H - vertical reinforcement. The upward smooth curve of the smoke shelf is designed to provide a circular airflow where air travels downward along the rear smoke shelf and reverses direction along the curved smoke shelf to direct upward airflow past the damper, which increases draft. Filled smoke shelves also reinforce the structural integrity of the rear firebox wall.A Step in Time recommends filling the smoke shelf area with refractory mortar as per Virginia Building codes."
+  },
+  {
+    id: '27',
+    srNo: 27,
+    description: 'Install Stainless Steel Cap Damper In Place Of Rotary Damper',
+    unit: 1,
+    price: 1500,
+    recommendation: "RECOMMEND CAP DAMPERVirginia Building Code R1001.7.1 Damper - Masonry fireplaces shall be equipped with a ferrous metal damper. R1003.17 Masonry chimney cleanout openings shall be provided. Exception: Chimney flues servicing masonry fireplaces where cleaning is possible through the fireplace opening.A Step in Time recommends replacing all rotary dampers with cap dampers because the rotary damper mechanism prevents proper cleaning through the fireplace opening."
+  },
+  {
+    id: '28',
+    srNo: 28,
+    description: 'Install Stainless Steel Cap Damper To Improve Draft',
+    unit: 1,
+    price: 1090,
+    recommendation: "RECOMMEND CAP DAMPERVirginia Building Code R1001.7.1 Damper - Masonry fireplaces shall be equipped with a ferrous metal damper. R1003.17 Masonry chimney cleanout opening shall be provided. Exception: Chimney flues servicing masonry fireplaces where cleaning is possible through the fireplace opening.A Step in Time recommends installing an energy efficient cap damper, which improves draft and allows for easier cleaning through the fireplace opening."
+  },
+  {
+    id: '29',
+    srNo: 29,
+    description: 'Liner To Wood Stove',
+    unit: 1,
+    price: 890,
+    recommendation: "WOOD STOVE REQUIRES DIRECT CONNECT LINERVirginia Building Code G2427.5.2 requires masonry chimneys to be installed in accordance with NFPA 211. 13.4.5.1 \"A natural draft solid fuel burning appliance such as a wood stove or insert shall be permitted to be used in a masonry fireplace flue, where the following conditions are met: 1) There is a connector between the appliance to the flue liner.In the 1970's and 1980's many homes had wood stove inserts installed, and insurance companies found that the decreased opening of the wood stove drafted the appliance extremely slowly, which produced large amounts of creosote. This dangerous situation caused many chimney fires, and the building code officials solved this problem by requiring smaller direct connect liners installed from the appliance up the chimney liner."
+  },
+  {
+    id: '30',
+        srNo: 30,
+    description: 'Parge Lintel Joint With Refractory Mortar',
+    unit: 1,
+    price: 2900,
+    recommendation: "LINTEL JOINT REQUIRES PARGINGVirginia Building Code G2427.5.2 requires masonry chimneys to be installed in accordance with NFPA 211. 11.2.1.5 All joints and intersections between the hearth extension/ fireplace facing and the fire chamber (firebox) shall be fully sealed with medium-duty refractory mortar (ASTM C199, Standard Test Method for Pier Test for Refractory Mortars). Gaps or voids at supporting lintels and joints between steel fireplace units and the fireplace face or between the frames of dampers and the fireplace face shall be sealed with the same material or with a high-temperature insulating mortar."
+  },
+  {
+    id: '31',
+    srNo: 31,
+    description: 'Repair Cracked Profile Seams With Refractory Mortar',
+    unit: 1,
+    price: 390,
+    recommendation: "FIREBOX PROFILE SEAMS REQUIRES PARGINGVirginia Building Code G2427.5.2 require masonry chimneys to be installed in accordance with NFPA 211. 11.2.1.5 All joints and intersections between the hearth extension/ fireplace facing and the fire chamber (firebox) shall be fully sealed with medium-duty refractory mortar (ASTM C199, Standard Test Method for Pier Test for Refractory Mortars). Gaps or voids at supporting lintels and joints between steel fireplace units and the fireplace face or between the frames of dampers and the fireplace face shall be sealed with the same material or with a high temperature insulating mortar."
+  },
+  {
+    id: '32',
+    srNo: 32,
+    description: 'Repair Inner/Outer Profile Seam With Refractory Mortar',
+    unit: 1,
+    price: 290,
+    recommendation: "JOINT BETWEEN INNER & OUTER HEARTH REQUIRES PARGINGVirginia Building Code G2427.5.2 requires masonry chimneys to be installed in accordance with NFPA 211. 11.2.1.5 All joints and intersections between the hearth extension/ fireplace facing and the fire chamber (firebox) shall be fully sealed with medium-duty refractory mortar (ASTM C199, Standard Test Method for Pier Test for Refractory Mortars). Gaps or voids at supporting lintels and joints between steel fireplace units and the fireplace face or between the frames of dampers and the fireplace face shall be sealed with the same material or with a high temperature insulating mortar."
+  },
+  {
+    id: '33',
+    srNo: 33,
+    description: 'Repoint Firebox Joints With Refractory Mortar',
+    unit: 1,
+    price: 190,
+    recommendation: "FIREBOX MORTAR JOINTS REQUIRE REPOINTINGVirginia Building Code G2427.5.2 require masonry chimneys to be installed in accordance with NFPA 211. 11.2.1.5 All joints and intersections between the hearth extension/ fireplace facing and the fire chamber (firebox) shall be fully sealed with medium-duty refractory mortar (ASTM C199, Standard Test Method for Pier Test for Refractory Mortars). Gaps or voids at supporting lintels and joints between steel fireplace units and the fireplace face or between the frames of dampers and the fireplace face shall be sealed with the same material or with a high temperature insulating mortar."
+  },
+  {
+    id: '34',
+    srNo: 34,
+    description: 'Replace Ash Dump Door',
+    unit: 1,
+    price: 990,
+    recommendation: "REPLACE ASH DUMP DOORVirginia Building Code R1001.2.1 Ash Dump Cleanout is required \"to remain tightly closed except when in use.\"Many times, ash dump doors will warp, rust, or become inoperable after repeated use.A Step in Time recommends replacement of the ash dump door."
+  },
+  {
+    id: '35',
+    srNo: 35,
+    description: 'Replace Clean Out Door',
+    unit: 1,
+    price: 90,
+    recommendation: "REPLACE CLEAN-OUT DOORVirginia Building Code R1001.2.1 Clean outs shall be located to allow access so that ash removal will not create a hazard to combustible materials. Additional clean-out doors are required to remain tightly closed.Many times, clean-out doors will warp, rust, or become inoperable after repeated use.A Step in Time recommends replacement of the clean-out door."
+  },
+  {
+    id: '36',
+    srNo: 36,
+    description: 'Remove Timber Formwork',
+    unit: 1,
+    price: 490,
+    recommendation: "REMOVE COMBUSTIBLE MATERIAL UNDER HEARTHVirginia Building Code R1001.9 requires: \"Combustible material shall not remain against the underside of hearths and hearth extensions after construction.\"The heat from the firebox can heat the combustible material under the hearth. This combustible material should be removed, and the outer heart may require support using foundation and pier supports."
+  },
+  {
+    id: '37',
+    srNo: 37,
+    description: 'Remove Wood Stove',
+    unit: 1,
+    price: 2100,
+    recommendation: "WOOD STOVE INSERT SHOULD BE REMOVEDVirginia Building Code G2427.5.2 require masonry chimneys to be installed in accordance with NFPA 211. 13.4.5.1 \"A natural draft solid fuel burning appliance such as a wood stove or insert shall be permitted to be used in a masonry fireplace flue, where the following conditions are met: 1) There is a connector between the appliance to the flue liner.In the 1970's and 1980's many homes had wood stove inserts installed, and insurance companies found that the decreased opening of the wood stove drafted the appliance extremely slowly, which produced large amounts of creosote. This dangerous situation caused many chimney fires, and the building code officials solved this problem by requiring smaller direct connect liners installed from the appliance up the chimney liner."
+  },
+  {
+    id: '38',
+    srNo: 38,
+    description: 'Level 2 Chimney Inspection Is Required',
+    unit: 1,
+    price: 450,
+    recommendation: "Virginia Chimneys, Fireplaces, Vents and Solid Fuel-Burning Appliance Code 15.4 states: A Level II inspection is indicated when verification of the suitability of the chimney for new or changed conditions of service is needed or when a Level I inspection is not sufficient to determine the serviceability of the chimney. 15.4.1: Circumstances: After a building or chimney fire, weather or seismic event, or other incident likely to have caused damage to the chimney."
+  },
+  {
+    id: '39',
+    srNo: 39,
+    description: 'Level 2 Chimney Inspection Is Required',
+    unit: 1,
+    price: 100,
+    recommendation: "Virginia Chimneys, Fireplaces, Vents and Solid Fuel-Burning Appliance Code 15.4 states: A Level II inspection is indicated when verification of the suitability of the chimney for new or changed conditions of service is needed or when a Level I inspection is not sufficient to determine the serviceability of the chimney. 15.4.1: Circumstances: After a building or chimney fire, weather or seismic event, or other incident likely to have caused damage to the chimney."
   }
 ];
 
@@ -148,8 +405,8 @@ const MultiStepForm: React.FC = () => {
   } | null>(null);
   const [showReviewImageSelector, setShowReviewImageSelector] = useState(false);
   const [showAddRowModal, setShowAddRowModal] = useState(false);
+  const [showPredefinedModal, setShowPredefinedModal] = useState(false);
   const [showChangeImageModal, setShowChangeImageModal] = useState(false);
-  const [imageChangePageIndex, setImageChangePageIndex] = useState<number>(-1);
 
   // Block mobile devices until they switch to desktop view
   useEffect(() => {
@@ -176,10 +433,7 @@ const MultiStepForm: React.FC = () => {
   // Helper functions for managing recommendation pages
   const getCurrentRecommendationPage = () => {
     const pages = formData.repairEstimatePages || [];
-    if (isRecommendationPage(currentPage)) {
-      const pageIndex = getRecommendationPageIndex(currentPage);
-      return pages[pageIndex];
-    }
+    // Always use currentRecommendationPageIndex for consistency
     return pages[currentRecommendationPageIndex];
   };
 
@@ -187,6 +441,7 @@ const MultiStepForm: React.FC = () => {
     const newPage = {
       id: Date.now().toString(),
       reviewImage,
+      customRecommendation: '',
       repairEstimateData: {
         manualEntry: false,
         rows: []
@@ -239,11 +494,18 @@ const MultiStepForm: React.FC = () => {
       });
       
       // Adjust current page index if needed
-      if (currentRecommendationPageIndex >= updatedPages.length && updatedPages.length > 0) {
-        setCurrentRecommendationPageIndex(updatedPages.length - 1);
-      } else if (updatedPages.length === 0) {
-        setCurrentRecommendationPageIndex(0);
+      let newIndex = currentRecommendationPageIndex;
+      if (updatedPages.length === 0) {
+        newIndex = 0;
+      } else if (currentRecommendationPageIndex >= updatedPages.length) {
+        newIndex = updatedPages.length - 1;
+      } else if (currentRecommendationPageIndex > pageIndex) {
+        // If we deleted a page before the current one, adjust the index
+        newIndex = currentRecommendationPageIndex - 1;
       }
+      // If we deleted a page after the current one, no adjustment needed
+      
+      setCurrentRecommendationPageIndex(newIndex);
     }
   };
 
@@ -277,6 +539,14 @@ const MultiStepForm: React.FC = () => {
 
   const handleImageSelection = (selectedImages: ImageItem[]) => {
     setFormData(prev => ({ ...prev, selectedImages }));
+  };
+
+  const handleCustomRecommendationChange = (customRecommendation: string) => {
+    const pages = [...(formData.repairEstimatePages || [])];
+    if (pages[currentRecommendationPageIndex]) {
+      pages[currentRecommendationPageIndex].customRecommendation = customRecommendation;
+      updateFormData({ repairEstimatePages: pages });
+    }
   };
 
   const handleDataExtracted = (data: {
@@ -522,13 +792,29 @@ const MultiStepForm: React.FC = () => {
   const currentLogicalStep = getLogicalStep(currentPage);
 
   const handleNextPage = () => {
-    if (currentPage < totalPages) {
+    if (currentLogicalStep === 7) {
+      // If we're on recommendation pages, navigate through recommendation pages
+      if (currentRecommendationPageIndex < (formData.repairEstimatePages?.length || 0) - 1) {
+        setCurrentRecommendationPageIndex(currentRecommendationPageIndex + 1);
+      } else if (currentPage < totalPages) {
+        // If we're on the last recommendation page, go to next main page
+        setCurrentPage(currentPage + 1);
+      }
+    } else if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
     }
   };
 
   const handlePrevPage = () => {
-    if (currentPage > 1) {
+    if (currentLogicalStep === 7) {
+      // If we're on recommendation pages, navigate through recommendation pages
+      if (currentRecommendationPageIndex > 0) {
+        setCurrentRecommendationPageIndex(currentRecommendationPageIndex - 1);
+      } else if (currentPage > 1) {
+        // If we're on the first recommendation page, go to previous main page
+        setCurrentPage(currentPage - 1);
+      }
+    } else if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
     }
   };
@@ -641,7 +927,8 @@ const MultiStepForm: React.FC = () => {
         scrapedImages: formData.scrapedImages || [], 
         selectedImages: formData.selectedImages || [],
         repairEstimateData: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.repairEstimateData || { manualEntry: false, rows: [] },
-        reviewImage: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.reviewImage || ''
+        reviewImage: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.reviewImage || '',
+        customRecommendation: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.customRecommendation || ''
       }) :
       React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 });
     
@@ -1369,76 +1656,50 @@ const MultiStepForm: React.FC = () => {
                     Repair Estimate Configuration
                   </h4>
                   
-                  {/* Multiple Pages Navigation */}
+                  {/* Page Management Buttons */}
                   <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h5 className="font-medium text-gray-700">Recommendation Pages</h5>
-                      <button
-                        onClick={() => setShowReviewImageSelector(true)}
-                        disabled={getAvailableImages().length === 0}
-                        className={`px-3 py-1.5 rounded text-sm transition-colors ${
-                          getAvailableImages().length > 0
-                            ? 'bg-[#722420] text-white hover:bg-[#5a1d1a]' 
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        + Add New Page
-                      </button>
-                    </div>
-                    
-                    {formData.repairEstimatePages && formData.repairEstimatePages.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {formData.repairEstimatePages.map((page, index) => (
-                          <div key={page.id} className="relative group">
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-medium text-gray-700">Page Management</h5>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowReviewImageSelector(true)}
+                          disabled={getAvailableImages().length === 0}
+                          className={`px-3 py-1.5 rounded text-sm transition-colors ${
+                            getAvailableImages().length > 0
+                              ? 'bg-[#722420] text-white hover:bg-[#5a1d1a]' 
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          + Add New Page
+                        </button>
+                        {formData.repairEstimatePages && formData.repairEstimatePages.length > 0 && (
+                          <>
                             <button
-                              onClick={() => setCurrentRecommendationPageIndex(index)}
-                              className={`px-3 py-2 rounded text-sm transition-colors ${
-                                index === currentRecommendationPageIndex
-                                  ? 'bg-[#722420] text-white'
-                                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                              onClick={() => setShowChangeImageModal(true)}
+                              disabled={getAvailableImages().length === 0}
+                              className={`px-3 py-1.5 rounded text-sm transition-colors ${
+                                getAvailableImages().length > 0
+                                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                               }`}
                             >
-                              Page {index + 1}
-                              <div className="text-xs opacity-75 mt-1">
-                                {page.repairEstimateData.rows.length} items
-                              </div>
+                              Change Image
                             </button>
-                            
-                            {/* Page Actions */}
-                            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setImageChangePageIndex(index);
-                                  setShowChangeImageModal(true);
-                                }}
-                                className="w-6 h-6 bg-blue-500 text-white rounded-full text-xs hover:bg-blue-600 flex items-center justify-center"
-                                title="Change Image"
-                              >
-                                🔄
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (window.confirm('Are you sure you want to delete this page?')) {
-                                    deleteRecommendationPage(index);
-                                  }
-                                }}
-                                className="w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 flex items-center justify-center"
-                                title="Delete Page"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete page ${currentRecommendationPageIndex + 1}?`)) {
+                                  deleteRecommendationPage(currentRecommendationPageIndex);
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                            >
+                              Delete Current Page
+                            </button>
+                          </>
+                        )}
                       </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>No recommendation pages created yet.</p>
-                        <p className="text-sm mt-1">Click "Add New Page" to create your first recommendation page.</p>
-                      </div>
-                    )}
+                    </div>
+                    
                   </div>
                 </div>
 
@@ -1602,51 +1863,33 @@ const MultiStepForm: React.FC = () => {
                 </div>
                 )}
 
-                {/* Review Image Selection */}
-                <div className="space-y-3">
-                  <h5 className="font-medium text-gray-700">Review Image</h5>
-                  <div className="flex gap-4 items-center">
-                    <button
-                      onClick={() => setShowReviewImageSelector(true)}
-                      className="px-4 py-2 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] transition-colors"
-                      disabled={!formData.scrapedImages || formData.scrapedImages.length === 0}
-                    >
-                      Select Image for Review
-                    </button>
-                    {false && (
-                      <button
-                        onClick={() => {}}
-                        className="px-3 py-1 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-sm"
-                      >
-                        Remove Image
-                      </button>
-                    )}
+                {/* Custom Recommendation Input - Only show when there are custom rows */}
+                {getCurrentRecommendationPage()?.repairEstimateData.rows.some((row: any) => row.isManual) && (
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-gray-700">Custom Recommendation</h5>
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <label className="block text-sm font-medium text-blue-800 mb-2">
+                        Add your custom recommendation text:
+                      </label>
+                      <textarea
+                        value={getCurrentRecommendationPage()?.customRecommendation || ''}
+                        onChange={(e) => handleCustomRecommendationChange(e.target.value)}
+                        placeholder="Enter your custom recommendation here..."
+                        className="w-full h-24 p-3 text-sm border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        style={{ fontFamily: 'Inter, Arial, sans-serif' }}
+                      />
+                      <p className="text-xs text-blue-600 mt-2">
+                        This text will be displayed in the Professional Recommendations section on Recommendation Pages.
+                      </p>
+                    </div>
                   </div>
-                  {false ? (
-                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-green-600">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-green-800">Review image selected</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-                      <p>No images available</p>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             ) : null}
 
             {/* Generate Button - Only show on last page */}
             <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-              {currentPage === totalPages ? (
+              {(currentPage === totalPages || (currentLogicalStep === 7 && currentRecommendationPageIndex === (formData.repairEstimatePages?.length || 0) - 1)) ? (
                 <button 
                   type="button"
                   onClick={handleSubmit}
@@ -1690,25 +1933,34 @@ const MultiStepForm: React.FC = () => {
                 
               </h3>
               <div className="flex items-center space-x-2">
-                {currentPage > 1 && (
-                  <button
-                    onClick={handlePrevPage}
-                    className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
-                  >
-                    ← Page {currentPage - 1}
-                  </button>
-                )}
-                <span className="text-sm text-gray-600 font-medium">
-                  Page {currentPage} of {totalPages}
-                </span>
-                {currentPage < totalPages && (
-                  <button
-                    onClick={handleNextPage}
-                    className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
-                  >
-                    Page {currentPage + 1} →
-                  </button>
-                )}
+                {(() => {
+                  // Calculate the actual page number being displayed
+                  const actualPageNumber = currentLogicalStep === 7 ? currentPage + currentRecommendationPageIndex : currentPage;
+                  
+                  return (
+                    <>
+                      {(actualPageNumber > 1) && (
+                        <button
+                          onClick={handlePrevPage}
+                          className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
+                        >
+                          ← Page {actualPageNumber - 1}
+                        </button>
+                      )}
+                      <span className="text-sm text-gray-600 font-medium">
+                        Page {actualPageNumber} of {totalPages}
+                      </span>
+                      {(actualPageNumber < totalPages) && (
+                        <button
+                          onClick={handleNextPage}
+                          className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
+                        >
+                          Page {actualPageNumber + 1} →
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
             
@@ -1751,6 +2003,7 @@ const MultiStepForm: React.FC = () => {
                     isPDF={false}
                     repairEstimateData={getCurrentRecommendationPage()?.repairEstimateData}
                     reviewImage={getCurrentRecommendationPage()?.reviewImage}
+                    customRecommendation={getCurrentRecommendationPage()?.customRecommendation || ''}
                   />
                 ) : (
                   // Show empty Page7 when no recommendation pages exist
@@ -1761,6 +2014,7 @@ const MultiStepForm: React.FC = () => {
                     isPDF={false}
                     repairEstimateData={{ manualEntry: false, rows: [] }}
                     reviewImage=""
+                    customRecommendation=""
                   />
                 )
               ) : null}
@@ -1877,18 +2131,15 @@ const MultiStepForm: React.FC = () => {
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900">Change Image for Page {imageChangePageIndex + 1}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Change Image for Current Page</h3>
                 <button
-                  onClick={() => {
-                    setShowChangeImageModal(false);
-                    setImageChangePageIndex(-1);
-                  }}
+                  onClick={() => setShowChangeImageModal(false)}
                   className="text-gray-400 hover:text-gray-600 text-xl font-bold"
                 >
                   ×
                 </button>
               </div>
-              <p className="text-sm text-gray-600 mt-2">Choose a different image for this recommendation page</p>
+              <p className="text-sm text-gray-600 mt-2">Choose a different image for the current recommendation page</p>
             </div>
             
             <div className="p-4">
@@ -1901,9 +2152,8 @@ const MultiStepForm: React.FC = () => {
                         alt={`Available Image ${index + 1}`}
                         className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-[#722420] transition-colors"
                         onClick={() => {
-                          changePageImage(imageChangePageIndex, image.url);
+                          changePageImage(currentRecommendationPageIndex, image.url);
                           setShowChangeImageModal(false);
-                          setImageChangePageIndex(-1);
                         }}
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1981,24 +2231,8 @@ const MultiStepForm: React.FC = () => {
 
               <button
                 onClick={() => {
-                        const currentPage = getCurrentRecommendationPage();
-                        if (currentPage) {
-                          const newRow = {
-                            id: Date.now().toString(),
-                            srNo: currentPage.repairEstimateData.rows.length + 1,
-                            description: '',
-                            unit: 1,
-                            price: 0,
-                            isManual: false
-                          };
-                          updateCurrentRecommendationPage({
-                            repairEstimateData: {
-                              ...currentPage.repairEstimateData,
-                              rows: [...currentPage.repairEstimateData.rows, newRow]
-                            }
-                          });
-                        }
                   setShowAddRowModal(false);
+                  setShowPredefinedModal(true);
                 }}
                 className="w-full p-4 text-left border-2 border-gray-200 rounded-lg hover:border-[#722420] hover:bg-gray-50 transition-colors"
               >
@@ -2016,6 +2250,72 @@ const MultiStepForm: React.FC = () => {
                   </div>
                 </div>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Predefined Options Modal */}
+      {showPredefinedModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh]">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Select Predefined Repair Item</h3>
+                <button
+                  onClick={() => setShowPredefinedModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">Choose from {dropdownOptions.length} predefined repair items</p>
+            </div>
+            
+            <div className="p-4 max-h-96 overflow-y-auto">
+              <div className="space-y-2">
+                {dropdownOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => {
+                      const currentPage = getCurrentRecommendationPage();
+                      if (currentPage) {
+                        const newRow = {
+                          id: Date.now().toString(),
+                          srNo: currentPage.repairEstimateData.rows.length + 1,
+                          description: option.description,
+                          unit: option.unit,
+                          price: option.price,
+                          recommendation: option.recommendation,
+                          isManual: false
+                        };
+                        updateCurrentRecommendationPage({
+                          repairEstimateData: {
+                            ...currentPage.repairEstimateData,
+                            rows: [...currentPage.repairEstimateData.rows, newRow]
+                          }
+                        });
+                      }
+                      setShowPredefinedModal(false);
+                    }}
+                    className="w-full p-3 text-left border border-gray-200 rounded-lg hover:border-[#722420] hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 text-sm">
+                          {option.srNo}. {option.description}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          Unit: {option.unit} | Price: ${option.price}
+                        </div>
+                      </div>
+                      <div className="ml-4 text-xs text-gray-500">
+                        #{option.id}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

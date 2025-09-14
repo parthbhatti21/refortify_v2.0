@@ -27,6 +27,7 @@ interface Page7Props {
     rows: TableRow[];
   };
   reviewImage?: string;
+  customRecommendation?: string;
 }
 const dropdownOptions = [
   {
@@ -292,7 +293,7 @@ const dropdownOptions = [
     srNo: 38,
     description: 'Level 2 Chimney Inspection Is Required',
     unit: 1,
-    estimate: 450,
+      estimate: 450,
     recommendation: "Virginia Chimneys, Fireplaces, Vents and Solid Fuel-Burning Appliance Code 15.4 states: A Level II inspection is indicated when verification of the suitability of the chimney for new or changed conditions of service is needed or when a Level I inspection is not sufficient to determine the serviceability of the chimney. 15.4.1: Circumstances: After a building or chimney fire, weather or seismic event, or other incident likely to have caused damage to the chimney."
   },
   {
@@ -311,7 +312,8 @@ export const Page7: React.FC<Page7Props> = ({
   onImageSelection,
   isPDF = false,
   repairEstimateData,
-  reviewImage
+  reviewImage,
+  customRecommendation
 }) => {
   const tableRows = repairEstimateData?.rows || [];
   const [availableImages, setAvailableImages] = useState<ImageItem[]>(selectedImages);
@@ -651,13 +653,13 @@ export const Page7: React.FC<Page7Props> = ({
                   const textLength = recommendationText.length;
                   // Estimate height based on text length (roughly 80 chars per line at 8px font)
                   const estimatedLines = Math.max(2, Math.ceil(textLength / 80));
-                  // Header (20px) + text lines (10px each) + padding (24px)
-                  return `${20 + (estimatedLines * 10) + 24}px`;
+                  // Header (17px) + text lines (8.5px each) + minimal padding (3px) - 15% reduction
+                  return `${17 + (estimatedLines * 8.5) + 3}px`;
                 })()
               }}>
                 <h4 style={{ 
                   position: 'absolute',
-                  top: '8px',
+                  top: '6px',
                   left: '12px',
                   right: '12px',
                   fontSize: '10px', 
@@ -665,16 +667,16 @@ export const Page7: React.FC<Page7Props> = ({
                   color: '#722420',
                   fontFamily: 'Inter, Arial, sans-serif',
                   margin: '0',
-                  height: '12px'
+                  height: '10px'
                 }}>
                   Professional Recommendations:
                 </h4>
                 <p style={{ 
                   position: 'absolute',
-                  top: '24px',
+                  top: '20px',
                   left: '12px',
                   right: '12px',
-                  bottom: '12px',
+                  bottom: '0px',  // Minimal bottom margin
                   fontSize: '8px', 
                   color: '#495057', 
                   lineHeight: '1.3',
@@ -682,7 +684,13 @@ export const Page7: React.FC<Page7Props> = ({
                   fontFamily: 'Inter, Arial, sans-serif',
                   textAlign: 'justify'
                 }}>
-                  {tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ')}
+                  {(() => {
+                    const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                    const allRecommendations = customRecommendation ? 
+                      `${tableRecommendations} ${customRecommendation}`.trim() : 
+                      tableRecommendations;
+                    return allRecommendations;
+                  })()}
                 </p>
               </div>
             </div>
@@ -712,8 +720,30 @@ export const Page7: React.FC<Page7Props> = ({
                 src={reviewImage}
                 alt="Review image"
                 style={{
-                  maxWidth: '400px',
-                  maxHeight: '300px',
+                  maxWidth: (() => {
+                    const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                    const allRecommendations = customRecommendation ? 
+                      `${tableRecommendations} ${customRecommendation}`.trim() : 
+                      tableRecommendations;
+                    const textLength = allRecommendations.length;
+                    
+                    if (textLength > 2000) return '280px';
+                    if (textLength > 1500) return '320px';
+                    if (textLength > 1000) return '350px';
+                    return '390px';
+                  })(),
+                  maxHeight: (() => {
+                    const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                    const allRecommendations = customRecommendation ? 
+                      `${tableRecommendations} ${customRecommendation}`.trim() : 
+                      tableRecommendations;
+                    const textLength = allRecommendations.length;
+                    
+                    if (textLength > 2000) return '190px';
+                    if (textLength > 1500) return '220px';
+                    if (textLength > 1000) return '250px';
+                    return '280px';
+                  })(),
                   objectFit: 'contain',
                   borderRadius: '4px',
                   border: '1px solid #e9ecef',
@@ -999,7 +1029,13 @@ export const Page7: React.FC<Page7Props> = ({
             <div className="bg-gray-50 p-3 rounded border">
               <h4 className="text-xs font-bold mb-2 text-[#722420]">Professional Recommendations:</h4>
               <p className="text-[8.5px] text-gray-700 leading-tight text-justify">
-                {tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ')}
+                {(() => {
+                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                  const allRecommendations = customRecommendation ? 
+                    `${tableRecommendations} ${customRecommendation}`.trim() : 
+                    tableRecommendations;
+                  return allRecommendations;
+                })()}
               </p>
             </div>
           </div>
@@ -1026,7 +1062,36 @@ export const Page7: React.FC<Page7Props> = ({
             <img
               src={reviewImage}
               alt="Review image"
-              className="max-w-[400px] max-h-[300px] object-contain rounded border shadow-sm"
+              style={{
+                maxWidth: (() => {
+                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                  const allRecommendations = customRecommendation ? 
+                    `${tableRecommendations} ${customRecommendation}`.trim() : 
+                    tableRecommendations;
+                  const textLength = allRecommendations.length;
+                  
+                  if (textLength > 2000) return '280px';
+                  if (textLength > 1200) return '320px';
+                  if (textLength > 1000) return '350px';
+                  return '390px';
+                })(),
+                maxHeight: (() => {
+                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                  const allRecommendations = customRecommendation ? 
+                    `${tableRecommendations} ${customRecommendation}`.trim() : 
+                    tableRecommendations;
+                  const textLength = allRecommendations.length;
+                  
+                  if (textLength > 2000) return '190px';
+                  if (textLength > 1500) return '220px';
+                  if (textLength > 1000) return '250px';
+                  return '280px';
+                })(),
+                objectFit: 'contain',
+                borderRadius: '4px',
+                border: '1px solid #e9ecef',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+              }}
             />
           </div>
         )}
