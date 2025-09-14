@@ -29,7 +29,14 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
     <div className="bg-white grid justify-items-center [align-items:start] w-full">
       <div className="bg-white w-[595px] h-[842px]">
         <div className="relative w-[546px] h-[790px] top-[26px] left-[25px]" style={mainContainerStyle}>
-          <div className="absolute w-[487px] top-[370px] left-12 [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[14px] tracking-[0] space-y-4">
+          <div 
+            className="absolute w-[487px] top-[370px] left-12 [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[14px] tracking-[0]"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}
+          >
             <div>Virginia Class A Contractor # 2705139016 (Expires March 31,2027)</div>
             <div>Master H.V.A.C. # 2710076347 (Expires September 30,2027)</div>
             <div>License Professional Engineer # 0402032901 (Expires January 31,2027)</div>

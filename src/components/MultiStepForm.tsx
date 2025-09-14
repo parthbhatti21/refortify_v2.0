@@ -7,6 +7,10 @@ import Page4 from './Page4';
 import Page5 from './Page5';
 import Page6 from './Page6';
 import Page7 from './Page7';
+import Page8 from './Page8';
+import Page9Part1 from './Page9-part1';
+import Page9Part2 from './Page9-part2';
+import Page9Part3 from './Page9-part3';
 import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
 
@@ -752,15 +756,42 @@ const MultiStepForm: React.FC = () => {
   
   const totalInvoicePages = calculateSmartInvoicePages();
     const totalRecommendationPages = formData.repairEstimatePages?.length || 0;
+    
+    // Get unused images for Page8
+    const getUnusedImages = () => {
+      const allImages = formData.scrapedImages || [];
+      const usedImages = new Set<string>();
+      
+      // Collect all images used in recommendation pages
+      formData.repairEstimatePages?.forEach(page => {
+        if (page.reviewImage) {
+          usedImages.add(page.reviewImage);
+        }
+      });
+      
+      // Return images that are not used
+      return allImages.filter(img => !usedImages.has(img.url));
+    };
+
+    // Calculate total image pages needed (9 images per page)
+    const getTotalImagePages = () => {
+      const unusedImages = getUnusedImages();
+      return Math.max(1, Math.ceil(unusedImages.length / 9));
+    };
+    
     // Always include at least one page for step 7 (recommendation setup), plus any additional recommendation pages
-    const totalPages = 4 + totalInvoicePages + 1 + Math.max(1, totalRecommendationPages); // Pages 1-4 + invoice pages + Page 6 (images) + recommendation pages (min 1)
+    const totalImagePages = getTotalImagePages();
+    const totalPages = 4 + totalInvoicePages + 1 + Math.max(1, totalRecommendationPages) + totalImagePages + 3; // Pages 1-4 + invoice pages + Page 6 (images) + recommendation pages (min 1) + image pages + Page9-part1 + Page9-part2 + Page9-part3
   
-  // Helper function to determine the logical step (1-7) based on current page
+  // Helper function to determine the logical step (1-9) based on current page
   const getLogicalStep = (pageNum: number): number => {
     if (pageNum <= 4) return pageNum; // Pages 1-4 are steps 1-4
     if (pageNum <= 4 + totalInvoicePages) return 5; // All invoice pages are step 5
     if (pageNum === 4 + totalInvoicePages + 1) return 6; // Image page is step 6
-    return 7; // Recommendation pages are step 7
+    if (isRecommendationPage(pageNum)) return 7; // Recommendation pages are step 7
+    if (isImagePage(pageNum)) return 8; // Image pages are step 8
+    if (pageNum >= totalPages - 2) return 9; // Page9-part1, Page9-part2, and Page9-part3 are step 9
+    return 7; // Default to recommendation pages
   };
   
   // Helper function to check if we're on an invoice page
@@ -768,52 +799,173 @@ const MultiStepForm: React.FC = () => {
     return pageNum >= 5 && pageNum <= 4 + totalInvoicePages;
   };
   
-  // Helper function to check if we're on the image page
-  const isImagePage = (pageNum: number): boolean => {
+  // Helper function to check if we're on the image page (Page 6)
+  const isImagePage6 = (pageNum: number): boolean => {
     return pageNum === 4 + totalInvoicePages + 1;
   };
   
   // Helper function to check if we're on a recommendation page
   const isRecommendationPage = (pageNum: number): boolean => {
-    return pageNum > 4 + totalInvoicePages + 1; // After image page
+    const imagePageNum = 4 + totalInvoicePages + 1;
+    const recommendationPageStart = imagePageNum + 1;
+    const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+    return pageNum >= recommendationPageStart && pageNum < imagePageStart;
   };
   
   // Helper function to get recommendation page index
   const getRecommendationPageIndex = (pageNum: number): number => {
-    const index = pageNum - (4 + totalInvoicePages + 1) - 1; // Zero-based index
+    const imagePageNum = 4 + totalInvoicePages + 1;
+    const index = pageNum - imagePageNum - 1; // Zero-based index
     return Math.max(0, index); // Ensure non-negative
   };
   
   // Helper function to check if we're on the first recommendation page (setup page)
   const isRecommendationSetupPage = (pageNum: number): boolean => {
-    return pageNum === 4 + totalInvoicePages + 2 && totalRecommendationPages === 0; // First page after images, no pages created
+    const imagePageNum = 4 + totalInvoicePages + 1;
+    return pageNum === imagePageNum + 1 && totalRecommendationPages === 0; // First page after images, no pages created
+  };
+
+  // Helper function to check if we're on an image page (step 8)
+  const isImagePage = (pageNum: number): boolean => {
+    const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+    const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+    const imagePageEnd = totalPages - 3; // Exclude Page9-part1, Page9-part2, and Page9-part3 (last 3 pages)
+    return pageNum >= imagePageStart && pageNum <= imagePageEnd;
+  };
+
+  // Helper function to get image page index
+  const getImagePageIndex = (pageNum: number): number => {
+    const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+    const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+    return pageNum - imagePageStart;
   };
   
   const currentLogicalStep = getLogicalStep(currentPage);
 
+  // Debug helper to understand page structure
+  const debugPageStructure = () => {
+    console.log('=== PAGE STRUCTURE DEBUG ===');
+    console.log('totalInvoicePages:', totalInvoicePages);
+    console.log('totalRecommendationPages:', totalRecommendationPages);
+    console.log('totalImagePages:', getTotalImagePages());
+    console.log('totalPages:', totalPages);
+    console.log('currentPage:', currentPage);
+    console.log('currentLogicalStep:', currentLogicalStep);
+    
+    const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+    const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+    const lastImagePage = totalPages - 3;
+    
+    console.log('Pages 1-4: Client Info, Company Info, Service Report, Chimney Type');
+    console.log(`Pages 5-${4 + totalInvoicePages}: Invoice pages`);
+    console.log(`Page ${4 + totalInvoicePages + 1}: Image selection`);
+    console.log(`Pages ${recommendationPageStart}-${imagePageStart - 1}: Recommendation pages`);
+    console.log(`Pages ${imagePageStart}-${lastImagePage}: Image pages`);
+    console.log(`Page ${totalPages - 2}: Page9-part1`);
+    console.log(`Page ${totalPages - 1}: Page9-part2`);
+    console.log(`Page ${totalPages}: Page9-part3`);
+    console.log('isImagePage(currentPage):', isImagePage(currentPage));
+    console.log('================================');
+  };
+
+  // Function to navigate to a specific step
+  const navigateToStep = (targetStep: number) => {
+    if (targetStep < 1 || targetStep > 9) return;
+    
+    // Special handling for step 9 - go to Page9-part1 (third to last page)
+    if (targetStep === 9) {
+      setCurrentPage(totalPages - 2);
+      return;
+    }
+    
+    // Find the first page that corresponds to the target step
+    for (let page = 1; page <= totalPages; page++) {
+      if (getLogicalStep(page) === targetStep) {
+        setCurrentPage(page);
+        break;
+      }
+    }
+  };
+
   const handleNextPage = () => {
+    // Debug page structure when navigating
+    if (currentLogicalStep >= 7) {
+      debugPageStructure();
+    }
+    
     if (currentLogicalStep === 7) {
       // If we're on recommendation pages, navigate through recommendation pages
       if (currentRecommendationPageIndex < (formData.repairEstimatePages?.length || 0) - 1) {
+        // Move to next recommendation page
         setCurrentRecommendationPageIndex(currentRecommendationPageIndex + 1);
-      } else if (currentPage < totalPages) {
-        // If we're on the last recommendation page, go to next main page
-        setCurrentPage(currentPage + 1);
+      } else {
+        // If we're on the last recommendation page, go to first image page
+        const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+        const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+        setCurrentPage(imagePageStart);
+        setCurrentRecommendationPageIndex(0); // Reset for future use
       }
+    } else if (isImagePage(currentPage)) {
+      // If we're on image pages, navigate through image pages
+      const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+      const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+      const lastImagePage = totalPages - 3; // Last image page before Page9
+      
+      if (currentPage < lastImagePage) {
+        setCurrentPage(currentPage + 1);
+      } else {
+        // If we're on the last image page, go to Page9-part1
+        setCurrentPage(totalPages - 2);
+      }
+    } else if (currentPage === totalPages - 2) {
+      // If we're on Page9-part1, go to Page9-part2
+      setCurrentPage(totalPages - 1);
+    } else if (currentPage === totalPages - 1) {
+      // If we're on Page9-part2, go to Page9-part3
+      setCurrentPage(totalPages);
     } else if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
     }
   };
 
   const handlePrevPage = () => {
-    if (currentLogicalStep === 7) {
+    if (isImagePage(currentPage)) {
+      // If we're on image pages, navigate through image pages
+      const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+      const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+      const currentImagePageIndex = getImagePageIndex(currentPage);
+      
+      if (currentImagePageIndex > 0) {
+        // Move to previous image page
+        setCurrentPage(currentPage - 1);
+      } else {
+        // If we're on the first image page, go to last recommendation page
+        setCurrentPage(imagePageStart - 1);
+        setCurrentRecommendationPageIndex((formData.repairEstimatePages?.length || 0) - 1);
+      }
+    } else if (currentLogicalStep === 7) {
       // If we're on recommendation pages, navigate through recommendation pages
       if (currentRecommendationPageIndex > 0) {
+        // Move to previous recommendation page
         setCurrentRecommendationPageIndex(currentRecommendationPageIndex - 1);
-      } else if (currentPage > 1) {
-        // If we're on the first recommendation page, go to previous main page
-        setCurrentPage(currentPage - 1);
+      } else {
+        // If we're on the first recommendation page, go to image page
+        const imagePageNum = 4 + totalInvoicePages + 1;
+        setCurrentPage(imagePageNum);
+        setCurrentRecommendationPageIndex(0);
       }
+    } else if (currentPage === totalPages) {
+      // If we're on Page9-part3, go to Page9-part2
+      setCurrentPage(totalPages - 1);
+    } else if (currentPage === totalPages - 1) {
+      // If we're on Page9-part2, go to Page9-part1
+      setCurrentPage(totalPages - 2);
+    } else if (currentPage === totalPages - 2) {
+      // If we're on Page9-part1, go to last image page
+      const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+      const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+      const lastImagePage = totalPages - 3; // Last image page before Page9
+      setCurrentPage(lastImagePage);
     } else if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
     }
@@ -930,6 +1082,19 @@ const MultiStepForm: React.FC = () => {
         reviewImage: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.reviewImage || '',
         customRecommendation: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.customRecommendation || ''
       }) :
+      isImagePage(pageNumber) ?
+      React.createElement(Page8, { 
+        isPDF: true, 
+        unusedImages: getUnusedImages(),
+        currentPage: getImagePageIndex(pageNumber) + 1,
+        totalPages: getTotalImagePages()
+      }) :
+      pageNumber === totalPages - 2 ?
+      React.createElement(Page9Part1, { isPDF: true, chimneyType: formData.chimneyType }) :
+      pageNumber === totalPages - 1 ?
+      React.createElement(Page9Part2, { isPDF: true, chimneyType: formData.chimneyType }) :
+      pageNumber === totalPages ?
+      React.createElement(Page9Part3, { isPDF: true, chimneyType: formData.chimneyType }) :
       React.createElement(Page5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: 1 });
     
     // Render the page to the container
@@ -1057,7 +1222,10 @@ const MultiStepForm: React.FC = () => {
           {/* Form Step Progress Indicator */}
           <div className="mb-6 px-2">
             <div className="flex items-center justify-center space-x-4">
-              <div className={`flex items-center ${currentLogicalStep >= 1 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div 
+                className={`flex items-center cursor-pointer ${currentLogicalStep >= 1 ? 'text-[#722420]' : 'text-gray-400'}`}
+                onClick={() => navigateToStep(1)}
+              >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   currentLogicalStep >= 1 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
@@ -1066,7 +1234,10 @@ const MultiStepForm: React.FC = () => {
                 <span className="ml-2 text-sm font-medium">Client Info</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentLogicalStep >= 2 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div 
+                className={`flex items-center cursor-pointer ${currentLogicalStep >= 2 ? 'text-[#722420]' : 'text-gray-400'}`}
+                onClick={() => navigateToStep(2)}
+              >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   currentLogicalStep >= 2 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
@@ -1075,7 +1246,10 @@ const MultiStepForm: React.FC = () => {
                 <span className="ml-2 text-sm font-medium">Company Info</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentLogicalStep >= 3 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div 
+                className={`flex items-center cursor-pointer ${currentLogicalStep >= 3 ? 'text-[#722420]' : 'text-gray-400'}`}
+                onClick={() => navigateToStep(3)}
+              >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   currentLogicalStep >= 3 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
@@ -1084,7 +1258,10 @@ const MultiStepForm: React.FC = () => {
                 <span className="ml-2 text-sm font-medium">Service Report</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentLogicalStep >= 4 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div 
+                className={`flex items-center cursor-pointer ${currentLogicalStep >= 4 ? 'text-[#722420]' : 'text-gray-400'}`}
+                onClick={() => navigateToStep(4)}
+              >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   currentLogicalStep >= 4 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
@@ -1093,7 +1270,10 @@ const MultiStepForm: React.FC = () => {
                 <span className="ml-2 text-sm font-medium">Chimney Type</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentLogicalStep >= 5 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div 
+                className={`flex items-center cursor-pointer ${currentLogicalStep >= 5 ? 'text-[#722420]' : 'text-gray-400'}`}
+                onClick={() => navigateToStep(5)}
+              >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   currentLogicalStep >= 5 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
@@ -1102,7 +1282,10 @@ const MultiStepForm: React.FC = () => {
                 <span className="ml-2 text-sm font-medium">Invoice</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentLogicalStep >= 6 ? 'text-[#722420]' : 'text-gray-400'}`}>
+              <div 
+                className={`flex items-center cursor-pointer ${currentLogicalStep >= 6 ? 'text-[#722420]' : 'text-gray-400'}`}
+                onClick={() => navigateToStep(6)}
+              >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   currentLogicalStep >= 6 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
@@ -1111,14 +1294,41 @@ const MultiStepForm: React.FC = () => {
                 <span className="ml-2 text-sm font-medium">Images</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
-              <div className={`flex items-center ${currentLogicalStep >= 7 ? 'text-[#722420]' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentLogicalStep >= 7 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  7
-                </div>
-                <span className="ml-2 text-sm font-medium">Repair Est.</span>
-              </div>
+               <div 
+                 className={`flex items-center cursor-pointer ${currentLogicalStep >= 7 ? 'text-[#722420]' : 'text-gray-400'}`}
+                 onClick={() => navigateToStep(7)}
+               >
+                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                   currentLogicalStep >= 7 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                 }`}>
+                   {currentLogicalStep > 7 ? '✓' : '7'}
+                 </div>
+                 <span className="ml-2 text-sm font-medium">Repair Est.</span>
+               </div>
+               <div className="w-12 h-1 bg-gray-200"></div>
+               <div 
+                 className={`flex items-center cursor-pointer ${currentLogicalStep >= 8 ? 'text-[#722420]' : 'text-gray-400'}`}
+                 onClick={() => navigateToStep(8)}
+               >
+                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                   currentLogicalStep >= 8 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                 }`}>
+                   8
+                 </div>
+                 <span className="ml-2 text-sm font-medium">Inspection Images</span>
+               </div>
+               <div className="w-12 h-1 bg-gray-200"></div>
+               <div 
+                 className={`flex items-center cursor-pointer ${currentLogicalStep >= 9 ? 'text-[#722420]' : 'text-gray-400'}`}
+                 onClick={() => navigateToStep(9)}
+               >
+                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                   currentLogicalStep >= 9 ? 'bg-[#722420] text-white' : 'bg-gray-200 text-gray-600'
+                 }`}>
+                   9
+                 </div>
+                 <span className="ml-2 text-sm font-medium">Documentation</span>
+               </div>
             </div>
           </div>
           
@@ -1133,7 +1343,8 @@ const MultiStepForm: React.FC = () => {
                  currentLogicalStep === 4 ? 'Page 4 - Chimney Type' : 
                  currentLogicalStep === 5 ? `Page ${currentPage} - Invoice${totalInvoicePages > 1 ? ` (${currentPage - 4}/${totalInvoicePages})` : ''}` : 
                  currentLogicalStep === 6 ? 'Page 6 - Project Images' :
-                 'Page 7 - Repair Estimate'}
+                 currentLogicalStep === 7 ? 'Page 7 - Repair Estimate' :
+                 'Page 8 - Inspection Images'}
               </h3>
               <button
                 onClick={handleBackToScrape}
@@ -1547,7 +1758,7 @@ const MultiStepForm: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ) : isImagePage(currentPage) ? (
+            ) : isImagePage6(currentPage) ? (
               // Page 6 - Image Selection Interface
               <div className="space-y-4">
                 <div className="mb-4">
@@ -1885,11 +2096,79 @@ const MultiStepForm: React.FC = () => {
                   </div>
                 )}
               </div>
+            ) : isImagePage(currentPage) ? (
+              <div className="text-center py-8">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="text-blue-600 mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-black mb-2">Page 8 - Inspection Images</h4>
+                  <p className="text-black mb-4">
+                    This page displays inspection images in a static format. Images are automatically arranged and cannot be modified in this view.
+                  </p>
+                  <p className="text-sm text-black">
+                    Page {getImagePageIndex(currentPage) + 1} of {getTotalImagePages()}
+                  </p>
+                </div>
+              </div>
+            ) : currentPage === totalPages - 1 ? (
+              <div className="text-center py-8">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <div className="text-green-600 mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-black mb-2">Page 9 - Documentation (Part 1)</h4>
+                  <p className="text-black mb-4">
+                    This page contains chimney documentation information that cannot be edited.
+                  </p>
+                  <p className="text-sm text-black">
+                    All information is pre-filled and will be included in the final PDF report.
+                  </p>
+                </div>
+              </div>
+            ) : currentPage === totalPages - 1 ? (
+              <div className="text-center py-8">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <div className="text-green-600 mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-black mb-2">Page 9 - Documentation (Part 2)</h4>
+                  <p className="text-black mb-4">
+                    This page contains additional chimney documentation information that cannot be edited.
+                  </p>
+                  <p className="text-sm text-black">
+                    All information is pre-filled and will be included in the final PDF report.
+                  </p>
+                </div>
+              </div>
+            ) : currentPage === totalPages ? (
+              <div className="text-center py-8">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <div className="text-green-600 mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-black mb-2">Page 9 - Documentation (Part 3)</h4>
+                  <p className="text-black mb-4">
+                    This page contains final chimney documentation information that cannot be edited.
+                  </p>
+                  <p className="text-sm text-black">
+                    All information is pre-filled and will be included in the final PDF report.
+                  </p>
+                </div>
+              </div>
             ) : null}
 
-            {/* Generate Button - Only show on last page */}
-            <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
-              {(currentPage === totalPages || (currentLogicalStep === 7 && currentRecommendationPageIndex === (formData.repairEstimatePages?.length || 0) - 1)) ? (
+             {/* Generate Button - Only show on last page */}
+             <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+               {currentPage === totalPages ? (
                 <button 
                   type="button"
                   onClick={handleSubmit}
@@ -1907,7 +2186,7 @@ const MultiStepForm: React.FC = () => {
                      currentLogicalStep === 4 ? 'Review chimney type details' : 
                      currentLogicalStep === 5 ? 'Review invoice details' : 
                      currentLogicalStep === 6 ? 'Select project images for the report' :
-                     'Configure repair estimate table'}
+                     currentLogicalStep === 7 ? 'Configure repair estimate table' : "This page is static and not editable"}
                   </p>
                   <p className="text-xs text-gray-500">
                     {currentPage < totalPages ? 'Navigate through all pages to complete your report' : 'All pages completed - ready to generate report'}
@@ -1935,7 +2214,14 @@ const MultiStepForm: React.FC = () => {
               <div className="flex items-center space-x-2">
                 {(() => {
                   // Calculate the actual page number being displayed
-                  const actualPageNumber = currentLogicalStep === 7 ? currentPage + currentRecommendationPageIndex : currentPage;
+                  let actualPageNumber = currentPage;
+                  if (currentLogicalStep === 7) {
+                    const imagePageNum = 4 + totalInvoicePages + 1;
+                    actualPageNumber = imagePageNum + 1 + currentRecommendationPageIndex;
+                  } else if (currentLogicalStep === 8) {
+                    // For image pages, show the actual page number
+                    actualPageNumber = currentPage;
+                  }
                   
                   return (
                     <>
@@ -1987,7 +2273,7 @@ const MultiStepForm: React.FC = () => {
                   currentInvoicePage={currentPage - 4}
                   isPDF={false}
                 />
-              ) : isImagePage(currentPage) ? (
+              ) : isImagePage6(currentPage) ? (
                 <Page6 
                   scrapedImages={formData.scrapedImages || []}
                   selectedImages={formData.selectedImages || []}
@@ -2016,9 +2302,22 @@ const MultiStepForm: React.FC = () => {
                     reviewImage=""
                     customRecommendation=""
                   />
-                )
-              ) : null}
-            </div>
+                 )
+               ) : isImagePage(currentPage) ? (
+                 <Page8 
+                   isPDF={false} 
+                   unusedImages={getUnusedImages()} 
+                   currentPage={getImagePageIndex(currentPage) + 1}
+                   totalPages={getTotalImagePages()}
+                 />
+                ) : currentPage === totalPages - 2 ? (
+                  <Page9Part1 isPDF={false} chimneyType={formData.chimneyType} />
+                ) : currentPage === totalPages - 1 ? (
+                  <Page9Part2 isPDF={false} chimneyType={formData.chimneyType} />
+                ) : currentPage === totalPages ? (
+                  <Page9Part3 isPDF={false} chimneyType={formData.chimneyType} />
+                ) : null}
+             </div>
             
             {/* Mobile preview instructions */}
             {isMobile && (
