@@ -94,7 +94,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
     
 
           {/* Invoice Table */}
-          <div style={{ position: 'absolute', top: '180px', left: '29px', right: '29px' }}>
+          <div style={{ position: 'absolute', top: '170px', left: '29px', right: '29px' }}>
             <div 
               ref={tableRef}
               style={{ 
@@ -163,7 +163,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 </div>
                 {!isPDF && (
                   <div style={{ 
-                    width: '40px',
+                    width: '0px',
                     textAlign: 'center', 
                     height: '30px',
                     display: 'flex',
@@ -243,40 +243,12 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     }}>
                       {total.toFixed(2)}
                     </div>
-                    {!isPDF && (
-                      <div style={{ 
-                        width: '40px',
-                        padding: '8px 0', 
-                        textAlign: 'center', 
-                        height: '30px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'inherit'
-                      }}>
-                        <button 
-                          onClick={() => {
-                            const updatedRows = localData.rows.filter(r => r.id !== row.id);
-                            updateLocalData({ ...localData, rows: updatedRows });
-                          }}
-                          aria-label="Delete row"
-                          style={{ 
-                            background: 'transparent', 
-                            border: 'none', 
-                            cursor: 'pointer', 
-                            fontSize: '14px',
-                            lineHeight: 1
-                          }}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    )}
+                    
                   </div>
                 );
               })}
 
-              {/* Total row - only show on last page */}
+              {/* Total row - only show on last page, directly after rows */}
               {currentPageRows.length > 0 && currentEstimatePage === totalPages && (
                 <div style={{ 
                   display: 'flex',
@@ -333,7 +305,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   </div>
                   {!isPDF && (
                     <div style={{ 
-                      width: '40px',
+                      width: '0px',
                       height: '30px',
                       backgroundColor: '#722420'
                     }}></div>

@@ -1250,21 +1250,29 @@ const MultiStepForm: React.FC = () => {
       
       console.log('Generating PDF Page:', pageNum);
       const pageCanvas = await generatePageCanvas(pageNum);
-      const optimizedCanvas = createOptimizedCanvas(pageCanvas, 842, 1190);
+      const isStep6ImagePage = getLogicalStep(pageNum) === 6;
       
-      // Use different compression for page 4 (chimney images)
-      const compressionQuality = pageNum === 4 ? 0.9 : 0.78;
-      const pageImgData = await compressImage(optimizedCanvas, 'JPEG', compressionQuality);
+      // For Step 6 (Invoice Images) pages, avoid compression and keep PNG
+      let pageImgData: string;
+      if (isStep6ImagePage) {
+        // Use original canvas at full fidelity in PNG (no quality loss)
+        pageImgData = pageCanvas.toDataURL('image/png');
+      } else {
+        // Default path: scale and compress as JPEG
+        const optimizedCanvas = createOptimizedCanvas(pageCanvas, 842, 1190);
+        const compressionQuality = pageNum === 4 ? 0.9 : 0.78;
+        pageImgData = await compressImage(optimizedCanvas, 'JPEG', compressionQuality);
+      }
       
       if (pageCount > 0) {
         pdf.addPage();
       }
       pageCount++;
       
-    if (isMobileDevice) {
-        pdf.addImage(pageImgData, 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
-    } else {
-        pdf.addImage(pageImgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      if (isMobileDevice) {
+        pdf.addImage(pageImgData, isStep6ImagePage ? 'PNG' : 'JPEG', 0, 0, imgWidth, imgHeight, '', 'FAST');
+      } else {
+        pdf.addImage(pageImgData, isStep6ImagePage ? 'PNG' : 'JPEG', 0, 0, imgWidth, imgHeight);
       }
     }
   };
@@ -1322,7 +1330,8 @@ const MultiStepForm: React.FC = () => {
         isPDF: true, 
         unusedImages: getUnusedImages(),
         currentPage: getImagePageIndex(pageNumber) + 1,
-        totalPages: getTotalImagePages()
+        totalPages: getTotalImagePages(),
+        selectedImages: formData.selectedImages || []
       }) :
       // Step 9 pages (dynamic based on chimney type)
       getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - (formData.chimneyType === 'prefabricated' ? 8 : 7)) ?
@@ -2197,8 +2206,11 @@ const MultiStepForm: React.FC = () => {
                             });
                           }}
                           className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+                          title="Delete row"
                         >
-                          ×
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
                       </div>
                     ))}
@@ -2806,6 +2818,7 @@ const MultiStepForm: React.FC = () => {
                    unusedImages={getUnusedImages()} 
                    currentPage={getImagePageIndex(currentPage) + 1}
                    totalPages={getTotalImagePages()}
+                   selectedImages={formData.selectedImages || []}
                  />
                 ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - (formData.chimneyType === 'prefabricated' ? 8 : 7)) ? (
                   <Step9Part1 isPDF={false} chimneyType={formData.chimneyType} />

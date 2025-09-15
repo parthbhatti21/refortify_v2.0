@@ -86,7 +86,7 @@
 
 .page .div {
     color: #000000;
-    font-family: "Times New Roman-Regular", Helvetica;
+    font-family: "Times New Roman", Times, serif;
     font-size: 20px;
     font-weight: 400;
     left: 41px;
@@ -196,6 +196,16 @@
 [data-pdf="true"] .page * {
     font-family: inherit !important;
     line-height: normal !important;
+}
+
+/* Specific font consistency for the "Dear" text in PDF */
+.pdf-generation .page .div,
+[data-pdf="true"] .page .div {
+    opacity: 0.95 !important;  /* Adjust client name position for better spacing */
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 20px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.40px !important;
 }
 
 

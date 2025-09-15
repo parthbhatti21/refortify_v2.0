@@ -16,7 +16,7 @@ function App() {
                   <h1 className="text-2xl sm:text-3xl font-bold text-[#722420] text-left">
                     ChimneySweeps
                   </h1>
-                  <p className="text-xs sm:text-sm text-gray-500 text-left">Professional Report Builder - v2.0</p>
+                  <p className="text-xs sm:text-sm text-gray-500 text-left">Professional Report Builder</p>
                 </div>
               </div>
             </div>
@@ -39,7 +39,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           <div className="text-center">
             <p className="text-xs sm:text-sm text-gray-500">
-              © 2024 SumoQuote. Professional business reporting made simple.
+              © 2024 ChimneySweeps. Professional business reporting made simple.
             </p>
           </div>
         </div>

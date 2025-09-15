@@ -10,14 +10,17 @@ interface Page8Props {
   unusedImages?: ImageItem[];
   currentPage?: number;
   totalPages?: number;
+  selectedImages?: ImageItem[]; // Images chosen on Step 6
 }
 
-const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], currentPage = 1, totalPages = 1 }) => {
+const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], currentPage = 1, totalPages = 1, selectedImages = [] }) => {
   // Calculate which images to show for this page (9 images per page)
   const imagesPerPage = 9;
   const startIndex = (currentPage - 1) * imagesPerPage;
   const endIndex = startIndex + imagesPerPage;
   const pageImages = unusedImages.slice(startIndex, endIndex);
+
+  const selectedIdSet = new Set((selectedImages || []).map(img => img.id));
 
   if (isPDF) {
     return (
@@ -125,11 +128,11 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
               <div
                 key={image.id}
                 style={{
+                  position: 'relative',
                   width: '100%',
                   height: '100%',
                   overflow: 'hidden',
-                  border: '1px solid #722420',
-                  backgroundColor: '#f8f9fa'
+                  border: '1px solid #722420'
                 }}
               >
                 <img
@@ -141,6 +144,28 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
                     objectFit: 'cover'
                   }}
                 />
+                {/* {selectedIdSet.has(image.id) && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '6px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      color: 'white',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      borderRadius: '4px',
+                      letterSpacing: '0.4px',
+                      display: 'inline-block',
+                      height: '14px',
+                      lineHeight: '14px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {'\u00A0Invoice\u00A0'}
+                  </div>
+                )} */}
               </div>
             ))}
             
@@ -151,8 +176,8 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
                 style={{
                   width: '100%',
                   height: '100%',
-                  border: '1px solid #e0e0e0',
-                  backgroundColor: '#f8f9fa',
+                  
+                
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -199,13 +224,18 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
             {pageImages.map((image, index) => (
               <div
                 key={image.id}
-                className="w-full h-full overflow-hidden border border-[#722420] bg-white"
+                className="w-full h-full overflow-hidden border border-[#722420] bg-white relative"
               >
                 <img
                   src={image.url}
                   alt={`Inspection image ${startIndex + index + 1}`}
                   className="w-full h-full object-cover"
                 />
+                {selectedIdSet.has(image.id) && (
+                  <div className="absolute bottom-1 left-1 bg-black text-white text-[12px] font-bold px-1.5 py-0.5 rounded">
+                    Invoice
+                  </div>
+                )}
               </div>
             ))}
             

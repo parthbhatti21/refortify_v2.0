@@ -79,7 +79,13 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
 
           <div
             className="div"
-            style={{ fontFamily: 'Times New Roman, Times, serif', opacity: 1 , fontSize: '17px'}}
+            style={{ 
+              fontFamily: 'Times New Roman, Times, serif', 
+              opacity: 1, 
+              fontSize: '20px',
+              fontWeight: '400',
+              letterSpacing: '0.40px'
+            }}
           >
             Dear {formData.clientName || 'c1'},
           </div>
