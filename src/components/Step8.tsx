@@ -192,14 +192,14 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
             <div className="relative w-[536px] h-[780px] top-[3px] left-[3px] border-2 border-solid border-[#722420]" />
           </div>
           
-          <div className="absolute left-[22px] top-[146px] w-[502px] h-[602px] border border-[#722420] bg-gray-50" />
+          <div className="absolute left-[22px] top-[146px] w-[502px] h-[602px] border  bg-white" />
           
           {/* Images Grid - 3x3 */}
           <div className="absolute top-[146px] left-[22px] w-[502px] h-[602px] grid grid-cols-3 grid-rows-3 gap-2">
             {pageImages.map((image, index) => (
               <div
                 key={image.id}
-                className="w-full h-full overflow-hidden border border-[#722420] bg-gray-100"
+                className="w-full h-full overflow-hidden border border-[#722420] bg-white"
               >
                 <img
                   src={image.url}
@@ -213,7 +213,7 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
             {Array.from({ length: 9 - pageImages.length }).map((_, index) => (
               <div
                 key={`empty-${index}`}
-                className="w-full h-full border border-gray-300 bg-gray-100 flex items-center justify-center text-gray-500 text-xs"
+                className="w-full h-full   bg-white flex items-center justify-center text-gray-500 text-xs"
               >
                
               </div>
