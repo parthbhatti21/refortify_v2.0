@@ -349,7 +349,7 @@ export const Page7: React.FC<Page7Props> = ({
           <div className="w-[393px] h-[106px] absolute top-[25px]" style={{left: '50%', transform: 'translateX(-50%)'}}>
             <div className="absolute w-[391px] h-[54px] top-[52px] left-0 bg-black rounded-[36px] border-[6px] border-solid border-[#722420]">
               <div className="absolute w-[364px] top-[4px] left-2 [font-family:'Inter-Bold',Helvetica] font-bold text-white text-[21px] text-center tracking-[0.42px] leading-[normal] whitespace-nowrap">
-                Repair Estimate
+                Repair Recommendation
               </div>
             </div>
             <img className="absolute w-[124px] h-[52px] top-0 left-[134px] aspect-[2.4] object-cover" alt="Logo" src="/logo.webp" />
@@ -778,7 +778,7 @@ export const Page7: React.FC<Page7Props> = ({
             <div 
               className="absolute w-[364px] top-[8px] left-2 [font-family:'Inter-Bold',Helvetica] font-bold text-white text-[21px] text-center tracking-[0.42px] leading-[normal] whitespace-nowrap"
             >
-              Repair Estimate
+              Repair Recommendation
             </div>
           </div>
           <img

@@ -5,6 +5,7 @@ import Step2 from './Step2';
 import Step3 from './Step3';
 import Step4 from './Step4';
 import Step5 from './Step5';
+import Step5Part2 from './Step5-part2';
 import Step6 from './Step6';
 import Step7 from './Step7';
 import Step8 from './Step8';
@@ -37,6 +38,17 @@ export interface FormData {
   selectedImages?: ImageItem[]; // Selected images for Page6
   invoiceData?: {
     invoiceNumber: string;
+    paymentMethod: string;
+    paymentNumber: string;
+    rows: Array<{
+      id: string;
+      description: string;
+      unit: string;
+      price: string;
+    }>;
+  };
+  repairEstimateData?: {
+    estimateNumber: string;
     paymentMethod: string;
     paymentNumber: string;
     rows: Array<{
@@ -400,6 +412,12 @@ const MultiStepForm: React.FC = () => {
       paymentNumber: '',
       rows: []
     },
+    repairEstimateData: {
+      estimateNumber: '',
+      paymentMethod: '',
+      paymentNumber: '',
+      rows: []
+    },
     repairEstimatePages: [],
     usedReviewImages: []
   });
@@ -419,6 +437,7 @@ const MultiStepForm: React.FC = () => {
   const [showAddRowModal, setShowAddRowModal] = useState(false);
   const [showPredefinedModal, setShowPredefinedModal] = useState(false);
   const [showChangeImageModal, setShowChangeImageModal] = useState(false);
+  const [showInvoiceQuickAdd, setShowInvoiceQuickAdd] = useState(false);
 
   // Toggle page inclusion in PDF
   const togglePageInclusion = (logicalStep: number) => {
@@ -823,8 +842,18 @@ const MultiStepForm: React.FC = () => {
     const ROWS_PER_PAGE = 5;
     return Math.ceil(totalRows / ROWS_PER_PAGE);
   };
+
+  const calculateSmartRepairEstimatePages = () => {
+    const totalRows = formData.repairEstimateData?.rows?.length || 0;
+    if (totalRows === 0) return 1;
+    
+    // Use 15 rows per page to match Step5-part2
+    const ROWS_PER_PAGE = 15;
+    return Math.ceil(totalRows / ROWS_PER_PAGE);
+  };
   
   const totalInvoicePages = calculateSmartInvoicePages();
+  const totalRepairEstimatePages = calculateSmartRepairEstimatePages();
     const totalRecommendationPages = formData.repairEstimatePages?.length || 0;
     
     // Get unused images for Page8
@@ -855,7 +884,7 @@ const MultiStepForm: React.FC = () => {
     const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
     // Step 10 always has 5 pages for both chimney types
     const step10Pages = 5;
-    const totalPages = 4 + totalInvoicePages + 1 + Math.max(1, totalRecommendationPages) + totalImagePages + step9Pages + step10Pages;
+    const totalPages = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + Math.max(1, totalRecommendationPages) + totalImagePages + step9Pages + step10Pages;
   
   // Initialize all pages as included by default
   useEffect(() => {
@@ -870,7 +899,8 @@ const MultiStepForm: React.FC = () => {
   const getLogicalStep = (pageNum: number): number => {
     if (pageNum <= 4) return pageNum; // Pages 1-4 are steps 1-4
     if (pageNum <= 4 + totalInvoicePages) return 5; // All invoice pages are step 5
-    if (pageNum === 4 + totalInvoicePages + 1) return 6; // Image page is step 6
+    if (pageNum <= 4 + totalInvoicePages + totalRepairEstimatePages) return 5; // All repair estimate pages are also step 5
+    if (pageNum === 4 + totalInvoicePages + totalRepairEstimatePages + 1) return 6; // Image page is step 6
     if (isRecommendationPage(pageNum)) return 7; // Recommendation pages are step 7
     if (isImagePage(pageNum)) return 8; // Image pages are step 8
     
@@ -889,15 +919,20 @@ const MultiStepForm: React.FC = () => {
   const isInvoicePage = (pageNum: number): boolean => {
     return pageNum >= 5 && pageNum <= 4 + totalInvoicePages;
   };
+
+  // Helper function to check if we're on a repair estimate page
+  const isRepairEstimatePage = (pageNum: number): boolean => {
+    return pageNum > 4 + totalInvoicePages && pageNum <= 4 + totalInvoicePages + totalRepairEstimatePages;
+  };
   
   // Helper function to check if we're on the image page (Step 6)
   const isImagePage6 = (pageNum: number): boolean => {
-    return pageNum === 4 + totalInvoicePages + 1;
+    return pageNum === 4 + totalInvoicePages + totalRepairEstimatePages + 1;
   };
   
   // Helper function to check if we're on a recommendation page
   const isRecommendationPage = (pageNum: number): boolean => {
-    const imagePageNum = 4 + totalInvoicePages + 1;
+    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
     const recommendationPageStart = imagePageNum + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
     return pageNum >= recommendationPageStart && pageNum < imagePageStart;
@@ -905,20 +940,20 @@ const MultiStepForm: React.FC = () => {
   
   // Helper function to get recommendation page index
   const getRecommendationPageIndex = (pageNum: number): number => {
-    const imagePageNum = 4 + totalInvoicePages + 1;
+    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
     const index = pageNum - imagePageNum - 1; // Zero-based index
     return Math.max(0, index); // Ensure non-negative
   };
   
   // Helper function to check if we're on the first recommendation page (setup page)
   const isRecommendationSetupPage = (pageNum: number): boolean => {
-    const imagePageNum = 4 + totalInvoicePages + 1;
+    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
     return pageNum === imagePageNum + 1 && totalRecommendationPages === 0; // First page after images, no pages created
   };
 
   // Helper function to check if we're on an image page (step 8)
   const isImagePage = (pageNum: number): boolean => {
-    const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+    const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
     const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
     const step10Pages = 5;
@@ -929,7 +964,7 @@ const MultiStepForm: React.FC = () => {
 
   // Helper function to get image page index
   const getImagePageIndex = (pageNum: number): number => {
-    const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+    const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
     return pageNum - imagePageStart;
   };
@@ -985,7 +1020,7 @@ const MultiStepForm: React.FC = () => {
     console.log('currentLogicalStep:', currentLogicalStep);
     console.log('chimneyType:', formData.chimneyType);
     
-    const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+    const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
     const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
     const step10Pages = 5;
@@ -995,7 +1030,8 @@ const MultiStepForm: React.FC = () => {
     
     console.log('Pages 1-4: Client Info, Company Info, Service Report, Chimney Type');
     console.log(`Pages 5-${4 + totalInvoicePages}: Invoice pages`);
-    console.log(`Page ${4 + totalInvoicePages + 1}: Image selection`);
+    console.log(`Pages ${4 + totalInvoicePages + 1}-${4 + totalInvoicePages + totalRepairEstimatePages}: Repair estimate pages`);
+    console.log(`Page ${4 + totalInvoicePages + totalRepairEstimatePages + 1}: Image selection`);
     console.log(`Pages ${recommendationPageStart}-${imagePageStart - 1}: Recommendation pages`);
     console.log(`Pages ${imagePageStart}-${lastImagePage}: Image pages`);
     console.log(`Pages ${step9Start}-${step10Start - 1}: Step 9 pages (${step9Pages} pages for ${formData.chimneyType})`);
@@ -1055,14 +1091,14 @@ const MultiStepForm: React.FC = () => {
         setCurrentRecommendationPageIndex(currentRecommendationPageIndex + 1);
       } else {
         // If we're on the last recommendation page, go to first image page
-        const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+        const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
         const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
         setCurrentPage(imagePageStart);
         setCurrentRecommendationPageIndex(0); // Reset for future use
       }
     } else if (isImagePage(currentPage)) {
       // If we're on image pages, navigate through image pages
-      const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+      const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
       const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
       const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
       const step10Pages = 5;
@@ -1104,7 +1140,7 @@ const MultiStepForm: React.FC = () => {
   const handlePrevPage = () => {
     if (isImagePage(currentPage)) {
       // If we're on image pages, navigate through image pages
-      const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+      const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
       const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
       const currentImagePageIndex = getImagePageIndex(currentPage);
       
@@ -1123,7 +1159,7 @@ const MultiStepForm: React.FC = () => {
         setCurrentRecommendationPageIndex(currentRecommendationPageIndex - 1);
       } else {
         // If we're on the first recommendation page, go to image page
-        const imagePageNum = 4 + totalInvoicePages + 1;
+        const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
         setCurrentPage(imagePageNum);
         setCurrentRecommendationPageIndex(0);
       }
@@ -1150,7 +1186,7 @@ const MultiStepForm: React.FC = () => {
         setCurrentPage(currentPage - 1);
       } else {
         // If we're on the first Step 9 page, go to last image page
-        const recommendationPageStart = 4 + totalInvoicePages + 1 + 1;
+        const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
         const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
         const lastImagePage = step9Start - 1;
         setCurrentPage(lastImagePage);
@@ -1264,7 +1300,9 @@ const MultiStepForm: React.FC = () => {
       React.createElement(Step4, { chimneyType: formData.chimneyType, isPDF: true }) :
       pageNumber >= 5 && pageNumber <= 4 + totalInvoicePages ?
       React.createElement(Step5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: pageNumber - 4 }) :
-      pageNumber === 4 + totalInvoicePages + 1 ?
+      pageNumber > 4 + totalInvoicePages && pageNumber <= 4 + totalInvoicePages + totalRepairEstimatePages ?
+      React.createElement(Step5Part2, { isPDF: true, repairEstimateData: formData.repairEstimateData, currentEstimatePage: pageNumber - 4 - totalInvoicePages }) :
+      pageNumber === 4 + totalInvoicePages + totalRepairEstimatePages + 1 ?
       React.createElement(Step6, { 
         isPDF: true, 
         scrapedImages: formData.scrapedImages || [], 
@@ -1491,7 +1529,7 @@ const MultiStepForm: React.FC = () => {
                 }`}>
                   {isStepCompleted(5) ? '✓' : '5'}
                 </div>
-                <span className="ml-2 text-sm font-medium">Invoice</span>
+                <span className="ml-2 text-sm font-medium">Invoice & Estimate</span>
               </div>
             </div>
             
@@ -1506,7 +1544,7 @@ const MultiStepForm: React.FC = () => {
                 }`}>
                   {isStepCompleted(6) ? '✓' : '6'}
                 </div>
-                <span className="ml-2 text-sm font-medium">Images</span>
+                <span className="ml-2 text-sm font-medium">Invoice Images</span>
               </div>
               <div className="w-12 h-1 bg-gray-200"></div>
                <div 
@@ -1518,7 +1556,7 @@ const MultiStepForm: React.FC = () => {
                  }`}>
                    {isStepCompleted(7) ? '✓' : '7'}
                  </div>
-                 <span className="ml-2 text-sm font-medium">Repair Est.</span>
+                 <span className="ml-2 text-sm font-medium">Repair Recc.</span>
                </div>
                <div className="w-12 h-1 bg-gray-200"></div>
                <div 
@@ -1542,7 +1580,7 @@ const MultiStepForm: React.FC = () => {
                  }`}>
                    {isStepCompleted(9) ? '✓' : '9'}
                  </div>
-                 <span className="ml-2 text-sm font-medium">Documentation</span>
+                 <span className="ml-2 text-sm font-medium">Chimney Type Understanding</span>
                </div>
                <div className="w-12 h-1 bg-gray-200"></div>
                <div 
@@ -1554,7 +1592,7 @@ const MultiStepForm: React.FC = () => {
                  }`}>
                    {isStepCompleted(10) ? '✓' : '10'}
                  </div>
-                 <span className="ml-2 text-sm font-medium">Final Steps</span>
+                 <span className="ml-2 text-sm font-medium">Club & Terms</span>
                </div>
             </div>
           </div>
@@ -1569,7 +1607,7 @@ const MultiStepForm: React.FC = () => {
                    currentLogicalStep === 2 ? 'Step 2 - Static Content' : 
                    currentLogicalStep === 3 ? 'Step 3 - Service Report' : 
                    currentLogicalStep === 4 ? 'Step 4 - Chimney Type' : 
-                   currentLogicalStep === 5 ? `Step 5 - Invoice${totalInvoicePages > 1 ? ` (${currentPage - 4}/${totalInvoicePages})` : ''}` : 
+                   currentLogicalStep === 5 ? `Step 5 - Invoice & Estimate${isInvoicePage(currentPage) ? (totalInvoicePages > 1 ? ` (Invoice ${currentPage - 4}/${totalInvoicePages})` : ' (Invoice)') : isRepairEstimatePage(currentPage) ? (totalRepairEstimatePages > 1 ? ` (Estimate ${currentPage - 4 - totalInvoicePages}/${totalRepairEstimatePages})` : ' (Estimate)') : ''}` : 
                    currentLogicalStep === 6 ? 'Step 6 - Project Images' :
                    currentLogicalStep === 7 ? 'Step 7 - Repair Estimate' :
                    currentLogicalStep === 8 ? 'Step 8 - Inspection Images' :
@@ -1864,28 +1902,91 @@ const MultiStepForm: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700">
                       Invoice Items
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newRow = {
-                          id: Date.now().toString(),
-                          description: '',
-                          unit: '',
-                          price: ''
-                        };
-                        updateFormData({ 
-                          invoiceData: { 
-                            invoiceNumber: formData.invoiceData?.invoiceNumber || '',
-                            paymentMethod: formData.invoiceData?.paymentMethod || '',
-                            paymentNumber: formData.invoiceData?.paymentNumber || '',
-                            rows: [...(formData.invoiceData?.rows || []), newRow]
-                          } 
-                        });
-                      }}
-                      className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
-                    >
-                      + Add Item
-                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowInvoiceQuickAdd(!showInvoiceQuickAdd)}
+                        className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
+                      >
+                        + Add Item
+                      </button>
+                      {showInvoiceQuickAdd && (
+                        <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                          <div className="py-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newRow = {
+                                  id: Date.now().toString(),
+                                  description: 'Chimney Inspection - Level 1',
+                                  unit: '1',
+                                  price: '99.00'
+                                };
+                                updateFormData({ 
+                                  invoiceData: { 
+                                    invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                    paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                    paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                    rows: [...(formData.invoiceData?.rows || []), newRow]
+                                  } 
+                                });
+                                setShowInvoiceQuickAdd(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              Add Chimney Inspection - Level 1 ($99)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newRow = {
+                                  id: Date.now().toString(),
+                                  description: 'Chimney Inspection - Level 2',
+                                  unit: '1',
+                                  price: '149.00'
+                                };
+                                updateFormData({ 
+                                  invoiceData: { 
+                                    invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                    paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                    paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                    rows: [...(formData.invoiceData?.rows || []), newRow]
+                                  } 
+                                });
+                                setShowInvoiceQuickAdd(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              Add Chimney Inspection - Level 2 ($149)
+                            </button>
+                            <div className="border-t my-1" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newRow = {
+                                  id: Date.now().toString(),
+                                  description: '',
+                                  unit: '',
+                                  price: ''
+                                };
+                                updateFormData({ 
+                                  invoiceData: { 
+                                    invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                    paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                    paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                    rows: [...(formData.invoiceData?.rows || []), newRow]
+                                  } 
+                                });
+                                setShowInvoiceQuickAdd(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              Add Blank Item
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1987,6 +2088,120 @@ const MultiStepForm: React.FC = () => {
                         No items added yet. Click "Add Item" to add invoice items.
                       </p>
                     )}
+                  </div>
+                </div>
+              </div>
+            ) : isRepairEstimatePage(currentPage) ? (
+              <div className="space-y-4">
+                {/* Repair Estimate Items */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Repair Estimate Items
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRow = {
+                          id: Date.now().toString(),
+                          description: '',
+                          unit: '',
+                          price: ''
+                        };
+                        updateFormData({ 
+                          repairEstimateData: { 
+                            estimateNumber: '',
+                            paymentMethod: '',
+                            paymentNumber: '',
+                            rows: [...(formData.repairEstimateData?.rows || []), newRow]
+                          } 
+                        });
+                      }}
+                      className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {(formData.repairEstimateData?.rows || []).map((row, index) => (
+                      <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={row.description}
+                          onChange={(e) => {
+                            const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
+                              r.id === row.id ? { ...r, description: e.target.value } : r
+                            );
+                            updateFormData({ 
+                              repairEstimateData: { 
+                                estimateNumber: '',
+                                paymentMethod: '',
+                                paymentNumber: '',
+                                rows: updatedRows
+                              } 
+                            });
+                          }}
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Unit"
+                          value={row.unit}
+                          onChange={(e) => {
+                            const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
+                              r.id === row.id ? { ...r, unit: e.target.value } : r
+                            );
+                            updateFormData({ 
+                              repairEstimateData: { 
+                                estimateNumber: '',
+                                paymentMethod: '',
+                                paymentNumber: '',
+                                rows: updatedRows
+                              } 
+                            });
+                          }}
+                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Price"
+                          value={row.price}
+                          onChange={(e) => {
+                            const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
+                              r.id === row.id ? { ...r, price: e.target.value } : r
+                            );
+                            updateFormData({ 
+                              repairEstimateData: { 
+                                estimateNumber: '',
+                                paymentMethod: '',
+                                paymentNumber: '',
+                                rows: updatedRows
+                              } 
+                            });
+                          }}
+                          className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedRows = (formData.repairEstimateData?.rows || []).filter(r => r.id !== row.id);
+                            updateFormData({ 
+                              repairEstimateData: { 
+                                estimateNumber: '',
+                                paymentMethod: '',
+                                paymentNumber: '',
+                                rows: updatedRows
+                              } 
+                            });
+                          }}
+                          className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -2424,7 +2639,7 @@ const MultiStepForm: React.FC = () => {
                      currentLogicalStep === 2 ? 'Review the static content' : 
                      currentLogicalStep === 3 ? 'Review service report details' : 
                      currentLogicalStep === 4 ? 'Review chimney type details' : 
-                     currentLogicalStep === 5 ? 'Review invoice details' : 
+                     currentLogicalStep === 5 ? (isInvoicePage(currentPage) ? 'Review invoice details' : 'Review repair estimate details') : 
                      currentLogicalStep === 6 ? 'Select project images for the report' :
                      currentLogicalStep === 7 ? 'Configure repair estimate table' : 
                      currentLogicalStep === 8 ? 'Review inspection images' :
@@ -2491,7 +2706,7 @@ const MultiStepForm: React.FC = () => {
                   // Calculate the actual page number being displayed
                   let actualPageNumber = currentPage;
                   if (currentLogicalStep === 7) {
-                    const imagePageNum = 4 + totalInvoicePages + 1;
+                    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
                     actualPageNumber = imagePageNum + 1 + currentRecommendationPageIndex;
                   } else if (currentLogicalStep === 8) {
                     // For image pages, show the actual page number
@@ -2546,6 +2761,13 @@ const MultiStepForm: React.FC = () => {
                   invoiceData={formData.invoiceData} 
                   updateInvoiceData={(data) => updateFormData({ invoiceData: data })}
                   currentInvoicePage={currentPage - 4}
+                  isPDF={false}
+                />
+              ) : isRepairEstimatePage(currentPage) ? (
+                <Step5Part2 
+                  repairEstimateData={formData.repairEstimateData} 
+                  updateRepairEstimateData={(data) => updateFormData({ repairEstimateData: data })}
+                  currentEstimatePage={currentPage - 4 - totalInvoicePages}
                   isPDF={false}
                 />
               ) : isImagePage6(currentPage) ? (
@@ -2911,3 +3133,4 @@ const MultiStepForm: React.FC = () => {
 };
 
 export default MultiStepForm;
+
