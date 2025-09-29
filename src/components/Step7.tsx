@@ -14,6 +14,7 @@ interface TableRow {
   description: string;
   unit: number;
   price: number;
+  isManual?: boolean;
   recommendation?: string;
 }
 
@@ -612,7 +613,7 @@ export const Page7: React.FC<Page7Props> = ({
           </div>
 
           {/* Recommendations Section */}
-          {tableRows.some(row => row.recommendation) && (
+          {(tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
             <div style={{ 
               position: 'absolute', 
               left: '29px', 
@@ -649,11 +650,15 @@ export const Page7: React.FC<Page7Props> = ({
                 borderRadius: '4px',
                 position: 'relative',
                 minHeight: (() => {
-                  const recommendationText = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const textLength = recommendationText.length;
+                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                  const hasManualRows = tableRows.some(row => row.isManual);
+                  const allRecommendations = (customRecommendation && hasManualRows) ? 
+                    `${tableRecommendations} ${customRecommendation}`.trim() : 
+                    tableRecommendations;
+                  const textLength = allRecommendations.length;
                   // Estimate height based on text length (roughly 80 chars per line at 8px font)
                   const estimatedLines = Math.max(2, Math.ceil(textLength / 80));
-                  // Header (17px) + text lines (8.5px each) + minimal padding (3px) - 15% reduction
+                  // Header (17px) + text lines (8.5px each) + minimal padding (3px)
                   return `${17 + (estimatedLines * 8.5) + 3}px`;
                 })()
               }}>
@@ -682,11 +687,16 @@ export const Page7: React.FC<Page7Props> = ({
                   lineHeight: '1.3',
                   margin: '0',
                   fontFamily: 'Inter, Arial, sans-serif',
-                  textAlign: 'justify'
+                  textAlign: 'justify',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal',
+                  hyphens: 'auto'
                 }}>
                   {(() => {
                     const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                    const allRecommendations = customRecommendation ? 
+                    const hasManualRows = tableRows.some(row => row.isManual);
+                    const allRecommendations = (customRecommendation && hasManualRows) ? 
                       `${tableRecommendations} ${customRecommendation}`.trim() : 
                       tableRecommendations;
                     return allRecommendations;
@@ -995,7 +1005,7 @@ export const Page7: React.FC<Page7Props> = ({
         </div>
 
         {/* Recommendations Section */}
-        {tableRows.some(row => row.recommendation) && (
+        {(tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
           <div 
             className="absolute left-0 right-0 px-7"
             style={{
@@ -1026,12 +1036,29 @@ export const Page7: React.FC<Page7Props> = ({
               })()
             }}
           >
-            <div className="bg-gray-50 p-3 rounded border">
+            <div 
+              className="bg-gray-50 p-3 rounded border"
+              style={{
+                minHeight: (() => {
+                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                  const hasManualRows = tableRows.some(row => row.isManual);
+                  const allRecommendations = (customRecommendation && hasManualRows) ? 
+                    `${tableRecommendations} ${customRecommendation}`.trim() : 
+                    tableRecommendations;
+                  const textLength = allRecommendations.length;
+                  // Estimate height based on text length (roughly 80 chars per line at 8.5px font)
+                  const estimatedLines = Math.max(2, Math.ceil(textLength / 80));
+                  // Header (20px) + text lines (8.5px each) + padding (24px total)
+                  return `${20 + (estimatedLines * 8.5) + 24}px`;
+                })()
+              }}
+            >
               <h4 className="text-xs font-bold mb-2 text-[#722420]">Professional Recommendations:</h4>
-              <p className="text-[8.5px] text-gray-700 leading-tight text-justify">
+              <p className="text-[8.5px] text-gray-700 leading-tight text-justify break-words whitespace-normal">
                 {(() => {
                   const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const allRecommendations = customRecommendation ? 
+                  const hasManualRows = tableRows.some(row => row.isManual);
+                  const allRecommendations = (customRecommendation && hasManualRows) ? 
                     `${tableRecommendations} ${customRecommendation}`.trim() : 
                     tableRecommendations;
                   return allRecommendations;
@@ -1065,7 +1092,8 @@ export const Page7: React.FC<Page7Props> = ({
               style={{
                 maxWidth: (() => {
                   const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const allRecommendations = customRecommendation ? 
+                  const hasManualRows = tableRows.some(row => row.isManual);
+                  const allRecommendations = (customRecommendation && hasManualRows) ? 
                     `${tableRecommendations} ${customRecommendation}`.trim() : 
                     tableRecommendations;
                   const textLength = allRecommendations.length;
@@ -1077,7 +1105,8 @@ export const Page7: React.FC<Page7Props> = ({
                 })(),
                 maxHeight: (() => {
                   const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const allRecommendations = customRecommendation ? 
+                  const hasManualRows = tableRows.some(row => row.isManual);
+                  const allRecommendations = (customRecommendation && hasManualRows) ? 
                     `${tableRecommendations} ${customRecommendation}`.trim() : 
                     tableRecommendations;
                   const textLength = allRecommendations.length;
