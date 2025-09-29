@@ -444,8 +444,9 @@ const MultiStepForm: React.FC = () => {
     setIncludedPages(prev => {
       const newSet = new Set(prev);
       
-      // For Steps 9 and 10, toggle only the current page, not the whole step
-      if (logicalStep === 9 || logicalStep === 10) {
+      // For Steps 5, 9 and 10, toggle only the current page, not the whole step
+      // Step 5 contains multiple sub-pages (Invoice and Repair Estimate)
+      if (logicalStep === 5 || logicalStep === 9 || logicalStep === 10) {
         // Toggle only the current page
         if (newSet.has(currentPage)) {
           newSet.delete(currentPage);
@@ -478,19 +479,34 @@ const MultiStepForm: React.FC = () => {
       case 2: return 2;
       case 3: return 3;
       case 4: return 4;
-      case 5: return 5; // First invoice page
-      case 6: return 6; // First project image page
-      case 7: return 7; // First repair estimate page
-      case 8: return 8; // First inspection image page
-      case 9: return 11; // First Step 9 page
-      case 10: return totalPages - 4; // First Step 10 page
+      case 5: return 5; // First invoice page (handled specially via currentPage toggle)
+      case 6: {
+        // Image selection page comes after invoices and repair estimate pages
+        return 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+      }
+      case 7: {
+        // First recommendation page (or setup page if none created)
+        const imageSelectionPage = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+        const recommendationStart = imageSelectionPage + 1;
+        return recommendationStart;
+      }
+      case 8: {
+        // First inspection image page (after recommendation pages)
+        const imageSelectionPage = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+        const recommendationStart = imageSelectionPage + 1;
+        const totalRecommendationPages = formData.repairEstimatePages?.length || 0;
+        const imagePagesStart = recommendationStart + Math.max(1, totalRecommendationPages);
+        return imagePagesStart;
+      }
+      case 9: return 0; // Not used; handled via currentPage toggle
+      case 10: return totalPages - 4; // First Step 10 page (precomputed)
       default: return 1;
     }
   };
 
   // Check if a logical step is included in PDF
   const isLogicalStepIncluded = (logicalStep: number) => {
-    if (logicalStep === 9 || logicalStep === 10) {
+    if (logicalStep === 5 || logicalStep === 9 || logicalStep === 10) {
       // For Steps 9 and 10, check if the current page is included
       return includedPages.has(currentPage);
     } else {
