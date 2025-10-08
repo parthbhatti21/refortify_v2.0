@@ -25,7 +25,7 @@
     left: 31px;
     position: absolute;
     top: 25px;
-    width: 482px;
+    width: 486px;
 }
 
 .page .overlap-group {
@@ -51,7 +51,10 @@
     position: absolute;
     text-align: center;
     top: 10px;
-    width: 433px;
+    width: 450px;
+    left: 50%;
+    transform: translateX(-50%);
+    /* background-color: #722420; */
 }
 
 .page .logo {

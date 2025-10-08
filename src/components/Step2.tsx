@@ -34,7 +34,8 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px'
+              fontFamily: 'Times New Roman, Times, serif', 
+              gap: '14px'
             }}
           >
             <div>Virginia Class A Contractor # 2705139016 (Expires March 31,2027)</div>

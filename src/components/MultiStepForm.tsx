@@ -397,6 +397,7 @@ const MultiStepForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'scrape' | 'form'>('scrape');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentRecommendationPageIndex, setCurrentRecommendationPageIndex] = useState<number>(0);
+  const [currentRecommendationSubPage, setCurrentRecommendationSubPage] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [formData, setFormData] = useState<FormData>({
     clientName: '',
@@ -544,6 +545,12 @@ const MultiStepForm: React.FC = () => {
     const pages = formData.repairEstimatePages || [];
     // Always use currentRecommendationPageIndex for consistency
     return pages[currentRecommendationPageIndex];
+  };
+
+  // Calculate how many pages a recommendation needs based on number of rows
+  const calculateRecommendationPages = (rows: any[]) => {
+    if (rows.length <= 1) return 1; // 1 row or less = 1 page
+    return 2; // Multiple rows = 2 pages (table + image)
   };
 
   const addNewRecommendationPage = (reviewImage: string) => {
@@ -870,7 +877,9 @@ const MultiStepForm: React.FC = () => {
   
   const totalInvoicePages = calculateSmartInvoicePages();
   const totalRepairEstimatePages = calculateSmartRepairEstimatePages();
-    const totalRecommendationPages = formData.repairEstimatePages?.length || 0;
+    const totalRecommendationPages = formData.repairEstimatePages?.reduce((total, page) => {
+      return total + calculateRecommendationPages(page.repairEstimateData?.rows || []);
+    }, 0) || 0;
     
     // Get unused images for Page8
     const getUnusedImages = () => {
@@ -957,8 +966,22 @@ const MultiStepForm: React.FC = () => {
   // Helper function to get recommendation page index
   const getRecommendationPageIndex = (pageNum: number): number => {
     const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
-    const index = pageNum - imagePageNum - 1; // Zero-based index
-    return Math.max(0, index); // Ensure non-negative
+    const recommendationPageStart = imagePageNum + 1;
+    const relativePageNum = pageNum - recommendationPageStart; // Pages since start of recommendations
+    
+    // Find which recommendation this page belongs to
+    let pagesAccounted = 0;
+    const pages = formData.repairEstimatePages || [];
+    for (let i = 0; i < pages.length; i++) {
+      const rows = pages[i].repairEstimateData?.rows || [];
+      const pagesNeeded = calculateRecommendationPages(rows);
+      if (relativePageNum < pagesAccounted + pagesNeeded) {
+        return i; // This is the recommendation index
+      }
+      pagesAccounted += pagesNeeded;
+    }
+    
+    return Math.max(0, pages.length - 1); // Default to last recommendation
   };
   
   // Helper function to check if we're on the first recommendation page (setup page)
@@ -1101,16 +1124,30 @@ const MultiStepForm: React.FC = () => {
     }
     
     if (currentLogicalStep === 7) {
-      // If we're on recommendation pages, navigate through recommendation pages
-      if (currentRecommendationPageIndex < (formData.repairEstimatePages?.length || 0) - 1) {
-        // Move to next recommendation page
-        setCurrentRecommendationPageIndex(currentRecommendationPageIndex + 1);
+      // Check if current recommendation has multiple pages (table + image)
+      const currentPage = getCurrentRecommendationPage();
+      const currentRows = currentPage?.repairEstimateData?.rows || [];
+      const currentRecommendationTotalPages = calculateRecommendationPages(currentRows);
+      
+      // If we're on page 1 of a multi-page recommendation, go to page 2 (image page)
+      if (currentRecommendationTotalPages > 1 && currentRecommendationSubPage === 1) {
+        // Move to page 2 (image page) of same recommendation
+        setCurrentRecommendationSubPage(2);
       } else {
-        // If we're on the last recommendation page, go to first image page
-        const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
-        const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
-        setCurrentPage(imagePageStart);
-        setCurrentRecommendationPageIndex(0); // Reset for future use
+        // We're on page 2 or single page recommendation, move to next recommendation or next step
+        setCurrentRecommendationSubPage(1); // Reset sub-page for next recommendation
+        
+        if (currentRecommendationPageIndex < (formData.repairEstimatePages?.length || 0) - 1) {
+          // Move to next recommendation page
+          setCurrentRecommendationPageIndex(currentRecommendationPageIndex + 1);
+          setCurrentRecommendationSubPage(1); // Reset to page 1 of new recommendation
+        } else {
+          // If we're on the last recommendation page, go to first image page
+          const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
+          const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
+          setCurrentPage(imagePageStart);
+          setCurrentRecommendationPageIndex(0); // Reset for future use
+        }
       }
     } else if (isImagePage(currentPage)) {
       // If we're on image pages, navigate through image pages
@@ -1169,15 +1206,29 @@ const MultiStepForm: React.FC = () => {
         setCurrentRecommendationPageIndex((formData.repairEstimatePages?.length || 0) - 1);
       }
     } else if (currentLogicalStep === 7) {
-      // If we're on recommendation pages, navigate through recommendation pages
-      if (currentRecommendationPageIndex > 0) {
-        // Move to previous recommendation page
-        setCurrentRecommendationPageIndex(currentRecommendationPageIndex - 1);
+      // Check if current recommendation has multiple pages (table + image)
+      const currentPage = getCurrentRecommendationPage();
+      const currentRows = currentPage?.repairEstimateData?.rows || [];
+      const currentRecommendationTotalPages = calculateRecommendationPages(currentRows);
+      
+      // If we're on page 2 of a multi-page recommendation, go to page 1 (table page)
+      if (currentRecommendationTotalPages > 1 && currentRecommendationSubPage === 2) {
+        // Move to page 1 (table page) of same recommendation
+        setCurrentRecommendationSubPage(1);
       } else {
-        // If we're on the first recommendation page, go to image page
-        const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
-        setCurrentPage(imagePageNum);
-        setCurrentRecommendationPageIndex(0);
+        // We're on page 1, move to previous recommendation or previous step
+        setCurrentRecommendationSubPage(1); // Reset sub-page for previous recommendation
+        
+        if (currentRecommendationPageIndex > 0) {
+          // Move to previous recommendation page
+          setCurrentRecommendationPageIndex(currentRecommendationPageIndex - 1);
+          setCurrentRecommendationSubPage(1); // Reset to page 1 of new recommendation
+        } else {
+          // If we're on the first recommendation page, go to image page
+          const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+          setCurrentPage(imagePageNum);
+          setCurrentRecommendationPageIndex(0);
+        }
       }
     } else if (getLogicalStep(currentPage) === 10) {
       // If we're on Step 10 pages, navigate through them
@@ -1360,7 +1411,45 @@ const MultiStepForm: React.FC = () => {
         selectedImages: formData.selectedImages || [],
         repairEstimateData: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.repairEstimateData || { manualEntry: false, rows: [] },
         reviewImage: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.reviewImage || '',
-        customRecommendation: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.customRecommendation || ''
+        customRecommendation: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.customRecommendation || '',
+        currentPage: (() => {
+          const pageIndex = getRecommendationPageIndex(pageNumber);
+          const page = formData.repairEstimatePages?.[pageIndex];
+          if (!page) return 1;
+          const rows = page.repairEstimateData?.rows || [];
+          
+          // Calculate which sub-page this should be based on the actual page number
+          if (rows.length <= 1) return 1; // Single page recommendation
+          
+          // Calculate where this recommendation starts
+          const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+          const recommendationPageStart = imagePageNum + 1;
+          
+          // Count how many pages previous recommendations have used
+          let pagesUsedByPreviousRecommendations = 0;
+          for (let i = 0; i < pageIndex; i++) {
+            const prevPage = formData.repairEstimatePages?.[i];
+            if (prevPage) {
+              const prevRows = prevPage.repairEstimateData?.rows || [];
+              pagesUsedByPreviousRecommendations += calculateRecommendationPages(prevRows);
+            }
+          }
+          
+          // Calculate the start page of this specific recommendation
+          const thisRecommendationStartPage = recommendationPageStart + pagesUsedByPreviousRecommendations;
+          
+          // Calculate which page within this recommendation
+          const relativePageInRecommendation = pageNumber - thisRecommendationStartPage + 1;
+          
+          return relativePageInRecommendation;
+        })(),
+        totalPages: (() => {
+          const pageIndex = getRecommendationPageIndex(pageNumber);
+          const page = formData.repairEstimatePages?.[pageIndex];
+          if (!page) return 1;
+          const rows = page.repairEstimateData?.rows || [];
+          return calculateRecommendationPages(rows);
+        })()
       }) :
       isImagePage(pageNumber) ?
       React.createElement(Step8, { 
@@ -2872,6 +2961,13 @@ const MultiStepForm: React.FC = () => {
                     repairEstimateData={getCurrentRecommendationPage()?.repairEstimateData}
                     reviewImage={getCurrentRecommendationPage()?.reviewImage}
                     customRecommendation={getCurrentRecommendationPage()?.customRecommendation || ''}
+                    currentPage={currentRecommendationSubPage}
+                    totalPages={(() => {
+                      const currentPage = getCurrentRecommendationPage();
+                      if (!currentPage) return 1;
+                      const rows = currentPage.repairEstimateData?.rows || [];
+                      return calculateRecommendationPages(rows);
+                    })()}
                   />
                 ) : (
                   // Show empty Step7 when no recommendation pages exist
@@ -2883,6 +2979,8 @@ const MultiStepForm: React.FC = () => {
                     repairEstimateData={{ manualEntry: false, rows: [] }}
                     reviewImage=""
                     customRecommendation=""
+                    currentPage={1}
+                    totalPages={1}
                   />
                  )
                ) : isImagePage(currentPage) ? (

@@ -66,7 +66,7 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
           <div className="title" style={titleStyle}>
             <div className="overlap-group">
               <p className="text-wrapper">
-                Service Report: A Step In Time Chimney Sweep
+                Service Report: A Step In Time Chimney Sweeps
               </p>
             </div>
 

@@ -29,6 +29,8 @@ interface Page7Props {
   };
   reviewImage?: string;
   customRecommendation?: string;
+  currentPage?: number;
+  totalPages?: number;
 }
 const dropdownOptions = [
   {
@@ -314,7 +316,9 @@ export const Page7: React.FC<Page7Props> = ({
   isPDF = false,
   repairEstimateData,
   reviewImage,
-  customRecommendation
+  customRecommendation,
+  currentPage = 1,
+  totalPages = 1
 }) => {
   const tableRows = repairEstimateData?.rows || [];
   const [availableImages, setAvailableImages] = useState<ImageItem[]>(selectedImages);
@@ -341,6 +345,22 @@ export const Page7: React.FC<Page7Props> = ({
     return tableRows.reduce((total, row) => total + (row.unit * row.price), 0);
   };
 
+  // Determine if image should be shown on current page or moved to next page
+  const shouldShowImageOnCurrentPage = () => {
+    // If there's only 1 row or no rows, show image on same page
+    if (tableRows.length <= 1) return true;
+    
+    // If there are multiple rows, move image to next page
+    // Show image only on the last page of this recommendation
+    return currentPage === totalPages;
+  };
+
+  // Determine if table should be shown on current page
+  const shouldShowTableOnCurrentPage = () => {
+    // Always show table on first page, never on image-only pages
+    return currentPage === 1;
+  };
+
   // For PDF mode, render the preview only
   if (isPDF) {
     return (
@@ -357,6 +377,7 @@ export const Page7: React.FC<Page7Props> = ({
           </div>
 
           {/* Table Section */}
+          {shouldShowTableOnCurrentPage() && (
           <div style={{ position: 'absolute', top: '140px', left: '29px', right: '29px' }}>
           <div 
             style={{
@@ -612,9 +633,10 @@ export const Page7: React.FC<Page7Props> = ({
               )}
             </div>
           </div>
+          )}
 
           {/* Recommendations Section */}
-          {(tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
+          {shouldShowTableOnCurrentPage() && (tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
             <div style={{ 
               position: 'absolute', 
               left: '29px', 
@@ -708,30 +730,40 @@ export const Page7: React.FC<Page7Props> = ({
           )}
 
           {/* Review Image Section */}
-          {reviewImage && (
+          {reviewImage && shouldShowImageOnCurrentPage() && (
             <div 
               style={{
                 position: 'absolute',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                bottom: (() => {
-                  const recommendationText = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const textLength = recommendationText.length;
-                  
-                  // Dynamic positioning based on text length
-                  if (textLength > 2000) return '5px';       // Very long text - very low position
-                  if (textLength > 1500) return '10px';      // Long text - low position  
-                  if (textLength > 1000) return '20px';      // Medium text - medium position
-                  if (textLength > 500) return '35px';       // Short text - higher position
-                  return '50px';                             // Very short or no text - highest position
-                })()
+                ...(tableRows.length <= 1 ? {
+                  // Single row: position below recommendations section
+                  bottom: (() => {
+                    const recommendationText = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                    const textLength = recommendationText.length;
+                    
+                    // Dynamic positioning based on text length
+                    if (textLength > 2000) return '5px';       // Very long text - very low position
+                    if (textLength > 1500) return '10px';      // Long text - low position  
+                    if (textLength > 1000) return '20px';      // Medium text - medium position
+                    if (textLength > 500) return '35px';       // Short text - higher position
+                    return '50px';                             // Very short or no text - highest position
+                  })()
+                } : {
+                  // Multiple rows: center on image-only page
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                })
               }}
             >
               <img
                 src={reviewImage}
                 alt="Review image"
                 style={{
-                  maxWidth: (() => {
+                  maxWidth: tableRows.length <= 1 ? (() => {
                     const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                     const allRecommendations = customRecommendation ? 
                       `${tableRecommendations} ${customRecommendation}`.trim() : 
@@ -742,8 +774,8 @@ export const Page7: React.FC<Page7Props> = ({
                     if (textLength > 1500) return '320px';
                     if (textLength > 1000) return '350px';
                     return '390px';
-                  })(),
-                  maxHeight: (() => {
+                  })() : '450px',
+                  maxHeight: tableRows.length <= 1 ? (() => {
                     const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                     const allRecommendations = customRecommendation ? 
                       `${tableRecommendations} ${customRecommendation}`.trim() : 
@@ -754,11 +786,11 @@ export const Page7: React.FC<Page7Props> = ({
                     if (textLength > 1500) return '220px';
                     if (textLength > 1000) return '250px';
                     return '280px';
-                  })(),
+                  })() : '400px',
                   objectFit: 'contain',
-                  borderRadius: '4px',
-                  border: '1px solid #e9ecef',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  borderRadius: tableRows.length <= 1 ? '4px' : '8px',
+                  border: tableRows.length <= 1 ? '1px solid #e9ecef' : '2px solid #e9ecef',
+                  boxShadow: tableRows.length <= 1 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.15)'
                 }}
               />
             </div>
@@ -800,6 +832,7 @@ export const Page7: React.FC<Page7Props> = ({
         </div>
 
         {/* Table Section */}
+        {shouldShowTableOnCurrentPage() && (
         <div style={{ position: 'absolute', top: '160px', left: '29px', right: '29px' }}>
         <div 
           style={{
@@ -1003,9 +1036,10 @@ export const Page7: React.FC<Page7Props> = ({
               )}
           </div>
         </div>
+        )}
 
         {/* Recommendations Section */}
-        {(tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
+        {shouldShowTableOnCurrentPage() && (tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
           <div 
             className="absolute left-0 right-0 px-7"
             style={{
@@ -1069,10 +1103,10 @@ export const Page7: React.FC<Page7Props> = ({
         )}
 
         {/* Review Image Section */}
-        {reviewImage && (
+        {reviewImage && shouldShowImageOnCurrentPage() && (
           <div 
-            className="absolute left-[50%] transform -translate-x-1/2"
-            style={{
+            className={`absolute left-[50%] transform -translate-x-1/2 ${tableRows.length <= 1 ? '' : 'top-[50%] -translate-y-1/2 flex items-center justify-center'}`}
+            style={tableRows.length <= 1 ? {
               bottom: (() => {
                 const recommendationText = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                 const textLength = recommendationText.length;
@@ -1084,13 +1118,13 @@ export const Page7: React.FC<Page7Props> = ({
                 if (textLength > 500) return '35px';       // Short text - higher position
                 return '50px';                             // Very short or no text - highest position
               })()
-            }}
+            } : {}}
           >
             <img
               src={reviewImage}
               alt="Review image"
               style={{
-                maxWidth: (() => {
+                maxWidth: tableRows.length <= 1 ? (() => {
                   const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                   const hasManualRows = tableRows.some(row => row.isManual);
                   const allRecommendations = (customRecommendation && hasManualRows) ? 
@@ -1102,8 +1136,8 @@ export const Page7: React.FC<Page7Props> = ({
                   if (textLength > 1200) return '320px';
                   if (textLength > 1000) return '350px';
                   return '390px';
-                })(),
-                maxHeight: (() => {
+                })() : '450px',
+                maxHeight: tableRows.length <= 1 ? (() => {
                   const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                   const hasManualRows = tableRows.some(row => row.isManual);
                   const allRecommendations = (customRecommendation && hasManualRows) ? 
@@ -1115,11 +1149,11 @@ export const Page7: React.FC<Page7Props> = ({
                   if (textLength > 1500) return '220px';
                   if (textLength > 1000) return '250px';
                   return '280px';
-                })(),
+                })() : '400px',
                 objectFit: 'contain',
-                borderRadius: '4px',
-                border: '1px solid #e9ecef',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                borderRadius: tableRows.length <= 1 ? '4px' : '8px',
+                border: tableRows.length <= 1 ? '1px solid #e9ecef' : '2px solid #e9ecef',
+                boxShadow: tableRows.length <= 1 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.15)'
               }}
             />
           </div>
