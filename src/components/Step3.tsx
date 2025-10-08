@@ -57,7 +57,7 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
   };
 
   return (
-    <div className="page">
+    <div className="page" >
       {/* Preview Header - Only shown in preview mode */}
       {renderPreviewHeader()}
 

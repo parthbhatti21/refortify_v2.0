@@ -432,7 +432,8 @@ export const Page7: React.FC<Page7Props> = ({
                   <div key={row.id} style={{ 
                     display: 'flex',
                     minHeight: '30px',
-                    marginBottom: '4px',
+                    marginTop: '8px',
+                    marginBottom: '2px',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
                   }}>
                     <div style={{ 
@@ -559,8 +560,8 @@ export const Page7: React.FC<Page7Props> = ({
                       bottom: '2px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      textAlign: 'right',
+                      justifyContent: 'center',
+                      textAlign: 'center',
                       letterSpacing: '0.42px',
                       fontSize: '11px',
                       fontWeight: '600',
@@ -874,7 +875,8 @@ export const Page7: React.FC<Page7Props> = ({
                 <div key={row.id} style={{ 
                   display: 'flex',
                   minHeight: '30px',
-                  marginBottom: '4px',
+                  marginTop: '8px',
+                  marginBottom: '2px',
                   backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
                 }}>
                   <div style={{ 
@@ -955,13 +957,11 @@ export const Page7: React.FC<Page7Props> = ({
                 }}></div>
                 <div style={{ 
                   width: '100px',
-                  padding: '2px 6px', 
-                  textAlign: 'right', 
                   height: '30px',
                   letterSpacing: '0.42px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'flex-end',
+                  justifyContent: 'center',
                   fontSize: '11px',
                   fontWeight: '600',
                   backgroundColor: '#722420',

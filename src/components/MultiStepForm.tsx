@@ -1257,6 +1257,7 @@ const MultiStepForm: React.FC = () => {
     
     // Generate only included pages
     let pageCount = 0;
+    const totalIncludedPages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => isPageIncluded(p)).length;
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
       // Check if this page should be included in PDF
       if (!isPageIncluded(pageNum)) {
@@ -1265,7 +1266,8 @@ const MultiStepForm: React.FC = () => {
       }
       
       console.log('Generating PDF Page:', pageNum);
-      const pageCanvas = await generatePageCanvas(pageNum);
+      const pageDisplayIndex = pageCount + 1;
+      const pageCanvas = await generatePageCanvas(pageNum, pageDisplayIndex, totalIncludedPages);
       const isStep6ImagePage = getLogicalStep(pageNum) === 6;
       
       // For Step 6 (Invoice Images) pages, avoid compression and keep PNG
@@ -1290,11 +1292,30 @@ const MultiStepForm: React.FC = () => {
       } else {
         pdf.addImage(pageImgData, isStep6ImagePage ? 'PNG' : 'JPEG', 0, 0, imgWidth, imgHeight);
       }
+
+      // Header: centered page number at top
+      try {
+        const headerY = imgHeight - 4; // mm from top
+        const headerText = `Page ${pageDisplayIndex} of ${totalIncludedPages}`;
+        // page number text
+        // Medium gray (approx #6B7280)
+        pdf.setTextColor(107, 114, 128);
+        pdf.setFontSize(10);
+        // center align
+        if (typeof (pdf as any).text === 'function') {
+          (pdf as any).text(headerText, imgWidth / 2, headerY, { align: 'center' });
+        } else {
+          // fallback: approximate center by measuring width
+          const textWidth = (pdf as any).getTextWidth ? (pdf as any).getTextWidth(headerText) : 0;
+          const startX = (imgWidth - textWidth) / 2;
+          (pdf as any).text(headerText, startX, headerY);
+        }
+      } catch {}
     }
   };
 
   // Function to generate canvas for specific page
-  const generatePageCanvas = async (pageNumber: number) => {
+  const generatePageCanvas = async (pageNumber: number, displayIndex?: number, totalIncluded?: number) => {
     // Create temporary container for the specific page
     const tempContainer = document.createElement('div');
     tempContainer.style.position = 'absolute';
@@ -1394,6 +1415,8 @@ const MultiStepForm: React.FC = () => {
       console.log('Email position:', emailElement?.style.left, emailElement?.style.top);
     }
     
+    // No in-canvas badge for PDF; footer added via jsPDF
+
     // Use html2canvas to capture the page with optimized settings
     const { default: html2canvas } = await import('html2canvas');
     const canvas = await html2canvas(tempContainer, {
@@ -2751,9 +2774,43 @@ const MultiStepForm: React.FC = () => {
                           ← Page {actualPageNumber - 1}
                         </button>
                       )}
-                      <span className="text-sm text-gray-600 font-medium">
-                        Page {actualPageNumber} of {totalPages}
+                      {/* Progress bar + label */}
+                      <div className="hidden sm:flex items-center space-x-2">
+                        {/* <div  className="w-24 h-1 bg-gray-200 rounded"> */}
+                          {/* <div
+                            className="h-1 bg-[#722420] rounded"
+                            style={{ width: `${Math.min(100, Math.max(0, (actualPageNumber / totalPages) * 100))}%` }}
+                          /> */}
+                        {/* </div> */}
+                        {/* <span className="text-sm text-gray-600 font-medium">
+                          Page {actualPageNumber} of {totalPages}
+                        </span> */}
+                      </div>
+                      {/* Compact label on mobile */}
+                      <span className="sm:hidden text-sm text-gray-600 font-medium">
+                        {actualPageNumber}/{totalPages}
                       </span>
+                      {/* Direct page jump */}
+                      <label className="sr-only" htmlFor="jumpToPage">Jump to page</label>
+                      <input
+                        id="jumpToPage"
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        value={actualPageNumber}
+                        onChange={(e) => {
+                          const next = Number(e.target.value || 1);
+                          if (!Number.isFinite(next)) return;
+                          const clamped = Math.max(1, Math.min(totalPages, Math.floor(next)));
+                          if (isRecommendationPage(clamped)) {
+                            const idx = getRecommendationPageIndex(clamped);
+                            setCurrentRecommendationPageIndex(idx);
+                          }
+                          setCurrentPage(clamped);
+                        }}
+                        className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                        aria-label="Jump to page"
+                      />
                       {(actualPageNumber < totalPages) && (
                         <button
                           onClick={handleNextPage}

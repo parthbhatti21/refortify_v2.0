@@ -16,7 +16,7 @@
     height: 790px;
     left: 25px;
     position: relative;
-    top: 26px;
+    top: 32px;
     width: 546px;
 }
 
@@ -111,7 +111,7 @@
 /* PDF-specific overrides to ensure consistent positioning and centering */
 .pdf-generation .page .overlap {
     left: 24.5px !important; /* Center content: (595 - 546) / 2 = 24.5px */
-    top: 15px !important; /* Move content higher on the page for better PDF layout */
+    top: 25px !important; /* Move content higher on the page for better PDF layout */
     position: absolute !important;
 }
 

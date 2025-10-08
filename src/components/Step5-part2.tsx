@@ -187,7 +187,8 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   <div key={row.id} style={{ 
                     display: 'flex',
                     height: '30px',
-                    marginBottom: '4px',
+                    marginTop: '8px',
+                    marginBottom: '2px',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
                   }}>
                     <div style={{ 
@@ -270,13 +271,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   }}></div>
                   <div style={{ 
                     width: '100px',
-                    padding: '2px 6px', 
-                    textAlign: 'right', 
                     height: '30px',
                     letterSpacing: '0.42px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'flex-end',
+                    justifyContent: 'center',
                     fontSize: '11px',
                     fontWeight: '600',
                     backgroundColor: '#722420',

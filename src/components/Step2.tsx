@@ -41,12 +41,12 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
             <div>Master H.V.A.C. # 2710076347 (Expires September 30,2027)</div>
             <div>License Professional Engineer # 0402032901 (Expires January 31,2027)</div>
             <div>Business Engineering Entity # 0407004891 (Expires December 31,2027)</div>
-            <div>Fireplace Research Investigation Research &amp; Education Certified Inspector</div>
-            <div>Workers Comp: Brickfield Mutual Insurance Co. WCS3014610 (Expires July 1, 2027)</div>
-            <div>Commercial General Liability Insurance: Selective Insurance S 2447314 (Expires July 1, 2027)</div>
-            <div>Automobile Liability Insurance: Selective Insurance S 2447314 (Expires July 1, 2027)</div>
-            <div>Umbrella Liability Insurance: Selective Insurance S 2447314 (Expires July 1, 2027)</div>
-            <div>State Corporation Commission: Entity ID: 05700364: A Step in Time, Incorporate</div>
+            <div>Fireplace Research Investigation Research &amp; Education Certified <br /> Inspector</div>
+            <div>Workers Comp: Brickfield Mutual Insurance Co. WCS3014610 <br /> (Expires July 1, 2027)</div>
+            <div>Commercial General Liability Insurance: Selective Insurance S 2447314 <br /> (Expires July 1, 2027)</div>
+            <div>Automobile Liability Insurance: Selective Insurance S 2447314 <br /> (Expires July 1, 2027)</div>
+            <div>Umbrella Liability Insurance: Selective Insurance S 2447314 <br /> (Expires July 1, 2027)</div>
+            <div>State Corporation Commission: Entity ID: 05700364: A Step in Time, Incorporate  (Expires December 31, 2027)</div>
           </div>
 
           <img
