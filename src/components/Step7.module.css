@@ -3,6 +3,14 @@
   font-family: 'Inter', sans-serif;
 }
 
+/* Responsive A4 canvas scaling (595x842 baseline) */
+.page7-scale-wrapper {
+  /* Scale down proportionally on small screens, never upscale above 1 */
+  --page-scale: min(1, calc((100vw - 32px) / 595));
+  transform: scale(var(--page-scale));
+  transform-origin: top center;
+}
+
 .table-container {
   max-height: 400px;
   overflow-y: auto;

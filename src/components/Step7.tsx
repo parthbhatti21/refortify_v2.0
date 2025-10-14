@@ -320,8 +320,46 @@ export const Page7: React.FC<Page7Props> = ({
   currentPage = 1,
   totalPages = 1
 }) => {
+  const UNIFORM_FONT = '10px';
   const tableRows = repairEstimateData?.rows || [];
   const [availableImages, setAvailableImages] = useState<ImageItem[]>(selectedImages);
+  // PDF overlap control: measure real heights to place sections
+  const pdfTableRef = React.useRef<HTMLDivElement>(null);
+  const pdfRecBoxRef = React.useRef<HTMLDivElement>(null);
+  const pdfRecTextRef = React.useRef<HTMLParagraphElement>(null);
+  const [pdfTableHeight, setPdfTableHeight] = useState<number>(0);
+  const [pdfRecTextHeight, setPdfRecTextHeight] = useState<number>(0);
+
+  // Preview (non-PDF) measurement for recommendations placement
+  const previewTableRef = React.useRef<HTMLDivElement>(null);
+  const previewRecTextRef = React.useRef<HTMLParagraphElement>(null);
+  const [previewTableHeight, setPreviewTableHeight] = useState<number>(0);
+  const [previewRecTextHeight, setPreviewRecTextHeight] = useState<number>(0);
+
+  useEffect(() => {
+    if (!isPDF) return;
+    const measure = () => {
+      const th = pdfTableRef.current?.offsetHeight || 0;
+      const rh = pdfRecTextRef.current?.scrollHeight || 0;
+      setPdfTableHeight(th);
+      setPdfRecTextHeight(rh);
+    };
+    // Measure after render
+    const id = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(id);
+  }, [isPDF, tableRows, customRecommendation]);
+
+  useEffect(() => {
+    if (isPDF) return;
+    const measure = () => {
+      const th = previewTableRef.current?.offsetHeight || 0;
+      const rh = previewRecTextRef.current?.scrollHeight || 0;
+      setPreviewTableHeight(th);
+      setPreviewRecTextHeight(rh);
+    };
+    const id = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(id);
+  }, [isPDF, tableRows, customRecommendation]);
 
   useEffect(() => {
     // Filter out used images
@@ -378,11 +416,11 @@ export const Page7: React.FC<Page7Props> = ({
 
           {/* Table Section */}
           {shouldShowTableOnCurrentPage() && (
-          <div style={{ position: 'absolute', top: '140px', left: '29px', right: '29px' }}>
+          <div ref={pdfTableRef} style={{ position: 'absolute', top: '140px', left: '29px', right: '29px' }}>
           <div 
             style={{
                 width: '100%', 
-                fontSize: '12px',
+                fontSize: UNIFORM_FONT,
                 fontFamily: 'Inter, Arial, sans-serif'
               }}
             >
@@ -452,96 +490,58 @@ export const Page7: React.FC<Page7Props> = ({
                 return (
                   <div key={row.id} style={{ 
                     display: 'flex',
-                    minHeight: '30px',
+                    minHeight: '36px',
                     marginTop: '8px',
                     marginBottom: '2px',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
                   }}>
                     <div style={{ 
                       flex: '1',
-                      minHeight: '30px',
-                      position: 'relative',
-                      backgroundColor: 'inherit'
+                      minHeight: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '4px 6px',
+                      lineHeight: '1.35',
+                      textAlign: 'center',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      hyphens: 'auto',
+                      backgroundColor: 'inherit',
+                      fontSize: UNIFORM_FONT
                     }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: '4px',
-                        left: '6px',
-                        right: '6px',
-                        bottom: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        lineHeight: '1.5',
-                        textAlign: 'center',
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
-                        hyphens: 'auto',
-                        fontSize: '8px'
-                      }}>
-                        {row.description}
-                      </div>
+                      {row.description}
                     </div>
                     <div style={{ 
                       width: '80px',
-                      minHeight: '30px',
-                      position: 'relative',
+                      minHeight: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       backgroundColor: 'inherit'
                     }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: '10px',
-                        right: '10px',
-                        bottom: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }}>
-                        {row.unit}
-                      </div>
+                      {row.unit}
                     </div>
                     <div style={{ 
                       width: '100px',
-                      minHeight: '30px',
-                      position: 'relative',
+                      minHeight: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       backgroundColor: 'inherit'
                     }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: '10px',
-                        right: '10px',
-                        bottom: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }}>
-                        ${row.price.toLocaleString()}
-                      </div>
+                      ${row.price.toLocaleString()}
                     </div>
                     <div style={{ 
                       width: '100px',
-                      minHeight: '30px',
-                      position: 'relative',
+                      minHeight: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       backgroundColor: 'inherit'
                     }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: '10px',
-                        right: '10px',
-                        bottom: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center',
-                        fontWeight: '600'
-                      }}>
-                        ${total.toLocaleString()}
-                      </div>
+                      <span style={{ fontWeight: 600 }}>${total.toLocaleString()}</span>
                     </div>
                   </div>
                 );
@@ -551,7 +551,7 @@ export const Page7: React.FC<Page7Props> = ({
               {tableRows.length > 0 && (
                 <div style={{ 
                   display: 'flex',
-                  height: '30px',
+                  height: '34px',
                   backgroundColor: '#722420', 
                   color: 'white',
                   borderTop: '2px solid #722420',
@@ -559,17 +559,17 @@ export const Page7: React.FC<Page7Props> = ({
                 }}>
                   <div style={{ 
                     flex: '1',
-                    height: '30px',
+                    height: '34px',
                     backgroundColor: '#722420'
                   }}></div>
                   <div style={{ 
                     width: '80px',
-                    height: '30px',
+                    height: '34px',
                     backgroundColor: '#722420'
                   }}></div>
-                  <div style={{ 
+                    <div style={{ 
                     width: '100px',
-                    height: '30px',
+                    height: '34px',
                     position: 'relative',
                     backgroundColor: '#722420'
                   }}>
@@ -584,7 +584,7 @@ export const Page7: React.FC<Page7Props> = ({
                       justifyContent: 'center',
                       textAlign: 'center',
                       letterSpacing: '0.42px',
-                      fontSize: '11px',
+                        fontSize: UNIFORM_FONT,
                       fontWeight: '600',
                       color: '#ffffff'
                     }}>
@@ -593,7 +593,7 @@ export const Page7: React.FC<Page7Props> = ({
                   </div>
                   <div style={{ 
                     width: '100px',
-                    height: '30px',
+                    height: '34px',
                     position: 'relative',
                     backgroundColor: '#722420'
                   }}>
@@ -607,7 +607,7 @@ export const Page7: React.FC<Page7Props> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       textAlign: 'center',
-                      fontSize: '11px',
+                        fontSize: UNIFORM_FONT,
                       fontWeight: '600',
                       color: '#ffffff'
                     }}>
@@ -641,56 +641,22 @@ export const Page7: React.FC<Page7Props> = ({
               position: 'absolute', 
               left: '29px', 
               right: '29px',
-              top: (() => {
-                const baseTop = 160; // Table starts at 160px
-                const headerHeight = 30; // Header row height
-                const totalRowHeight = 30; // Total row height
-                const rows = tableRows || [];
-                
-                // Calculate dynamic row heights based on description length
-                let totalRowsHeight = 0;
-                rows.forEach(row => {
-                  const descLength = (row.description || '').length;
-                  // Very conservative estimate: 30 chars per line for description column in PDF
-                  // (accounting for flex: '1' column width, font size, and padding)
-                  const estimatedLines = Math.max(1, Math.ceil(descLength / 30));
-                  // Each line is about 22px in PDF, minimum 30px row height, plus 4px margin
-                  const rowHeight = Math.max(30, (estimatedLines * 22) + 16) + 4;
-                  totalRowsHeight += rowHeight;
-                });
-                
-                // Add minimal spacing to prevent overlap with recommendations
-                totalRowsHeight += 20;
-                
-                // Calculate dynamic position based on actual table content
-                const calculatedTop = baseTop + headerHeight + totalRowsHeight + totalRowHeight + 5;
-                return `${calculatedTop}px`;
-              })()
+              top: `${160 + (pdfTableHeight || 0) + 10}px`
             }}>
-              <div style={{ 
+              <div ref={pdfRecBoxRef} style={{ 
                 backgroundColor: '#f8f9fa', 
                 border: '1px solid #e9ecef',
                 borderRadius: '4px',
                 position: 'relative',
-                minHeight: (() => {
-                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const hasManualRows = tableRows.some(row => row.isManual);
-                  const allRecommendations = (customRecommendation && hasManualRows) ? 
-                    `${tableRecommendations} ${customRecommendation}`.trim() : 
-                    tableRecommendations;
-                  const textLength = allRecommendations.length;
-                  // Estimate height based on text length (roughly 80 chars per line at 8px font)
-                  const estimatedLines = Math.max(2, Math.ceil(textLength / 80));
-                  // Header (17px) + text lines (8.5px each) + minimal padding (3px)
-                  return `${17 + (estimatedLines * 8.5) + 3}px`;
-                })()
+                fontSize: UNIFORM_FONT,
+                minHeight: `${Math.max(40, (pdfRecTextHeight || 0) + 24)}px`
               }}>
                 <h4 style={{ 
                   position: 'absolute',
                   top: '6px',
                   left: '12px',
                   right: '12px',
-                  fontSize: '10px', 
+                  fontSize: UNIFORM_FONT, 
                   fontWeight: '700', 
                   color: '#722420',
                   fontFamily: 'Inter, Arial, sans-serif',
@@ -699,13 +665,13 @@ export const Page7: React.FC<Page7Props> = ({
                 }}>
                   Professional Recommendations:
                 </h4>
-                <p style={{ 
+                <p ref={pdfRecTextRef} style={{ 
                   position: 'absolute',
                   top: '20px',
                   left: '12px',
                   right: '12px',
-                  bottom: '0px',  // Minimal bottom margin
-                  fontSize: '8px', 
+                  bottom: '0px',
+                  fontSize: UNIFORM_FONT, 
                   color: '#495057', 
                   lineHeight: '1.3',
                   margin: '0',
@@ -737,18 +703,8 @@ export const Page7: React.FC<Page7Props> = ({
                 left: '50%',
                 transform: 'translateX(-50%)',
                 ...(tableRows.length <= 1 ? {
-                  // Single row: position below recommendations section
-                  bottom: (() => {
-                    const recommendationText = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                    const textLength = recommendationText.length;
-                    
-                    // Dynamic positioning based on text length
-                    if (textLength > 2000) return '5px';       // Very long text - very low position
-                    if (textLength > 1500) return '10px';      // Long text - low position  
-                    if (textLength > 1000) return '20px';      // Medium text - medium position
-                    if (textLength > 500) return '35px';       // Short text - higher position
-                    return '50px';                             // Very short or no text - highest position
-                  })()
+                  // Single row: place above bottom based on measured recommendations height
+                  bottom: `${Math.max(5, 20 - Math.min(15, Math.floor((pdfRecTextHeight || 0) / 50)))}px`
                 } : {
                   // Multiple rows: center on image-only page
                   top: '50%',
@@ -807,7 +763,7 @@ export const Page7: React.FC<Page7Props> = ({
 
   // For non-PDF mode, render the preview in the standard layout
   return (
-    <div className="bg-white w-[595px] h-[842px] mx-auto">
+    <div className="bg-white w-[595px] h-[842px] mx-auto page7-scale-wrapper">
       <div className="relative w-[546px] h-[790px] top-[26px] left-[22.5px]">
         {/* Header Section */}
         <div 
@@ -833,7 +789,7 @@ export const Page7: React.FC<Page7Props> = ({
 
         {/* Table Section */}
         {shouldShowTableOnCurrentPage() && (
-        <div style={{ position: 'absolute', top: '160px', left: '29px', right: '29px' }}>
+        <div ref={previewTableRef} style={{ position: 'absolute', top: '160px', left: '29px', right: '29px' }}>
         <div 
           style={{
               width: '100%', 
@@ -1042,53 +998,17 @@ export const Page7: React.FC<Page7Props> = ({
         {shouldShowTableOnCurrentPage() && (tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
           <div 
             className="absolute left-0 right-0 px-7"
-            style={{
-              top: (() => {
-                const baseTop = 160; // Table starts at 160px
-                const headerHeight = 30; // Header row height
-                const totalRowHeight = 30; // Total row height
-                const rows = tableRows || [];
-                
-                // Calculate dynamic row heights based on description length
-                let totalRowsHeight = 0;
-                rows.forEach(row => {
-                  const descLength = (row.description || '').length;
-                  // Very conservative estimate: 30 chars per line for description column in PDF
-                  // (accounting for flex: '1' column width, font size, and padding)
-                  const estimatedLines = Math.max(1, Math.ceil(descLength / 30));
-                  // Each line is about 22px in PDF, minimum 30px row height, plus 4px margin
-                  const rowHeight = Math.max(30, (estimatedLines * 22) + 16) + 4;
-                  totalRowsHeight += rowHeight;
-                });
-                
-                // Add minimal spacing to prevent overlap with recommendations
-                totalRowsHeight += 20;
-                
-                // Calculate dynamic position based on actual table content
-                const calculatedTop = baseTop + headerHeight + totalRowsHeight + totalRowHeight + 5;
-                return `${calculatedTop}px`;
-              })()
-            }}
+            style={{ top: `${160 + (previewTableHeight || 0) + 10}px` }}
           >
-            <div 
-              className="bg-gray-50 p-3 rounded border"
-              style={{
-                minHeight: (() => {
-                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const hasManualRows = tableRows.some(row => row.isManual);
-                  const allRecommendations = (customRecommendation && hasManualRows) ? 
-                    `${tableRecommendations} ${customRecommendation}`.trim() : 
-                    tableRecommendations;
-                  const textLength = allRecommendations.length;
-                  // Estimate height based on text length (roughly 80 chars per line at 8.5px font)
-                  const estimatedLines = Math.max(2, Math.ceil(textLength / 80));
-                  // Header (20px) + text lines (8.5px each) + padding (24px total)
-                  return `${20 + (estimatedLines * 8.5) + 24}px`;
-                })()
+          <div 
+            className="bg-gray-50 p-3 rounded border"
+            style={{
+                fontSize: UNIFORM_FONT,
+                minHeight: `${Math.max(44, (previewRecTextHeight || 0) + 24)}px`
               }}
             >
-              <h4 className="text-xs font-bold mb-2 text-[#722420]">Professional Recommendations:</h4>
-              <p className="text-[8.5px] text-gray-700 leading-tight text-justify break-words whitespace-normal">
+            <h4 className="font-bold mb-2 text-[#722420]" style={{ fontSize: UNIFORM_FONT }}>Professional Recommendations:</h4>
+              <p ref={previewRecTextRef} className="text-gray-700 leading-tight text-justify break-words whitespace-normal" style={{ fontSize: UNIFORM_FONT }}>
                 {(() => {
                   const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                   const hasManualRows = tableRows.some(row => row.isManual);

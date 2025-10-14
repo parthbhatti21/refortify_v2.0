@@ -82,7 +82,8 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
             style={{ 
               fontFamily: 'Times New Roman, Times, serif', 
               opacity: 1, 
-              fontSize: '20px',
+              top: '170px',
+              fontSize: '14px',
               fontWeight: '400',
               letterSpacing: '0.40px'
             }}

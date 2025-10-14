@@ -186,7 +186,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 return (
                   <div key={row.id} style={{ 
                     display: 'flex',
-                    height: '30px',
+                    minHeight: '36px',
                     marginTop: '8px',
                     marginBottom: '2px',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
@@ -194,15 +194,18 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     <div style={{ 
                       flex: '1',
                       padding: '8px 10px', 
-                      height: '30px',
+                      minHeight: '36px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      lineHeight: '1.2',
+                      lineHeight: '1.35',
                       textAlign: 'center',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'normal',
+                      hyphens: 'auto',
+                      overflow: 'visible',
                       backgroundColor: 'inherit'
                     }}>
                       {row.description}
@@ -211,7 +214,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       width: '80px',
                       padding: '8px 10px', 
                       textAlign: 'center',
-                      height: '30px',
+                      minHeight: '36px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -223,7 +226,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       width: '100px',
                       padding: '8px 10px', 
                       textAlign: 'center', 
-                      height: '30px',
+                      minHeight: '36px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -235,7 +238,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       width: '100px',
                       padding: '8px 10px', 
                       textAlign: 'center', 
-                      height: '30px',
+                      minHeight: '36px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -253,7 +256,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               {currentPageRows.length > 0 && currentEstimatePage === totalPages && (
                 <div style={{ 
                   display: 'flex',
-                  height: '25px',
+                  height: '34px',
                   backgroundColor: '#722420', 
                   color: 'white',
                   borderTop: '2px solid #722420',
@@ -261,22 +264,22 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 }}>
                   <div style={{ 
                     flex: '1',
-                    height: '30px',
+                    height: '34px',
                     backgroundColor: '#722420'
                   }}></div>
                   <div style={{ 
                     width: '80px',
-                    height: '30px',
+                    height: '34px',
                     backgroundColor: '#722420'
                   }}></div>
                   <div style={{ 
                     width: '100px',
-                    height: '30px',
+                    height: '34px',
                     letterSpacing: '0.42px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontWeight: '600',
                     backgroundColor: '#722420',
                     color: '#ffffff'
@@ -287,11 +290,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     width: '100px',
                     padding: '2px 6px', 
                     textAlign: 'center', 
-                    height: '30px',
+                    height: '34px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontWeight: '600',
                     backgroundColor: '#722420',
                     color: '#ffffff'
@@ -305,7 +308,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   {!isPDF && (
                     <div style={{ 
                       width: '0px',
-                      height: '30px',
+                      height: '34px',
                       backgroundColor: '#722420'
                     }}></div>
                   )}

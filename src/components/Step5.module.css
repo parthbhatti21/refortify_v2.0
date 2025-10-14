@@ -4,12 +4,17 @@
     display: grid;
     justify-items: center;
     width: 100%;
+    /* Responsive scale variable for A4-sized canvas (595x842) */
+    --page-scale: min(1, calc((100vw - 32px) / 595));
 }
 
 .overlapWrapper {
     background-color: #ffffff;
     height: 842px;
     width: 595px;
+    /* Responsively scale the fixed-size canvas on smaller screens */
+    transform: scale(var(--page-scale));
+    transform-origin: top center;
 }
 
 .overlap {
@@ -18,6 +23,8 @@
     position: relative;
     top: 26px;
     width: 546px;
+    /* Keep inner content from overflowing when scaled */
+    overflow: hidden;
 }
 
 .paymentMethod {

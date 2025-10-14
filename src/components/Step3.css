@@ -103,12 +103,12 @@
 
 .page .email {
     aspect-ratio: 0.9;
-    height: 524px;
-    left: 37px;
+    height: 400px;
+    left: 40px;
     object-fit: cover;
     position: absolute;
-    top: 183px;
-    width: 471px;
+    top: 190px;
+    width: 360px;
 }
 
 /* PDF-specific overrides to ensure consistent positioning and centering */
@@ -206,7 +206,7 @@
 [data-pdf="true"] .page .div {
     opacity: 0.95 !important;  /* Adjust client name position for better spacing */
     font-family: "Times New Roman", Times, serif !important;
-    font-size: 20px !important;
+    font-size: 14px !important;
     font-weight: 400 !important;
     letter-spacing: 0.40px !important;
 }
