@@ -416,221 +416,374 @@ export const Page7: React.FC<Page7Props> = ({
 
           {/* Table Section */}
           {shouldShowTableOnCurrentPage() && (
-          <div ref={pdfTableRef} style={{ position: 'absolute', top: '140px', left: '29px', right: '29px' }}>
-          <div 
-            style={{
-                width: '100%', 
+          <div style={{ 
+            position: 'absolute', 
+            top: '180px', 
+            left: '29px', 
+            right: '29px',    
+            fontSize: UNIFORM_FONT,
+            fontFamily: 'Inter, Arial, sans-serif'
+          }}>
+            <div 
+              ref={pdfTableRef}
+              style={{ 
+                display: 'grid',
+                gridTemplateColumns: '1fr 80px 100px 100px',
+                gap: '0px',
+                border: '1px solid #722420',
+                backgroundColor: '#722420',
                 fontSize: UNIFORM_FONT,
                 fontFamily: 'Inter, Arial, sans-serif'
               }}
             >
               {/* Header Row */}
-              <div style={{ 
-                display: 'flex', 
-                backgroundColor: '#722420', 
-                borderBottom: '2px solid #722420' 
-              }}>
-                <div style={{ 
-                  flex: '1',
-                  textAlign: 'center', 
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Description
-                </div>
-                <div style={{ 
-                  width: '80px',
-                  textAlign: 'center', 
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Unit
-                </div>
-                <div style={{ 
-                  width: '100px',
-                  height: '30px',
-                  textAlign: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Price
-                </div>
-                <div style={{ 
-                  width: '100px',
-                  textAlign: 'center',
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Total
-                </div>
-          </div>
+              <div style={{ display: 'contents' }}>
+                <div style={{
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: UNIFORM_FONT,
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Description</div>
+                <div style={{
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: UNIFORM_FONT,
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Unit</div>
+                <div style={{
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: UNIFORM_FONT,
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Price</div>
+                <div style={{
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: UNIFORM_FONT,
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Total</div>
+              </div>
 
               {/* Data Rows */}
               {tableRows.map((row, index) => {
                 const total = row.unit * row.price;
+                
+                // Calculate how many rows are needed based on content length
+                const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                  const lines = text.split('\n').length;
+                  const wordCount = text.split(' ').length;
+                  const charCount = text.length;
+                  
+                  // Calculate rows needed based on multiple factors
+                  let rowsNeeded = 1;
+                  
+                  // Factor in line breaks
+                  if (lines > 1) {
+                    rowsNeeded = Math.max(rowsNeeded, lines);
+                  }
+                  
+                  // Factor in character count (roughly 50 chars per row)
+                  const charRows = Math.ceil(charCount / baseLength);
+                  rowsNeeded = Math.max(rowsNeeded, charRows);
+                  
+                  // Factor in word count (roughly 8 words per row)
+                  const wordRows = Math.ceil(wordCount / 8);
+                  rowsNeeded = Math.max(rowsNeeded, wordRows);
+                  
+                  return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                };
+                
+                const descriptionRows = calculateRowsNeeded(row.description);
+                const unitRows = calculateRowsNeeded(row.unit.toString(), 10);
+                const priceRows = calculateRowsNeeded(row.price.toString(), 10);
+                
+                const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
+                const isLongContent = maxRowsNeeded > 1;
+                const rowSpan = maxRowsNeeded;
+
                 return (
-                  <div key={row.id} style={{ 
-                    display: 'flex',
-                    minHeight: '36px',
-                    marginTop: '8px',
-                    marginBottom: '2px',
-                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
-                  }}>
-                    <div style={{ 
-                      flex: '1',
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '4px 6px',
-                      lineHeight: '1.35',
-                      textAlign: 'center',
+                  <div key={row.id} style={{ display: 'contents' }}>
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
+                      fontWeight: 'normal',
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: UNIFORM_FONT,
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
                       whiteSpace: 'normal',
-                      hyphens: 'auto',
-                      backgroundColor: 'inherit',
-                      fontSize: UNIFORM_FONT
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
                       {row.description}
                     </div>
-                    <div style={{ 
-                      width: '80px',
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'inherit'
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
+                      fontWeight: 'normal',
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: UNIFORM_FONT,
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
                       {row.unit}
                     </div>
-                    <div style={{ 
-                      width: '100px',
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'inherit'
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
+                      fontWeight: 'normal',
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: UNIFORM_FONT,
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
                       ${row.price.toLocaleString()}
                     </div>
-                    <div style={{ 
-                      width: '100px',
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'inherit'
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
+                      fontWeight: '600',
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: UNIFORM_FONT,
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
-                      <span style={{ fontWeight: 600 }}>${total.toLocaleString()}</span>
+                      ${total.toLocaleString()}
                     </div>
+                    {/* Add empty rows for merged cells */}
+                    {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
+                      <div key={`empty-${i}`} style={{ display: 'contents' }}>
+                        <div style={{ display: 'none' }}></div>
+                        <div style={{ display: 'none' }}></div>
+                        <div style={{ display: 'none' }}></div>
+                        <div style={{ display: 'none' }}></div>
+                      </div>
+                    ))}
                   </div>
                 );
               })}
 
               {/* Total row */}
               {tableRows.length > 0 && (
-                <div style={{ 
-                  display: 'flex',
-                  height: '34px',
-                  backgroundColor: '#722420', 
-                  color: 'white',
-                  borderTop: '2px solid #722420',
-                  fontWeight: '700'
-                }}>
-                  <div style={{ 
-                    flex: '1',
-                    height: '34px',
-                    backgroundColor: '#722420'
-                  }}></div>
-                  <div style={{ 
-                    width: '80px',
-                    height: '34px',
-                    backgroundColor: '#722420'
-                  }}></div>
-                    <div style={{ 
-                    width: '100px',
-                    height: '34px',
-                    position: 'relative',
-                    backgroundColor: '#722420'
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      top: '0px',
-                      left: '6px',
-                      right: '6px',
-                      bottom: '2px',
+                <div style={{ display: 'contents' }}>
+                  <div style={{
+                    backgroundColor: '#722420',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      textAlign: 'center',
-                      letterSpacing: '0.42px',
-                        fontSize: UNIFORM_FONT,
-                      fontWeight: '600',
-                      color: '#ffffff'
-                    }}>
-                      TOTAL :
-                    </div>
+                      textAlign: 'center'
+                    }),
+                    fontSize: UNIFORM_FONT,
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
+                  }}></div>
+                  <div style={{
+                    backgroundColor: '#722420',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center'
+                    }),
+                    fontSize: UNIFORM_FONT,
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
+                  }}></div>
+                  <div style={{
+                    backgroundColor: '#722420',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center'
+                    }),
+                    fontSize: UNIFORM_FONT,
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
+                  }}>
+                    TOTAL:
                   </div>
-                  <div style={{ 
-                    width: '100px',
-                    height: '34px',
-                    position: 'relative',
-                    backgroundColor: '#722420'
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      top: '0px',
-                      left: '6px',
-                      right: '6px',
-                      bottom: '2px',
+                  <div style={{
+                    backgroundColor: '#722420',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      textAlign: 'center',
-                        fontSize: UNIFORM_FONT,
-                      fontWeight: '600',
-                      color: '#ffffff'
-                    }}>
-                      ${calculateTotal().toLocaleString()}
-                    </div>
+                      textAlign: 'center'
+                    }),
+                    fontSize: UNIFORM_FONT,
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
+                  }}>
+                    ${calculateTotal().toLocaleString()}
                   </div>
                 </div>
               )}
 
               {/* Empty state */}
-              {tableRows.length === 0 && (
-                <div style={{ 
-                  display: 'flex',
-                  height: '50px',
-                  backgroundColor: '#f8f9fa',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#6c757d',
-                  fontSize: '14px'
-                }}>
-                  No repair items added yet
-              </div>
-              )}
+             
             </div>
           </div>
           )}
@@ -641,7 +794,7 @@ export const Page7: React.FC<Page7Props> = ({
               position: 'absolute', 
               left: '29px', 
               right: '29px',
-              top: `${160 + (pdfTableHeight || 0) + 10}px`
+              top: `${160 + (pdfTableHeight || 0) + 50}px`
             }}>
               <div ref={pdfRecBoxRef} style={{ 
                 backgroundColor: '#f8f9fa', 
@@ -789,207 +942,297 @@ export const Page7: React.FC<Page7Props> = ({
 
         {/* Table Section */}
         {shouldShowTableOnCurrentPage() && (
-        <div ref={previewTableRef} style={{ position: 'absolute', top: '160px', left: '29px', right: '29px' }}>
-        <div 
-          style={{
-              width: '100%', 
-              fontSize: '12px',
-              fontFamily: 'Inter, Arial, sans-serif'
+        <div style={{ 
+          position: 'absolute', 
+          top: '180px', 
+          left: '29px', 
+          right: '29px',    
+          fontSize: '12px',
+          fontFamily: 'Inter, Arial, sans-serif'
+        }}>
+          <div 
+            ref={previewTableRef}
+            style={{ 
+              display: 'grid',
+              gridTemplateColumns: '1fr 80px 100px 100px',
+              gap: '0px',
+              border: '1px solid #722420',
+              backgroundColor:'#722420 ',
+              //  /backgroundColor: '#ffffff'
             }}
           >
             {/* Header Row */}
-            <div style={{ 
-              display: 'flex', 
-              backgroundColor: '#722420', 
-              borderBottom: '2px solid #722420' 
-            }}>
-              <div style={{ 
-                flex: '1',
-                textAlign: 'center', 
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '700',
-                color: '#ffffff',
-                backgroundColor: '#722420'
-              }}>
-                Description
+            <div style={{ display: 'contents' }}>
+                <div style={{
+                  // margin: i .sPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Description</div>
+                <div style={{
+                  // margin: isPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Unit</div>
+                <div style={{
+                  // margin: isPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Price</div>
+                <div style={{
+                  // margin: isPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Total</div>
               </div>
-              <div style={{ 
-                width: '80px',
-                textAlign: 'center', 
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '700',
-                color: '#ffffff',
-                backgroundColor: '#722420'
-              }}>
-                Unit
-              </div>
-              <div style={{ 
-                width: '100px',
-                height: '30px',
-                textAlign: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '700',
-                color: '#ffffff',
-                backgroundColor: '#722420'
-              }}>
-                Price
-              </div>
-              <div style={{ 
-                width: '100px',
-                textAlign: 'center',
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '700',
-                color: '#ffffff',
-                backgroundColor: '#722420'
-              }}>
-                Total
-              </div>
-            </div>
+
 
             {/* Data Rows */}
             {tableRows.map((row, index) => {
               const total = row.unit * row.price;
+              
+              // Calculate how many rows are needed based on content length
+              const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                const lines = text.split('\n').length;
+                const wordCount = text.split(' ').length;
+                const charCount = text.length;
+                
+                // Calculate rows needed based on multiple factors
+                let rowsNeeded = 1;
+                
+                // Factor in line breaks
+                if (lines > 1) {
+                  rowsNeeded = Math.max(rowsNeeded, lines);
+                }
+                
+                // Factor in character count (roughly 50 chars per row)
+                const charRows = Math.ceil(charCount / baseLength);
+                rowsNeeded = Math.max(rowsNeeded, charRows);
+                
+                // Factor in word count (roughly 8 words per row)
+                const wordRows = Math.ceil(wordCount / 8);
+                rowsNeeded = Math.max(rowsNeeded, wordRows);
+                
+                return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+              };
+              
+              const descriptionRows = calculateRowsNeeded(row.description);
+              const unitRows = calculateRowsNeeded(row.unit.toString(), 10);
+              const priceRows = calculateRowsNeeded(row.price.toString(), 10);
+              
+              const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
+              const isLongContent = maxRowsNeeded > 1;
+              const rowSpan = maxRowsNeeded;
+
               return (
-                <div key={row.id} style={{ 
-                  display: 'flex',
-                  minHeight: '30px',
-                  marginTop: '8px',
-                  marginBottom: '2px',
-                  backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
-                }}>
-                  <div style={{ 
-                    flex: '1',
-                    padding: '8px 10px', 
-                    minHeight: '30px',
+                <div key={row.id} style={{ display: 'contents' }}>
+                  <div style={{
+                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                    color: '#000000',
+                    fontWeight: 'normal',
+                    minHeight: `${28 * rowSpan}px`,
+                    padding: '4px 8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    lineHeight: '1.2',
                     textAlign: 'center',
+                    borderBottom: '1px solid #e0e0e0',
+                    fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
-                    backgroundColor: 'inherit'
+                    whiteSpace: 'normal',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
                   }}>
                     {row.description}
                   </div>
-                  <div style={{ 
-                    width: '80px',
-                    padding: '8px 10px', 
-                    textAlign: 'center',
-                    minHeight: '30px',
+                  <div style={{
+                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                    color: '#000000',
+                    fontWeight: 'normal',
+                    minHeight: `${28 * rowSpan}px`,
+                    padding: '4px 8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: 'inherit'
+                    textAlign: 'center',
+                    borderBottom: '1px solid #e0e0e0',
+                    fontSize: '12px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
                   }}>
                     {row.unit}
                   </div>
-                  <div style={{ 
-                    width: '100px',
-                    padding: '8px 10px', 
-                    textAlign: 'center', 
-                    minHeight: '30px',
+                  <div style={{
+                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                    color: '#000000',
+                    fontWeight: 'normal',
+                    minHeight: `${28 * rowSpan}px`,
+                    padding: '4px 8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: 'inherit'
+                    textAlign: 'center',
+                    borderBottom: '1px solid #e0e0e0',
+                    fontSize: '12px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
                   }}>
                     ${row.price.toLocaleString()}
                   </div>
-                  <div style={{ 
-                    width: '100px',
-                    padding: '8px 10px', 
-                    textAlign: 'center', 
-                    minHeight: '30px',
+                  <div style={{
+                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                    color: '#000000',
+                    fontWeight: '600',
+                    minHeight: `${28 * rowSpan}px`,
+                    padding: '4px 8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: '600',
-                    backgroundColor: 'inherit'
+                    textAlign: 'center',
+                    borderBottom: '1px solid #e0e0e0',
+                    fontSize: '12px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
                   }}>
                     ${total.toLocaleString()}
                   </div>
+                  {/* Add empty rows for merged cells */}
+                  {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
+                    <div key={`empty-${i}`} style={{ display: 'contents' }}>
+                      <div style={{ display: 'none' }}></div>
+                      <div style={{ display: 'none' }}></div>
+                      <div style={{ display: 'none' }}></div>
+                      <div style={{ display: 'none' }}></div>
+                    </div>
+                  ))}
                 </div>
               );
             })}
 
             {/* Total row */}
               {tableRows.length > 0 && (
-              <div style={{ 
-                display: 'flex',
-                height: '30px',
-                backgroundColor: '#722420', 
-                color: 'white',
-                borderTop: '2px solid #722420',
-                fontWeight: '700'
-              }}>
+              <div style={{ display: 'contents' }}>
                 <div style={{ 
-                  flex: '1',
-                  height: '30px',
-                  backgroundColor: '#722420'
+                  backgroundColor: '#722420',
+                  height: '30px'
                 }}></div>
                 <div style={{ 
-                  width: '80px',
-                  height: '30px',
-                  backgroundColor: '#722420'
+                  backgroundColor: '#722420',
+                  height: '30px'
                 }}></div>
                 <div style={{ 
-                  width: '100px',
-                  height: '30px',
+                  backgroundColor: '#722420',
+                  color: '#ffffff',
+                  fontWeight: '600',
+                  fontSize: '12px',
                   letterSpacing: '0.42px',
+                  height: '30px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  backgroundColor: '#722420',
-                  color: '#ffffff'
+                  textAlign: 'center'
                 }}>
                   TOTAL :
                 </div>
                 <div style={{ 
-                  width: '100px',
-                  padding: '2px 6px', 
-                  textAlign: 'center', 
+                  backgroundColor: '#722420',
+                  color: '#ffffff',
+                  fontWeight: '600',
+                  fontSize: '12px',
                   height: '30px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  backgroundColor: '#722420',
-                  color: '#ffffff'
+                  textAlign: 'center',
+                  padding: '2px 6px'
                 }}>
                   ${calculateTotal().toLocaleString()}
                 </div>
               </div>
             )}
 
-            {/* Empty state */}
-              {tableRows.length === 0 && (
-              <div style={{ 
-                display: 'flex',
-                height: '50px',
-                backgroundColor: '#f8f9fa',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#6c757d',
-                fontSize: '14px'
-              }}>
-                    No repair items added yet
-                </div>
-              )}
+            
           </div>
         </div>
         )}
@@ -998,7 +1241,7 @@ export const Page7: React.FC<Page7Props> = ({
         {shouldShowTableOnCurrentPage() && (tableRows.some(row => row.recommendation) || (customRecommendation && tableRows.some(row => row.isManual))) && (
           <div 
             className="absolute left-0 right-0 px-7"
-            style={{ top: `${160 + (previewTableHeight || 0) + 10}px` }}
+            style={{ top: `${160 + (previewTableHeight || 0) + 50}px` }}
           >
           <div 
             className="bg-gray-50 p-3 rounded border"

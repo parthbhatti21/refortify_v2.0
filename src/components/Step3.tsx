@@ -43,8 +43,9 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
   } : {};
 
   const emailStyle = isPDF ? {
-    left: `${(CONTENT_WIDTH - 471) / 2}px`, // Center email image within content area (471px width)
-    top: '178px', // Adjust email position for better spacing
+    left: '32px', // Align content block to the left in PDF
+    top: '188px',
+    position: 'absolute' as const,
   } : {};
 
   // Add a prominent header for the final page (only visible in preview, not in PDF)
@@ -83,15 +84,41 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
               fontFamily: 'Times New Roman, Times, serif', 
               opacity: 1, 
               top: '170px',
+              // lineHeight: '1.9',
               fontSize: '14px',
-              fontWeight: '400',
+              fontWeight: '500',
               letterSpacing: '0.40px'
             }}
           >
             Dear {formData.clientName || 'c1'},
           </div>
-
-          <img className="email" alt="Email" src="/email.webp" style={emailStyle} />
+          
+          <div className="email-content" style={emailStyle}>
+            
+            <div className="itWasAContainer">
+              <p className="itWasA">{`It was a pleasure to provide service for your home and attached is a detailed service report for your review and a repair estimate if applicable. This service report is in sections which are as follows:`}</p>
+              <ul className="todaysInvoiceWithDescripti">
+                {/* <br /> */}
+                <li className="itWasA" ><span className="dot"></span> Today's Invoice with description</li>
+                <li className="estimatedRepairsWith"><span className="dot"></span> Estimated Repairs with description, building codes and inspection 
+                <br /> <span className="photographs-left">photographs</span></li>
+                <li className="estimatedRepairsWith"><span className="dot"></span> Inspection Photographs</li>
+                <li className="estimatedRepairsWith"><span className="dot"></span> Details to understand chimney parts</li>
+                <li className="estimatedRepairsWith"><span className="dot"></span> Top hat club membership</li>
+                <li className="estimatedRepairsWith"><span className="dot"></span> Thank You</li>
+                <li className="estimatedRepairsWith"><span className="dot"></span> Terms and Conditions</li>
+              </ul>
+              {/* <p className="itWasA">&nbsp;</p> */}
+              <p className="itWasA">Thank you so much for using our service. We strive to offer the best service, the best warranties, the best quality control and the best training in our industry. Your complete satisfaction is most important to everyone of the us at A Step in Time Chimney Sweeps.</p>
+              {/* <p className="itWasA">&nbsp;</p> */}
+              <br />
+              <p className="itWasA">{`Sincerely, `}</p>
+              <p className="itWasA">{`Ray Gessner, P.E. `}</p>
+              <p className="itWasA">{`C.E.O. - A STEP IN TIME CHIMNEY SWEEPS Ray@ChimneySweep.com `}</p>
+              <p className="itWasA">{`833-CHIMNEY `}</p>
+              <p className="itWasA">833-244-6639</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

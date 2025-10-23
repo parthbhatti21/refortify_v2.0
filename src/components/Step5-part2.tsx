@@ -94,88 +94,120 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
     
 
           {/* Invoice Table */}
-          <div style={{ position: 'absolute', top: '170px', left: '29px', right: '29px' }}>
+          <div style={{ 
+            position: 'absolute', 
+            top: '180px', 
+            left: '29px', 
+            right: '29px',    
+            fontSize: '12px',
+            fontFamily: 'Inter, Arial, sans-serif'
+          }}>
             <div 
               ref={tableRef}
               style={{ 
-                width: '100%', 
-                fontSize: '12px',
-                fontFamily: 'Inter, Arial, sans-serif'
+                display: 'grid',
+                gridTemplateColumns: '1fr 80px 100px 100px',
+                gap: '0px',
+                border: '1px solid #722420',
+                backgroundColor:'#722420 ',
+                //  /backgroundColor: '#ffffff'
               }}
             >
               {/* Header Row */}
-              <div style={{ 
-                display: 'flex', 
-                backgroundColor: '#722420', 
-                borderBottom: '2px solid #722420' 
-              }}>
-                <div style={{ 
-                  flex: '1',
-                  textAlign: 'center', 
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Description
-                </div>
-                <div style={{ 
-                  width: '80px',
-                  textAlign: 'center', 
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Unit
-                </div>
-                <div style={{ 
-                  width: '100px',
-                  height: '30px',
-                  textAlign: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Price
-                </div>
-                <div style={{ 
-                  width: '100px',
-                  textAlign: 'center',
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  backgroundColor: '#722420'
-                }}>
-                  Total
-                </div>
-                {!isPDF && (
-                  <div style={{ 
-                    width: '0px',
-                    textAlign: 'center', 
-                    height: '30px',
+              
+              <div style={{ display: 'contents' }}>
+                <div style={{
+                  // margin: i .sPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: '700',
-                    color: '#ffffff',
-                    backgroundColor: '#722420'
-                  }}>
-                    
-                  </div>
-                )}
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Description</div>
+                <div style={{
+                  // margin: isPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Unit</div>
+                <div style={{
+                  // margin: isPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Price</div>
+                <div style={{
+                  // margin: isPDF ? '8px 8px' : '8px 8px',
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight:'28px',
+                  padding: '4px 8px',
+                  ...(isPDF ? {
+                    display: 'table-cell',
+                    verticalAlign: 'middle',
+                    textAlign: 'center'
+                  } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                  }),
+                  borderBottom: '1px solid #722420',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}>Total</div>
               </div>
 
               {/* Data Rows */}
@@ -183,121 +215,256 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 const unitPrice = parseFloat(row.unit) || 0;
                 const price = parseFloat(row.price) || 0;
                 const total = unitPrice * price;
+                
+                // Calculate how many rows are needed based on content length
+                const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                  const lines = text.split('\n').length;
+                  const wordCount = text.split(' ').length;
+                  const charCount = text.length;
+                  
+                  // Calculate rows needed based on multiple factors
+                  let rowsNeeded = 1;
+                  
+                  // Factor in line breaks
+                  if (lines > 1) {
+                    rowsNeeded = Math.max(rowsNeeded, lines);
+                  }
+                  
+                  // Factor in character count (roughly 50 chars per row)
+                  const charRows = Math.ceil(charCount / baseLength);
+                  rowsNeeded = Math.max(rowsNeeded, charRows);
+                  
+                  // Factor in word count (roughly 8 words per row)
+                  const wordRows = Math.ceil(wordCount / 8);
+                  rowsNeeded = Math.max(rowsNeeded, wordRows);
+                  
+                  return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                };
+                
+                const descriptionRows = calculateRowsNeeded(row.description);
+                const unitRows = calculateRowsNeeded(row.unit, 10);
+                const priceRows = calculateRowsNeeded(row.price, 10);
+                
+                const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
+                const isLongContent = maxRowsNeeded > 1;
+                const rowSpan = maxRowsNeeded;
+
                 return (
-                  <div key={row.id} style={{ 
-                    display: 'flex',
-                    minHeight: '36px',
-                    marginTop: '8px',
-                    marginBottom: '2px',
-                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
-                  }}>
-                    <div style={{ 
-                      flex: '1',
-                      padding: '8px 10px', 
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      lineHeight: '1.35',
-                      textAlign: 'center',
+                  <div key={row.id} style={{ display: 'contents' }}>
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
+                      fontWeight: 'normal',
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4',
+                        rowSpan: rowSpan
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      wordBreak: 'break-word',
                       whiteSpace: 'normal',
-                      hyphens: 'auto',
-                      overflow: 'visible',
-                      backgroundColor: 'inherit'
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
                       {row.description}
                     </div>
-                    <div style={{ 
-                      width: '80px',
-                      padding: '8px 10px', 
-                      textAlign: 'center',
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'inherit'
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
+                      fontWeight: 'normal',
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4',
+                        rowSpan: rowSpan
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
                       {row.unit}
                     </div>
-                    <div style={{ 
-                      width: '100px',
-                      padding: '8px 10px', 
-                      textAlign: 'center', 
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'inherit'
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
+                      fontWeight: 'normal',
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4',
+                        rowSpan: rowSpan
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
                       {row.price}
                     </div>
-                    <div style={{ 
-                      width: '100px',
-                      padding: '8px 10px', 
-                      textAlign: 'center', 
-                      minHeight: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                    <div style={{
+                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                      color: '#000000',
                       fontWeight: '600',
-                      backgroundColor: 'inherit'
+                      minHeight: `${28 * rowSpan}px`,
+                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'top',
+                        textAlign: 'center',
+                        lineHeight: '1.4',
+                        rowSpan: rowSpan
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      borderBottom: '1px solid #e0e0e0',
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
                     }}>
                       {total.toFixed(2)}
                     </div>
-                    
+                    {/* Add empty rows for merged cells */}
+                    {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
+                      <div key={`empty-${i}`} style={{ display: 'contents' }}>
+                        <div style={{ display: 'none' }}></div>
+                        <div style={{ display: 'none' }}></div>
+                        <div style={{ display: 'none' }}></div>
+                        <div style={{ display: 'none' }}></div>
+                      </div>
+                    ))}
                   </div>
                 );
               })}
 
-              {/* Total row - only show on last page, directly after rows */}
+
+              {/* ? */}
               {currentPageRows.length > 0 && currentEstimatePage === totalPages && (
-                <div style={{ 
-                  display: 'flex',
-                  height: '34px',
-                  backgroundColor: '#722420', 
-                  color: 'white',
-                  borderTop: '2px solid #722420',
-                  fontWeight: '700'
-                }}>
-                  <div style={{ 
-                    flex: '1',
-                    height: '34px',
-                    backgroundColor: '#722420'
-                  }}></div>
-                  <div style={{ 
-                    width: '80px',
-                    height: '34px',
-                    backgroundColor: '#722420'
-                  }}></div>
-                  <div style={{ 
-                    width: '100px',
-                    height: '34px',
-                    letterSpacing: '0.42px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    fontWeight: '600',
+                <div style={{ display: 'contents' }}>
+                  <div style={{
                     backgroundColor: '#722420',
-                    color: '#ffffff'
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center'
+                    }),
+                    fontSize: '12px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
+                  }}></div>
+                  <div style={{
+                    backgroundColor: '#722420',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center'
+                    }),
+                    fontSize: '12px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
+                  }}></div>
+                  <div style={{
+                    backgroundColor: '#722420',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center'
+                    }),
+                    fontSize: '12px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
                   }}>
-                    TOTAL :
+                    TOTAL:
                   </div>
-                  <div style={{ 
-                    width: '100px',
-                    padding: '2px 6px', 
-                    textAlign: 'center', 
-                    height: '34px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    fontWeight: '600',
+                  <div style={{
                     backgroundColor: '#722420',
-                    color: '#ffffff'
+                    color: 'white',
+                    fontWeight: 'bold',
+                    minHeight: '28px',
+                    padding: '4px 8px',
+                    ...(isPDF ? {
+                      display: 'table-cell',
+                      verticalAlign: 'middle',
+                      textAlign: 'center'
+                    } : {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center'
+                    }),
+                    fontSize: '12px',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'normal'
                   }}>
                     ${localData.rows.reduce((sum, row) => {
                       const unitPrice = parseFloat(row.unit) || 0;
@@ -305,13 +472,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       return sum + (unitPrice * price);
                     }, 0).toFixed(2)}
                   </div>
-                  {!isPDF && (
-                    <div style={{ 
-                      width: '0px',
-                      height: '34px',
-                      backgroundColor: '#722420'
-                    }}></div>
-                  )}
                 </div>
               )}
             </div>

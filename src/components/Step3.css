@@ -66,7 +66,15 @@
     top: 0;
     width: 124px;
 }
-
+.dot {
+    height: 8px;
+    
+    width: 8px;
+    background-color: #000;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
 .page .frame {
     border: 2px solid;
     border-color: #722420;
@@ -101,20 +109,58 @@
     width: 157px;
 }
 
-.page .email {
-    aspect-ratio: 0.9;
-    height: 400px;
-    left: 40px;
-    object-fit: cover;
+.page .email-content {
     position: absolute;
     top: 190px;
-    width: 360px;
+    left: 42px;
+    width: 471px;
+    /* matches old image content box */
+}
+
+.itWasAContainer {
+    width: 461px;
+    min-height: 553px;
+    position: relative;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    font-family: 'Times New Roman', Times, serif;
+    color: #000;
+    text-align: left;
+    display: inline-block;
+}
+
+.itWasA {
+    margin: 0 0 8px 0;
+    line-height: 1.6;
+}
+
+.todaysInvoiceWithDescripti {
+    margin: 6px 0 6px 0;
+    font-family: inherit;
+    font-size: inherit;
+    padding-left: 21px;
+}
+
+.estimatedRepairsWith {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+/* Base line spacing for list items */
+.todaysInvoiceWithDescripti li {
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.photographs-left {
+    display: inline-block;
+    padding-left: 12px;
 }
 
 /* PDF-specific overrides to ensure consistent positioning and centering */
 .pdf-generation .page .overlap {
     left: 24.5px !important; /* Center content: (595 - 546) / 2 = 24.5px */
-    top: 25px !important; /* Move content higher on the page for better PDF layout */
+    top: 30px !important; /* Shifted 5px down */
     position: absolute !important;
 }
 
@@ -130,12 +176,12 @@
 
 .pdf-generation .page .div {
     left: 194.5px !important; /* Center client name: (546 - 157) / 2 = 194.5px */
-    top: 149px !important; /* Adjust client name position for better spacing */
+    top: 154px !important; /* Shifted 5px down */
 }
 
-.pdf-generation .page .email {
-    left: 37.5px !important; /* Center email: (546 - 471) / 2 = 37.5px */
-    top: 178px !important; /* Adjust email position for better spacing */
+.pdf-generation .page .email-content {
+    left: 37.5px !important; /* Align to left edge of content area */
+    top: 172px !important; /* Move up to reduce gap below greeting */
 }
 
 /* PDF-specific text positioning */
@@ -158,7 +204,7 @@
 /* Additional centering support for different PDF generation scenarios */
 [data-pdf="true"] .page .overlap {
     left: 24.5px !important;
-    top: 15px !important; /* Move content higher on the page for better PDF layout */
+    top: 20px !important; /* Shifted 5px down */
     position: absolute !important;
 }
 
@@ -174,13 +220,54 @@
 
 [data-pdf="true"] .page .div {
     left: 41px !important;
-    top: 145px !important;
+    top: 142px !important; /* Reduced to tighten spacing above content */
     opacity: 0.8 !important;  /* Adjust client name position for better spacing */
 }
 
-[data-pdf="true"] .page .email {
-    left: 37.5px !important;
-    top: 178px !important; /* Adjust email position for better spacing */
+[data-pdf="true"] .page .email-content {
+    left: 40.5px !important;
+    top: 170px !important; /* Move up to reduce gap below greeting */
+}
+
+/* Remove extra left padding on list when generating PDF to flush left */
+.pdf-generation .todaysInvoiceWithDescripti,
+[data-pdf="true"] .todaysInvoiceWithDescripti {
+    padding-left: 16px !important;
+    line-height: 1.5 !important;
+    margin-left: 0 !important;
+    top: 15px !important;
+}
+
+/* PDF: vertically align dot and improve line spacing for readability */
+.pdf-generation .dot,
+[data-pdf="true"] .dot {
+    position: relative;
+    top: 5px; /* nudge dot vertically */
+}
+
+.pdf-generation .todaysInvoiceWithDescripti li,
+[data-pdf="true"] .todaysInvoiceWithDescripti li {
+    line-height: 1.5 !important;
+    margin-bottom: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.pdf-generation .itWasA,
+.pdf-generation .estimatedRepairsWith,
+[data-pdf="true"] .itWasA,
+[data-pdf="true"] .estimatedRepairsWith {
+    line-height: 1.5 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Ensure dots are vertically centered with text in PDF */
+.pdf-generation .dot,
+[data-pdf="true"] .dot {
+    position: relative;
+    top: 0px !important; /* Reset any previous top offset */
+    align-self: center !important;
 }
 
 /* PDF-specific text positioning for data-pdf selector */

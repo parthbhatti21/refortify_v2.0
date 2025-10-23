@@ -117,3 +117,91 @@
     top: 3px;
     width: 536px;
 }
+
+/* Semantic table header using CSS grid for reliable centering */
+.tableHeader {
+    display: grid;
+    grid-template-columns: 1fr 80px 100px 100px;
+    background-color: #722420;
+    border-bottom: 2px solid #722420;
+}
+
+.thCell {
+    height: 30px;
+    display: grid;
+    place-items: center; /* centers horizontally and vertically */
+    color: #ffffff;
+    font-weight: 700;
+    font-family: Inter, Arial, sans-serif;
+}
+
+/* PDF-specific: neutralize any renderer bias */
+.pdf-generation .tableHeader .thCell,
+[data-pdf="true"] .tableHeader .thCell {
+    line-height: 30px !important;
+    transform: translateY(1px); /* nudge for optical vertical centering in PDF */
+}
+
+/* PDF-specific overrides for table header vertical centering */
+.pdf-generation [style*="display: flex"][style*="alignItems: center"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Ensure table headers are properly centered in PDF */
+.pdf-generation [style*="height: 30px"] {
+    line-height: 30px !important;
+    vertical-align: middle !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Force flexbox centering for PDF generation */
+[data-pdf="true"] [style*="display: flex"][style*="alignItems: center"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+[data-pdf="true"] [style*="height: 30px"] {
+    line-height: 30px !important;
+    vertical-align: middle !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Specific targeting for table header row in PDF */
+.pdf-generation [style*="backgroundColor: #722420"][style*="height: 30px"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 30px !important;
+    position: relative !important;
+    top: 1px !important; /* nudge down for optical centering in PDF */
+}
+
+[data-pdf="true"] [style*="backgroundColor: #722420"][style*="height: 30px"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 30px !important;
+    position: relative !important;
+    top: 1px !important; /* nudge down for optical centering in PDF */
+}

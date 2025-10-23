@@ -30,7 +30,7 @@ const Page2: React.FC<Page2Props> = ({ formData, updateFormData, isPDF = false }
       <div className="bg-white w-[595px] h-[842px]">
         <div className="relative w-[546px] h-[790px] top-[26px] left-[25px]" style={mainContainerStyle}>
           <div 
-            className="absolute w-[487px] top-[370px] left-12 [font-family:'Instrument_Sans-Regular',Helvetica] font-normal text-black text-[14px] tracking-[0]"
+            className="absolute w-[487px] top-[370px] left-12 [font-family:'Times New Roman, Times, serif'] font-normal text-black text-[14px] tracking-[0]"
             style={{
               display: 'flex',
               flexDirection: 'column',
