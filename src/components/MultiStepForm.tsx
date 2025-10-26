@@ -444,9 +444,10 @@ const MultiStepForm: React.FC = () => {
     setIncludedPages(prev => {
       const newSet = new Set(prev);
       
-      // For Steps 5, 9 and 10, toggle only the current page, not the whole step
+      // For Steps 5, 8, 9 and 10, toggle only the current page, not the whole step
       // Step 5 contains multiple sub-pages (Invoice and Repair Estimate)
-      if (logicalStep === 5 || logicalStep === 9 || logicalStep === 10) {
+      // Step 8 contains multiple inspection image pages
+      if (logicalStep === 5 || logicalStep === 8 || logicalStep === 9 || logicalStep === 10) {
         // Toggle only the current page
         if (newSet.has(currentPage)) {
           newSet.delete(currentPage);
@@ -506,8 +507,8 @@ const MultiStepForm: React.FC = () => {
 
   // Check if a logical step is included in PDF
   const isLogicalStepIncluded = (logicalStep: number) => {
-    if (logicalStep === 5 || logicalStep === 9 || logicalStep === 10) {
-      // For Steps 9 and 10, check if the current page is included
+    if (logicalStep === 5 || logicalStep === 8 || logicalStep === 9 || logicalStep === 10) {
+      // For Steps 5, 8, 9 and 10, check if the current page is included
       return includedPages.has(currentPage);
     } else {
       // For other steps, check the page for this logical step
