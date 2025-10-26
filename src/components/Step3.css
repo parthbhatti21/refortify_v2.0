@@ -112,7 +112,7 @@
 .page .email-content {
     position: absolute;
     top: 190px;
-    left: 42px;
+    left: 39px;
     width: 471px;
     /* matches old image content box */
 }
@@ -180,7 +180,7 @@
 }
 
 .pdf-generation .page .email-content {
-    left: 37.5px !important; /* Align to left edge of content area */
+    left: 30px !important; /* Align to left edge of content area */
     top: 172px !important; /* Move up to reduce gap below greeting */
 }
 

@@ -94,30 +94,7 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
           </div>
           
           <div className="email-content" style={emailStyle}>
-            
-            <div className="itWasAContainer">
-              <p className="itWasA">{`It was a pleasure to provide service for your home and attached is a detailed service report for your review and a repair estimate if applicable. This service report is in sections which are as follows:`}</p>
-              <ul className="todaysInvoiceWithDescripti">
-                {/* <br /> */}
-                <li className="itWasA" ><span className="dot"></span> Today's Invoice with description</li>
-                <li className="estimatedRepairsWith"><span className="dot"></span> Estimated Repairs with description, building codes and inspection 
-                <br /> <span className="photographs-left">photographs</span></li>
-                <li className="estimatedRepairsWith"><span className="dot"></span> Inspection Photographs</li>
-                <li className="estimatedRepairsWith"><span className="dot"></span> Details to understand chimney parts</li>
-                <li className="estimatedRepairsWith"><span className="dot"></span> Top hat club membership</li>
-                <li className="estimatedRepairsWith"><span className="dot"></span> Thank You</li>
-                <li className="estimatedRepairsWith"><span className="dot"></span> Terms and Conditions</li>
-              </ul>
-              {/* <p className="itWasA">&nbsp;</p> */}
-              <p className="itWasA">Thank you so much for using our service. We strive to offer the best service, the best warranties, the best quality control and the best training in our industry. Your complete satisfaction is most important to everyone of the us at A Step in Time Chimney Sweeps.</p>
-              {/* <p className="itWasA">&nbsp;</p> */}
-              <br />
-              <p className="itWasA">{`Sincerely, `}</p>
-              <p className="itWasA">{`Ray Gessner, P.E. `}</p>
-              <p className="itWasA">{`C.E.O. - A STEP IN TIME CHIMNEY SWEEPS Ray@ChimneySweep.com `}</p>
-              <p className="itWasA">{`833-CHIMNEY `}</p>
-              <p className="itWasA">833-244-6639</p>
-            </div>
+            <img src="/email1.png" alt="Email content" style={{ width: '100%', height: 'auto' }} />
           </div>
         </div>
       </div>
