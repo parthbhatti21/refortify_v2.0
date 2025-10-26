@@ -12,7 +12,6 @@ import Step8 from './Step8';
 import Step9Part1 from './Step9-part1';
 import Step9Part2 from './Step9-part2';
 import Step9Part3 from './Step9-part3';
-import Step9Part4 from './Step9-part4';
 import Step10Part1 from './Step10Part1';
 import Step10Part2 from './Step10Part2';
 import Step10Part3 from './Step10Part3';
@@ -893,8 +892,13 @@ const MultiStepForm: React.FC = () => {
         }
       });
       
-      // Return images that are not used
-      return allImages.filter(img => !usedImages.has(img.url));
+      // Collect all images selected in Step 6 (invoice images)
+      const selectedImageIds = new Set((formData.selectedImages || []).map(img => img.id));
+      
+      // Return images that are not used in recommendations and not selected for invoice
+      return allImages.filter(img => 
+        !usedImages.has(img.url) && !selectedImageIds.has(img.id)
+      );
     };
 
     // Calculate total image pages needed (9 images per page)
@@ -905,8 +909,8 @@ const MultiStepForm: React.FC = () => {
     
     // Always include at least one page for step 7 (recommendation setup), plus any additional recommendation pages
     const totalImagePages = getTotalImagePages();
-    // Calculate Step 9 pages based on chimney type: 3 for masonry, 4 for prefabricated
-    const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+    // Calculate Step 9 pages based on chimney type: 3 for both masonry and prefabricated
+    const step9Pages = 3;
     // Step 10 always has 5 pages for both chimney types
     const step10Pages = 5;
     const totalPages = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + Math.max(1, totalRecommendationPages) + totalImagePages + step9Pages + step10Pages;
@@ -930,7 +934,7 @@ const MultiStepForm: React.FC = () => {
     if (isImagePage(pageNum)) return 8; // Image pages are step 8
     
     // Calculate Step 9 and Step 10 page ranges based on chimney type
-    const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+    const step9Pages = 3;
     const step10Pages = 5;
     const step9Start = totalPages - step9Pages - step10Pages + 1;
     const step10Start = totalPages - step10Pages + 1;
@@ -994,7 +998,7 @@ const MultiStepForm: React.FC = () => {
   const isImagePage = (pageNum: number): boolean => {
     const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
-    const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+    const step9Pages = 3;
     const step10Pages = 5;
     const step9Start = totalPages - step9Pages - step10Pages + 1;
     const imagePageEnd = step9Start - 1; // Image pages end before Step 9 starts
@@ -1012,7 +1016,7 @@ const MultiStepForm: React.FC = () => {
   const getStep9PartNumber = (): number => {
     if (getLogicalStep(currentPage) !== 9) return 1;
     
-    const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+    const step9Pages = 3;
     const step10Pages = 5;
     const step9Start = totalPages - step9Pages - step10Pages + 1;
     
@@ -1061,7 +1065,7 @@ const MultiStepForm: React.FC = () => {
     
     const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
-    const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+    const step9Pages = 3;
     const step10Pages = 5;
     const step9Start = totalPages - step9Pages - step10Pages + 1;
     const step10Start = totalPages - step10Pages + 1;
@@ -1088,7 +1092,7 @@ const MultiStepForm: React.FC = () => {
     markStepCompleted(targetStep);
     
     // Calculate Step 9 and Step 10 page ranges based on chimney type
-    const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+    const step9Pages = 3;
     const step10Pages = 5;
     const step9Start = totalPages - step9Pages - step10Pages + 1;
     const step10Start = totalPages - step10Pages + 1;
@@ -1153,7 +1157,7 @@ const MultiStepForm: React.FC = () => {
       // If we're on image pages, navigate through image pages
       const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
       const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
-      const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+      const step9Pages = 3;
       const step10Pages = 5;
       const step9Start = totalPages - step9Pages - step10Pages + 1;
       const lastImagePage = step9Start - 1;
@@ -1166,7 +1170,7 @@ const MultiStepForm: React.FC = () => {
       }
     } else if (getLogicalStep(currentPage) === 9) {
       // If we're on Step 9 pages, navigate through them
-      const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+      const step9Pages = 3;
       const step10Pages = 5;
       const step9Start = totalPages - step9Pages - step10Pages + 1;
       const step10Start = totalPages - step10Pages + 1;
@@ -1239,13 +1243,13 @@ const MultiStepForm: React.FC = () => {
         setCurrentPage(currentPage - 1);
       } else {
         // If we're on the first Step 10 page, go to last Step 9 page
-        const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+        const step9Pages = 3;
         const step9Start = totalPages - step9Pages - step10Pages + 1;
         setCurrentPage(step9Start + step9Pages - 1);
       }
     } else if (getLogicalStep(currentPage) === 9) {
       // If we're on Step 9 pages, navigate through them
-      const step9Pages = formData.chimneyType === 'prefabricated' ? 4 : 3;
+      const step9Pages = 3;
       const step10Pages = 5;
       const step9Start = totalPages - step9Pages - step10Pages + 1;
       
@@ -1459,15 +1463,13 @@ const MultiStepForm: React.FC = () => {
         totalPages: getTotalImagePages(),
         selectedImages: formData.selectedImages || []
       }) :
-      // Step 9 pages (dynamic based on chimney type)
-      getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - (formData.chimneyType === 'prefabricated' ? 8 : 7)) ?
+      // Step 9 pages (3 pages for both chimney types)
+      getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - 7) ?
       React.createElement(Step9Part1, { isPDF: true, chimneyType: formData.chimneyType }) :
-      getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - (formData.chimneyType === 'prefabricated' ? 7 : 6)) ?
+      getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - 6) ?
       React.createElement(Step9Part2, { isPDF: true, chimneyType: formData.chimneyType }) :
-      getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - (formData.chimneyType === 'prefabricated' ? 6 : 5)) ?
+      getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - 5) ?
       React.createElement(Step9Part3, { isPDF: true, chimneyType: formData.chimneyType }) :
-      getLogicalStep(pageNumber) === 9 && pageNumber === (totalPages - (formData.chimneyType === 'prefabricated' ? 5 : 4)) ?
-      React.createElement(Step9Part4, { isPDF: true, chimneyType: formData.chimneyType }) :
       // Step 10 pages (5 pages for both chimney types)
       getLogicalStep(pageNumber) === 10 && pageNumber === (totalPages - 4) ?
       React.createElement(Step10Part1, { isPDF: true, chimneyType: formData.chimneyType }) :
@@ -2007,6 +2009,7 @@ const MultiStepForm: React.FC = () => {
                     <option value="Check">Check</option>
                     <option value="Credit Card">Credit Card</option>
                     <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Billing"> Billing</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
@@ -2712,8 +2715,8 @@ const MultiStepForm: React.FC = () => {
                   <p className="text-black mb-4">
                     {getStep9PartNumber() === 1 ? 'This page contains chimney documentation information that cannot be edited.' :
                      getStep9PartNumber() === 2 ? 'This page contains additional chimney documentation information that cannot be edited.' :
-                     getStep9PartNumber() === 3 ? 'This page contains final chimney documentation information that cannot be edited.' :
-                     'This page contains additional prefabricated chimney documentation that cannot be edited.'}
+                     'This page contains final chimney documentation information that cannot be edited.' 
+                      }
                   </p>
                   <p className="text-sm text-black">
                     All information is pre-filled and will be included in the final PDF report.
@@ -2991,14 +2994,12 @@ const MultiStepForm: React.FC = () => {
                    totalPages={getTotalImagePages()}
                    selectedImages={formData.selectedImages || []}
                  />
-                ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - (formData.chimneyType === 'prefabricated' ? 8 : 7)) ? (
+                ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - 7) ? (
                   <Step9Part1 isPDF={false} chimneyType={formData.chimneyType} />
-                ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - (formData.chimneyType === 'prefabricated' ? 7 : 6)) ? (
+                ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - 6) ? (
                   <Step9Part2 isPDF={false} chimneyType={formData.chimneyType} />
-                ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - (formData.chimneyType === 'prefabricated' ? 6 : 5)) ? (
+                ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - 5) ? (
                   <Step9Part3 isPDF={false} chimneyType={formData.chimneyType} />
-                ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - (formData.chimneyType === 'prefabricated' ? 5 : 4)) ? (
-                  <Step9Part4 isPDF={false} chimneyType={formData.chimneyType} />
                 ) : getLogicalStep(currentPage) === 10 && currentPage === (totalPages - 4) ? (
                   <Step10Part1 isPDF={false} chimneyType={formData.chimneyType} />
                 ) : getLogicalStep(currentPage) === 10 && currentPage === (totalPages - 3) ? (

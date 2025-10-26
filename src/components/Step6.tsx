@@ -126,19 +126,28 @@ export const Page6: React.FC<Page6Props> = ({
                   }}
                 >
                 {localSelectedImages.length === 1 ? (
-                  // Single image - centered
+                  // Single image - centered with specific max dimensions
                   <div 
                     className="relative" 
                     style={{ 
-                      maxWidth: isPDF ? '80%' : '70%', 
-                      maxHeight: isPDF ? '80%' : '70%',
-                      marginTop: isPDF ? '70px' : '0'
+                      maxWidth: '270px',
+                      maxHeight: '350px',
+                      marginTop: isPDF ? '70px' : '0',
+                      width: '270px',
+                      height: '350px'
                     }}
                   >
                     <img
                       src={localSelectedImages[0].url}
                       alt={localSelectedImages[0].alt || 'Project image 1'}
                       className="w-full h-full object-cover shadow-md rounded-lg"
+                      style={{
+                        width: '270px',
+                        height: '350px',
+                        maxWidth: '270px',
+                        maxHeight: '350px',
+                        objectFit: 'cover'
+                      }}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -215,8 +224,8 @@ export const Page6: React.FC<Page6Props> = ({
                     style={{
                       maxWidth: isPDF ? '90%' : '80%',
                       maxHeight: isPDF ? '90%' : '80%',
-                      width: isPDF ? '450px' : 'auto',
-                      height: isPDF ? '350px' : 'auto'
+                      width: isPDF ? '500px' : 'auto',
+                      height: isPDF ? '400px' : 'auto'
                     }}
                   >
                     {localSelectedImages.map((image, index) => (
@@ -226,7 +235,9 @@ export const Page6: React.FC<Page6Props> = ({
                           alt={image.alt || `Project image ${index + 1}`}
                           className="w-full h-full object-cover shadow-md rounded-lg"
                           style={{
-                            minHeight: isPDF ? '150px' : '150px'
+                            minHeight: isPDF ? '200px' : '200px',
+                            width: '100%',
+                            height: '100%'
                           }}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -251,6 +262,40 @@ export const Page6: React.FC<Page6Props> = ({
               </div>
             )}
           </div>
+
+          {/* Description paragraph below images */}
+          {localSelectedImages.length > 0 && (
+            <div 
+              className="absolute"
+              style={{
+                top: localSelectedImages.length === 1 ? 
+                  (isPDF ? '580px' : '620px') : // Single image: 350px + 100px + 20px margin
+                  localSelectedImages.length === 2 ? 
+                  (isPDF ? '670px' : '690px') : // Two images: stacked height + margin
+                  localSelectedImages.length === 3 ? 
+                  (isPDF ? '690px' : '690px') : // Three images: grid height + margin
+                  (isPDF ? '690px' : '690px'), // Four images: grid height + margin
+                left: isPDF ? '53%' : '50%',
+
+                transform: 'translateX(-50%)',
+                width: '80%',
+                textAlign: 'center',
+                marginTop: '10px'
+              }}
+            >
+              <p 
+                style={{
+                  fontFamily: 'Times New Roman, Times, serif',
+                  fontSize: isPDF ? '14px' : '16px',
+                  color: '#000000',
+                  margin: '0',
+                  lineHeight: '1.4'
+                }}
+              >
+                Written Invoice
+              </p>
+            </div>
+          )}
 
           {/* Selection Info (Preview mode only) */}
           

@@ -428,7 +428,7 @@ export const Page7: React.FC<Page7Props> = ({
               ref={pdfTableRef}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: '1fr 80px 100px 100px',
+                gridTemplateColumns: '3fr 50px 60px 60px',
                 gap: '0px',
                 border: '1px solid #722420',
                 backgroundColor: '#722420',
@@ -442,12 +442,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight: '28px',
-                  padding: '4px 8px',
+                  minHeight: isPDF ? '20px' : '20px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -464,12 +467,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight: '28px',
-                  padding: '4px 8px',
+                  minHeight: isPDF ? '20px' : '20px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -486,12 +492,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight: '28px',
+                  minHeight: isPDF ? '20px' : '20px',
                   padding: '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -508,12 +517,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight: '28px',
-                  padding: '4px 8px',
+                  minHeight: isPDF ? '20px' : '20px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -571,13 +583,16 @@ export const Page7: React.FC<Page7Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: `${28 * rowSpan}px`,
+                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
                       padding: isPDF ? '6px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
                         textAlign: 'center',
-                        lineHeight: '1.4'
+                        lineHeight: '1.0',
+                        height: `${20 * rowSpan}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       } : {
                         display: 'flex',
                         alignItems: 'center',
@@ -598,13 +613,16 @@ export const Page7: React.FC<Page7Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: `${28 * rowSpan}px`,
+                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
                       padding: isPDF ? '6px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
                         textAlign: 'center',
-                        lineHeight: '1.4'
+                        lineHeight: '1.0',
+                        height: `${20 * rowSpan}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       } : {
                         display: 'flex',
                         alignItems: 'center',
@@ -625,13 +643,16 @@ export const Page7: React.FC<Page7Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: `${28 * rowSpan}px`,
+                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
                       padding: isPDF ? '6px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
                         textAlign: 'center',
-                        lineHeight: '1.4'
+                        lineHeight: '1.0',
+                        height: `${20 * rowSpan}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       } : {
                         display: 'flex',
                         alignItems: 'center',
@@ -652,13 +673,16 @@ export const Page7: React.FC<Page7Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: '600',
-                      minHeight: `${28 * rowSpan}px`,
+                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
                       padding: isPDF ? '6px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
                         textAlign: 'center',
-                        lineHeight: '1.4'
+                        lineHeight: '1.0',
+                        height: `${20 * rowSpan}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       } : {
                         display: 'flex',
                         alignItems: 'center',
@@ -695,12 +719,15 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: '#722420',
                     color: 'white',
                     fontWeight: 'bold',
-                    minHeight: '28px',
+                    minHeight: isPDF ? '20px' : '20px',
                     padding: '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      height: '20px',
+                      boxSizing: 'border-box',
+                      lineHeight: '1.0'
                     } : {
                       display: 'flex',
                       alignItems: 'center',
@@ -716,12 +743,15 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: '#722420',
                     color: 'white',
                     fontWeight: 'bold',
-                    minHeight: '28px',
+                    minHeight: isPDF ? '20px' : '20px',
                     padding: '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      height: '20px',
+                      boxSizing: 'border-box',
+                      lineHeight: '1.0'
                     } : {
                       display: 'flex',
                       alignItems: 'center',
@@ -737,12 +767,15 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: '#722420',
                     color: 'white',
                     fontWeight: 'bold',
-                    minHeight: '28px',
+                    minHeight: isPDF ? '20px' : '20px',
                     padding: '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      height: '20px',
+                      boxSizing: 'border-box',
+                      lineHeight: '1.0'
                     } : {
                       display: 'flex',
                       alignItems: 'center',
@@ -760,12 +793,15 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: '#722420',
                     color: 'white',
                     fontWeight: 'bold',
-                    minHeight: '28px',
+                      minHeight: isPDF ? '20px' : '20px',
                     padding: '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      height: '20px',
+                      boxSizing: 'border-box',
+                      lineHeight: '1.0'
                     } : {
                       display: 'flex',
                       alignItems: 'center',
@@ -806,7 +842,7 @@ export const Page7: React.FC<Page7Props> = ({
               }}>
                 <h4 style={{ 
                   position: 'absolute',
-                  top: '6px',
+                  top: '1px',
                   left: '12px',
                   right: '12px',
                   fontSize: UNIFORM_FONT, 
@@ -820,7 +856,7 @@ export const Page7: React.FC<Page7Props> = ({
                 </h4>
                 <p ref={pdfRecTextRef} style={{ 
                   position: 'absolute',
-                  top: '20px',
+                  top: '15px',
                   left: '12px',
                   right: '12px',
                   bottom: '0px',
@@ -954,7 +990,7 @@ export const Page7: React.FC<Page7Props> = ({
             ref={previewTableRef}
             style={{ 
               display: 'grid',
-              gridTemplateColumns: '1fr 80px 100px 100px',
+              gridTemplateColumns: '3fr 50px 60px 60px',
               gap: '0px',
               border: '1px solid #722420',
               backgroundColor:'#722420 ',
@@ -968,12 +1004,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
+                  minHeight: isPDF ? '20px' : '20px',
                   padding: '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -991,12 +1030,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
+                  minHeight: isPDF ? '20px' : '20px',
                   padding: '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -1014,12 +1056,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
+                  minHeight: isPDF ? '20px' : '20px',
                   padding: '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -1037,12 +1082,15 @@ export const Page7: React.FC<Page7Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
+                    minHeight: isPDF ? '20px' : '20px',
                   padding: '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -1101,12 +1149,15 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: 'normal',
-                    minHeight: `${28 * rowSpan}px`,
-                    padding: '4px 8px',
+                    // minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
+                    padding: isPDF ? '0px 8px' : '4px 8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
+                    height: '22px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0',
                     borderBottom: '1px solid #e0e0e0',
                     fontSize: '12px',
                     wordWrap: 'break-word',
@@ -1121,8 +1172,11 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: 'normal',
-                    minHeight: `${28 * rowSpan}px`,
-                    padding: '4px 8px',
+                    // minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
+                    padding: isPDF ? '0px 8px' : '4px 8px',
+                    height: '22px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1141,8 +1195,11 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: 'normal',
-                    minHeight: `${28 * rowSpan}px`,
-                    padding: '4px 8px',
+                    // minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
+                    padding: isPDF ? '0px 8px' : '4px 8px',
+                    height: '22px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1161,8 +1218,11 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: '600',
-                    minHeight: `${28 * rowSpan}px`,
-                    padding: '4px 8px',
+                    // minHeight: isPDF ? `${20 *  rowSpan}px` : `${28 * rowSpan}px`,
+                    padding: isPDF ? '0px 8px' : '4px 8px',
+                    height: '22px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1195,11 +1255,11 @@ export const Page7: React.FC<Page7Props> = ({
               <div style={{ display: 'contents' }}>
                 <div style={{ 
                   backgroundColor: '#722420',
-                  height: '30px'
+                  height: isPDF ? '20px' : '30px'
                 }}></div>
                 <div style={{ 
                   backgroundColor: '#722420',
-                  height: '30px'
+                  height: isPDF ? '20px' : '30px'
                 }}></div>
                 <div style={{ 
                   backgroundColor: '#722420',
@@ -1207,7 +1267,7 @@ export const Page7: React.FC<Page7Props> = ({
                   fontWeight: '600',
                   fontSize: '12px',
                   letterSpacing: '0.42px',
-                  height: '30px',
+                  height: isPDF ? '20px' : '30px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1220,12 +1280,14 @@ export const Page7: React.FC<Page7Props> = ({
                   color: '#ffffff',
                   fontWeight: '600',
                   fontSize: '12px',
-                  height: '30px',
+                  height: isPDF ? '20px' : '20px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   textAlign: 'center',
-                  padding: '2px 6px'
+                    padding: isPDF ? '0px 8px' : '2px 6px',
+                  boxSizing: 'border-box',
+                  lineHeight: '1.0'
                 }}>
                   ${calculateTotal().toLocaleString()}
                 </div>

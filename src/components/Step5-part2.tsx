@@ -106,7 +106,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               ref={tableRef}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: '1fr 80px 100px 100px',
+                gridTemplateColumns: '3fr 50px 60px 60px',
                 gap: '0px',
                 border: '1px solid #722420',
                 backgroundColor:'#722420 ',
@@ -121,12 +121,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
-                  padding: '4px 8px',
+                  minHeight: isPDF ? '20px' : '20px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -144,12 +147,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
-                  padding: '4px 8px',
+                  minHeight: isPDF ? '20px' : '20px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -167,12 +173,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
-                  padding: '4px 8px',
+                  minHeight: isPDF ? '20px' : '20px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -190,12 +199,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight:'28px',
-                  padding: '4px 8px',
+                  minHeight: isPDF ? '20px' : '20px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    height: '20px',
+                    boxSizing: 'border-box',
+                    lineHeight: '1.0'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
@@ -209,7 +221,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   whiteSpace: 'normal'
                 }}>Total</div>
               </div>
-
               {/* Data Rows */}
               {currentPageRows.map((row, index) => {
                 const unitPrice = parseFloat(row.unit) || 0;
@@ -249,33 +260,46 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 const isLongContent = maxRowsNeeded > 1;
                 const rowSpan = maxRowsNeeded;
 
+                // Calculate proper height for PDF rendering to prevent overlaps
+                const baseRowHeight = isPDF ? 14 : 14;
+                const calculatedHeight = baseRowHeight * rowSpan;
+                
+                // Special height calculation for description column (taller for better text display)
+                const descriptionHeight = isPDF ? (20 * rowSpan) : (20 * rowSpan);
+
                 return (
                   <div key={row.id} style={{ display: 'contents' }}>
                     <div style={{
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${descriptionHeight}px`,
+                      padding: isPDF ? '0px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
                         textAlign: 'center',
-                        lineHeight: '1.4',
-                        rowSpan: rowSpan
+                        lineHeight: '1.0',
+                        rowSpan: rowSpan,
+                        height: `${descriptionHeight}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       } : {
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'center',
-                        textAlign: 'center'
+                        textAlign: 'left',
+                        paddingTop: '2px'
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'break-word'
                     }}>
                       {row.description}
                     </div>
@@ -283,17 +307,20 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${descriptionHeight}px`,
+                      padding: isPDF ? '0px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
-                        verticalAlign: 'top',
+                        verticalAlign: 'middle',
                         textAlign: 'center',
-                        lineHeight: '1.4',
+                        height: `${descriptionHeight}px`,
+                        lineHeight: '1.0',
+                        boxSizing: 'border-box',
+                        paddingTop: '2px',
                         rowSpan: rowSpan
                       } : {
-                        display: 'flex',
-                        alignItems: 'center',
+                        display:  'flex',
+                        alignItems: 'flex-start',
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
@@ -301,9 +328,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'break-word'
                     }}>
                       {row.unit}
                     </div>
@@ -311,17 +340,20 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${calculatedHeight}px`,
+                      padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
-                        verticalAlign: 'top',
+                        verticalAlign: 'middle',
                         textAlign: 'center',
-                        lineHeight: '1.4',
+                        lineHeight: '1.0',
+                        height: `${descriptionHeight}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px',
                         rowSpan: rowSpan
                       } : {
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
@@ -329,9 +361,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'break-word'
                     }}>
                       {row.price}
                     </div>
@@ -339,17 +373,20 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: '600',
-                      minHeight: `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${calculatedHeight}px`,
+                      padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
-                        verticalAlign: 'top',
+                        verticalAlign: 'middle',
                         textAlign: 'center',
-                        lineHeight: '1.4',
+                        lineHeight: '1.0',
+                        height: `${descriptionHeight}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px',
                         rowSpan: rowSpan
                       } : {
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
@@ -357,9 +394,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'break-word'
                     }}>
                       {total.toFixed(2)}
                     </div>
@@ -379,100 +418,103 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
 
               {/* ? */}
               {currentPageRows.length > 0 && currentEstimatePage === totalPages && (
-                <div style={{ display: 'contents' }}>
-                  <div style={{
-                    backgroundColor: '#722420',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    minHeight: '28px',
-                    padding: '4px 8px',
-                    ...(isPDF ? {
-                      display: 'table-cell',
-                      verticalAlign: 'middle',
-                      textAlign: 'center'
-                    } : {
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center'
-                    }),
-                    fontSize: '12px',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    whiteSpace: 'normal'
-                  }}></div>
-                  <div style={{
-                    backgroundColor: '#722420',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    minHeight: '28px',
-                    padding: '4px 8px',
-                    ...(isPDF ? {
-                      display: 'table-cell',
-                      verticalAlign: 'middle',
-                      textAlign: 'center'
-                    } : {
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center'
-                    }),
-                    fontSize: '12px',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    whiteSpace: 'normal'
-                  }}></div>
-                  <div style={{
-                    backgroundColor: '#722420',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    minHeight: '28px',
-                    padding: '4px 8px',
-                    ...(isPDF ? {
-                      display: 'table-cell',
-                      verticalAlign: 'middle',
-                      textAlign: 'center'
-                    } : {
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center'
-                    }),
-                    fontSize: '12px',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    whiteSpace: 'normal'
-                  }}>
-                    TOTAL:
-                  </div>
-                  <div style={{
-                    backgroundColor: '#722420',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    minHeight: '28px',
-                    padding: '4px 8px',
-                    ...(isPDF ? {
-                      display: 'table-cell',
-                      verticalAlign: 'middle',
-                      textAlign: 'center'
-                    } : {
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center'
-                    }),
-                    fontSize: '12px',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    whiteSpace: 'normal'
-                  }}>
-                    ${localData.rows.reduce((sum, row) => {
-                      const unitPrice = parseFloat(row.unit) || 0;
-                      const price = parseFloat(row.price) || 0;
-                      return sum + (unitPrice * price);
-                    }, 0).toFixed(2)}
-                  </div>
-                </div>
+                   <div style={{ display: 'contents' }}>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                     minHeight: isPDF ? '20px' : '20px',
+                     padding: '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: `${20}px`,
+                       boxSizing: 'border-box',
+                       paddingTop: '2px',
+                     } : {
+                       display: 'flex',
+                       alignItems: 'flex-start',
+                       justifyContent: 'center',
+                       textAlign: 'center'
+                     }),
+                     fontSize: '12px',
+                     wordWrap: 'break-word',
+                     overflowWrap: 'break-word',
+                     whiteSpace: 'normal'
+                   }}></div>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                       minHeight: isPDF ? '20px' : '20px',
+                     padding: '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: `${20}px`,
+                       boxSizing: 'border-box',
+                       paddingTop: '2px',
+                     } : {}),
+                   }}></div>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                     minHeight: isPDF ? '20px' : '20px',
+                     padding: isPDF ? '0px 8px' : '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: '20px',
+                       boxSizing: 'border-box',
+                       lineHeight: '1.0'
+                     } : {
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       textAlign: 'center'
+                     }),
+                     fontSize: '12px',
+                     wordWrap: 'break-word',
+                     overflowWrap: 'break-word',
+                     whiteSpace: 'normal'
+                   }}>
+                     TOTAL:
+                   </div>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                     minHeight: isPDF ? '20px' : '20px',
+                     padding: isPDF ? '0px 8px' : '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: '20px',
+                       boxSizing: 'border-box',
+                       lineHeight: '1.0'
+                     } : {
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       textAlign: 'center'
+                     }),
+                     fontSize: '12px',
+                     wordWrap: 'break-word',
+                     overflowWrap: 'break-word',
+                     whiteSpace: 'normal'
+                   }}>
+                     ${localData.rows.reduce((sum, row) => {
+                       const unitPrice = parseFloat(row.unit) || 0;
+                       const price = parseFloat(row.price) || 0;
+                       return sum + (unitPrice * price);
+                     }, 0).toFixed(2)}
+                   </div>
+                 </div>
               )}
             </div>
           </div>
