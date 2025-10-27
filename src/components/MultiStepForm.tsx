@@ -438,6 +438,7 @@ const MultiStepForm: React.FC = () => {
   const [showPredefinedModal, setShowPredefinedModal] = useState(false);
   const [showChangeImageModal, setShowChangeImageModal] = useState(false);
   const [showInvoiceQuickAdd, setShowInvoiceQuickAdd] = useState(false);
+  const [predefinedSearchTerm, setPredefinedSearchTerm] = useState('');
 
   // Toggle page inclusion in PDF
   const togglePageInclusion = (logicalStep: number) => {
@@ -466,6 +467,11 @@ const MultiStepForm: React.FC = () => {
       
       return newSet;
     });
+  };
+
+  // Deactivate all pages for PDF generation
+  const deactivateAllPages = () => {
+    setIncludedPages(new Set());
   };
 
   // Check if a page is included in PDF
@@ -2767,6 +2773,18 @@ const MultiStepForm: React.FC = () => {
                       />
                     </div>
                   </div>
+                  
+                  {/* Deactivate All Pages Button */}
+                  {Array.from(includedPages).length > 0 && (
+                    <button 
+                      type="button"
+                      onClick={deactivateAllPages}
+                      className="w-full mb-3 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
+                    >
+                      Deactivate All Pages
+                    </button>
+                  )}
+                  
                   <button 
                     type="button"
                     onClick={handleSubmit}
@@ -3257,18 +3275,44 @@ const MultiStepForm: React.FC = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900">Select Predefined Repair Item</h3>
                 <button
-                  onClick={() => setShowPredefinedModal(false)}
+                  onClick={() => {
+                    setShowPredefinedModal(false);
+                    setPredefinedSearchTerm('');
+                  }}
                   className="text-gray-400 hover:text-gray-600 text-xl font-bold"
                 >
                   ×
                 </button>
               </div>
-              <p className="text-sm text-gray-600 mt-2">Choose from {dropdownOptions.length} predefined repair items</p>
+              <p className="text-sm text-gray-600 mt-2">
+                {predefinedSearchTerm ? 
+                  `Showing ${dropdownOptions.filter(option => 
+                    option.description.toLowerCase().includes(predefinedSearchTerm.toLowerCase())
+                  ).length} of ${dropdownOptions.length} predefined repair items` :
+                  `Choose from ${dropdownOptions.length} predefined repair items`
+                }
+              </p>
+              
+              {/* Search Input */}
+              <div className="mt-4">
+                <input
+                  type="text"
+                  placeholder="Search repair items..."
+                  value={predefinedSearchTerm}
+                  onChange={(e) => setPredefinedSearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                />
+              </div>
             </div>
             
             <div className="p-4 max-h-96 overflow-y-auto">
               <div className="space-y-2">
-                {dropdownOptions.map((option) => (
+                {dropdownOptions
+                  .filter(option => 
+                    predefinedSearchTerm === '' || 
+                    option.description.toLowerCase().includes(predefinedSearchTerm.toLowerCase())
+                  )
+                  .map((option) => (
                   <button
                     key={option.id}
                     onClick={() => {
@@ -3291,6 +3335,7 @@ const MultiStepForm: React.FC = () => {
                         });
                       }
                       setShowPredefinedModal(false);
+                      setPredefinedSearchTerm('');
                     }}
                     className="w-full p-3 text-left border border-gray-200 rounded-lg hover:border-[#722420] hover:bg-gray-50 transition-colors"
                   >
@@ -3309,6 +3354,20 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   </button>
                 ))}
+                
+                {/* No Results Message */}
+                {predefinedSearchTerm && dropdownOptions.filter(option => 
+                  option.description.toLowerCase().includes(predefinedSearchTerm.toLowerCase())
+                ).length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500 text-sm">
+                      No repair items found matching "{predefinedSearchTerm}"
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Try searching with different keywords
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

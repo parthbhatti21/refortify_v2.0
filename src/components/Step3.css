@@ -108,11 +108,36 @@
     white-space: nowrap;
     width: 157px;
 }
+.itWasAContainer {
+    width: 461px;
+    height: 553px;
+    position: relative;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    font-family: 'Times New Roman';
+    color: #000;
+    text-align: left;
+    display: inline-block;
+}
+.itWasA {
+    margin: 0;
+}
+.invoiceWithDescriptionEsti {
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    /* left: 19px; */
+}
+.estimatedRepairsWith {
+    margin-bottom: 0px;
+    /* left: 19px; */
+}
+
 
 .page .email-content {
     position: absolute;
     top: 190px;
-    left: 39px;
+    left: 41px;
     width: 471px;
     /* matches old image content box */
 }
@@ -131,7 +156,7 @@
 
 .itWasA {
     margin: 0 0 8px 0;
-    line-height: 1.6;
+    line-height: 1.2;
 }
 
 .todaysInvoiceWithDescripti {
@@ -221,7 +246,7 @@
 [data-pdf="true"] .page .div {
     left: 41px !important;
     top: 142px !important; /* Reduced to tighten spacing above content */
-    opacity: 0.8 !important;  /* Adjust client name position for better spacing */
+    /* opacity: 0.8 !important;  Adjust client name position for better spacing */
 }
 
 [data-pdf="true"] .page .email-content {
@@ -291,7 +316,7 @@
 /* Specific font consistency for the "Dear" text in PDF */
 .pdf-generation .page .div,
 [data-pdf="true"] .page .div {
-    opacity: 0.95 !important;  /* Adjust client name position for better spacing */
+    /* opacity: 0.95 !important;  Adjust client name position for better spacing */
     font-family: "Times New Roman", Times, serif !important;
     font-size: 14px !important;
     font-weight: 400 !important;

@@ -1164,7 +1164,8 @@ export const Page7: React.FC<Page7Props> = ({
                     overflowWrap: 'break-word',
                     whiteSpace: 'normal',
                     maxWidth: '100%',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    wordBreak: 'normal'
                   }}>
                     {row.description}
                   </div>

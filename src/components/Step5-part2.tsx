@@ -299,7 +299,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {row.description}
                     </div>
@@ -332,7 +332,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {row.unit}
                     </div>
@@ -365,7 +365,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {row.price}
                     </div>
@@ -398,7 +398,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {total.toFixed(2)}
                     </div>

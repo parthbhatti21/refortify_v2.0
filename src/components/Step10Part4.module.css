@@ -1,0 +1,23 @@
+.badChecksCustomerContainer {
+  width: 507px;
+  height: 682px;
+  position: relative;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  line-height: 13px;
+  color: #000;
+  line-height: 1.1;
+  text-align: left;
+  display: inline-block;
+  font-family: 'Times New Roman';
+}
+
+.badChecksCustomerUnderstan {
+  margin: 0;
+  margin-bottom: 8px;
+}
+
+.badChecks {
+  font-family: 'Times New Roman';
+  font-size: 12px;
+}

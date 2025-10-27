@@ -286,7 +286,7 @@ const Page5: FunctionComponent<Page5Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {row.description}
                     </div>
@@ -319,7 +319,7 @@ const Page5: FunctionComponent<Page5Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {row.unit}
                     </div>
@@ -352,7 +352,7 @@ const Page5: FunctionComponent<Page5Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {row.price}
                     </div>
@@ -385,7 +385,7 @@ const Page5: FunctionComponent<Page5Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'break-word'
+                      wordBreak: 'normal'
                     }}>
                       {total.toFixed(2)}
                     </div>
