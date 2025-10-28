@@ -431,14 +431,7 @@ const MultiStepForm: React.FC = () => {
       rows: []
     },
     repairEstimatePages: [],
-    usedReviewImages: [],
-    // Recommendations (Step5-part2) multi-section support
-    recommendationSection1Title: 'Recommendations',
-    showRecommendationSection2: false,
-    recommendationSection2Title: 'Recommendations#2',
-    recommendationSection2: {
-      rows: []
-    }
+    usedReviewImages: []
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -891,17 +884,73 @@ const MultiStepForm: React.FC = () => {
     return Math.ceil(totalRows / ROWS_PER_PAGE);
   };
 
-  const calculateSmartRepairEstimatePages = () => {
-    const rows1 = formData.repairEstimateData?.rows?.length || 0;
-    const rows2 = formData.showRecommendationSection2 ? (formData.recommendationSection2?.rows?.length || 0) : 0;
-    const totalRows = rows1 + rows2;
-    if (totalRows === 0) return 1;
-    // 10 rows per page total across both sections
-    const ROWS_PER_PAGE = 10;
-    const pagesForSection1 = Math.max(1, Math.ceil(rows1 / ROWS_PER_PAGE));
-    const pagesForSection2 = rows2 > 0 ? Math.ceil(rows2 / ROWS_PER_PAGE) : 0;
-    return pagesForSection1 + pagesForSection2;
-  };
+   const calculateSmartRepairEstimatePages = () => {
+     // Check if summary table needs a separate page
+     const SUMMARY_PAGE_THRESHOLD = 630; // Match the threshold in Step5-part2.tsx
+     
+     // Calculate if summary would exceed threshold
+     const section1Rows = formData.repairEstimateData?.rows || [];
+     const section2Rows = formData.recommendationSection2?.rows || [];
+     
+     // Only check if both sections exist
+     if (formData.showRecommendationSection2 && section2Rows.length > 0) {
+       // Use the same dynamic height calculation as Step5-part2.tsx
+       const calculateTableHeight = (rows: any[]) => {
+         if (rows.length === 0) return 0;
+         const headerHeight = 20; // Header row height
+         let totalRowHeight = 0;
+         
+         // Calculate height for each row based on content
+         rows.forEach(row => {
+           const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+             const lines = text.split('\n').length;
+             const wordCount = text.split(' ').length;
+             const charCount = text.length;
+             
+             let rowsNeeded = 1;
+             
+             if (lines > 1) {
+               rowsNeeded = Math.max(rowsNeeded, lines);
+             }
+             
+             const charRows = Math.ceil(charCount / baseLength);
+             rowsNeeded = Math.max(rowsNeeded, charRows);
+             
+             const wordRows = Math.ceil(wordCount / 8);
+             rowsNeeded = Math.max(rowsNeeded, wordRows);
+             
+             return Math.min(rowsNeeded, 4);
+           };
+           
+           const descriptionRows = calculateRowsNeeded(row.description);
+           const unitRows = calculateRowsNeeded(row.unit, 10);
+           const priceRows = calculateRowsNeeded(row.price, 10);
+           
+           const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
+           const rowHeight = 20 * maxRowsNeeded; // 20px per content row
+           totalRowHeight += rowHeight;
+         });
+         
+         return headerHeight + totalRowHeight;
+       };
+       
+       const section1Top = 150;
+       const section1Height = calculateTableHeight(section1Rows);
+       const GAP_BETWEEN_TABLES = 80;
+       const extraSpacing = Math.min(section1Rows.length * 2);
+       const section2Top = section1Top + section1Height + GAP_BETWEEN_TABLES + extraSpacing;
+       const section2Height = calculateTableHeight(section2Rows);
+       
+       // Calculate summary position exactly like in Step5-part2.tsx
+       const summaryTop = section2Top + section2Height + GAP_BETWEEN_TABLES + extraSpacing;
+       
+       if (summaryTop > SUMMARY_PAGE_THRESHOLD) {
+         return 2; // Main page + summary page
+       }
+     }
+     
+     return 1; // Single page
+   };
   
   const totalInvoicePages = calculateSmartInvoicePages();
   const totalRepairEstimatePages = calculateSmartRepairEstimatePages();
@@ -2450,9 +2499,9 @@ const MultiStepForm: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => updateFormData({ showRecommendationSection2: false, recommendationSection2: { rows: [] }, recommendationSection2Title: '' })}
-                        className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm"
+                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
                       >
-                        Delete Section 2
+                        Remove Section 2
                       </button>
                     )}
                   </div>
