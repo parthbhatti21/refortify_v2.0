@@ -1503,8 +1503,8 @@ const MultiStepForm: React.FC = () => {
       React.createElement(Step5Part2, { 
         isPDF: true, 
         repairEstimateData: formData.repairEstimateData, 
-        section1: { title: formData.recommendationSection1Title || 'Recommendations', rows: formData.repairEstimateData?.rows || [] },
-        section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Recommendations (2)', rows: formData.recommendationSection2?.rows || [] } : undefined,
+        section1: { title: formData.recommendationSection1Title || 'Recommendations#1', rows: formData.repairEstimateData?.rows || [] },
+        section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Recommendations#2', rows: formData.recommendationSection2?.rows || [] } : undefined,
         currentEstimatePage: pageNumber - 4 - totalInvoicePages,
         notes: formData.notes
       }) :
@@ -2409,8 +2409,8 @@ const MultiStepForm: React.FC = () => {
                   <div className="mb-2">
                     <input
                       type="text"
-                      placeholder="Title for Section 1"
-                      value={formData.recommendationSection1Title || ''}
+                      placeholder="Title for Recommendations#1"
+                      value={formData.recommendationSection1Title !== undefined ? formData.recommendationSection1Title : 'Recommendations#1'}
                       onChange={(e) => updateFormData({ recommendationSection1Title: e.target.value })}
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                     />
@@ -2528,8 +2528,8 @@ const MultiStepForm: React.FC = () => {
                     <div className="mt-3 space-y-3">
                       <input
                         type="text"
-                        placeholder="Title for Section 2"
-                        value={formData.recommendationSection2Title || ''}
+                        placeholder="Title for Recommendations#2"
+                        value={formData.recommendationSection2Title !== undefined ? formData.recommendationSection2Title : 'Recommendations#2'}
                         onChange={(e) => updateFormData({ recommendationSection2Title: e.target.value })}
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                       />
@@ -2613,7 +2613,7 @@ const MultiStepForm: React.FC = () => {
                   </label>
                   <textarea
                     id="notes"
-                    value={formData.notes || 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'}
+                    value={formData.notes !== undefined ? formData.notes : 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'}
                     onChange={(e) => updateFormData({ notes: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
                     rows={3}
@@ -3229,11 +3229,11 @@ const MultiStepForm: React.FC = () => {
                 <Step5Part2 
                   repairEstimateData={formData.repairEstimateData}
                   section1={{
-                    title: formData.recommendationSection1Title || 'Recommendations',
+                    title: formData.recommendationSection1Title || 'Recommendations#1',
                     rows: formData.repairEstimateData?.rows || []
                   }}
                   section2={formData.showRecommendationSection2 ? {
-                    title: formData.recommendationSection2Title || 'Recommendations (2)',
+                    title: formData.recommendationSection2Title || 'Recommendations#2',
                     rows: formData.recommendationSection2?.rows || []
                   } : undefined}
                   updateRepairEstimateData={(data) => updateFormData({ repairEstimateData: data })}

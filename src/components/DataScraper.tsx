@@ -26,6 +26,18 @@ interface DataScraperProps {
   }) => void;
 }
 
+interface JobData {
+  id: string;
+  date: string;
+  clientName: string;
+  clientAddress: string;
+  chimneyType: string;
+  timelineContent: string;
+  imageUrls: string[];
+  timelineCoverImage: string;
+  scrapedImages: ImageItem[];
+}
+
 interface ExtractedData {
   clientName: string;
   clientAddress: string;
@@ -53,6 +65,97 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   const [showEditForm, setShowEditForm] = useState(false);
   const [showImageSelector, setShowImageSelector] = useState(false);
   const [showNoImagePopup, setShowNoImagePopup] = useState(false);
+  const [showPreviousJobImages, setShowPreviousJobImages] = useState(false);
+  const [showDateSelector, setShowDateSelector] = useState(false);
+  const [allJobs, setAllJobs] = useState<JobData[]>([]);
+  const [selectedDateJob, setSelectedDateJob] = useState<JobData | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+
+  // Function to parse all jobs from HTML and extract their dates
+  const parseAllJobsFromHtml = (htmlContent: string): JobData[] => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    
+    const jobs: JobData[] = [];
+    
+    // Look for timeline-block elements (each represents a job/date)
+    const timelineBlocks = doc.querySelectorAll('div.timeline-block');
+    
+    console.log(`Found ${timelineBlocks.length} timeline blocks`);
+    
+    timelineBlocks.forEach((timelineBlock, index) => {
+      // Extract date from span.date element
+      let jobDate = '';
+      const dateElement = timelineBlock.querySelector('span.date');
+      if (dateElement) {
+        jobDate = dateElement.textContent?.trim() || '';
+        console.log(`Job ${index + 1} date: ${jobDate}`);
+      }
+      
+      // Extract images from photo-grid
+      const imageUrls: string[] = [];
+      const photoItems = timelineBlock.querySelectorAll('a.photo-item[data-full]');
+      
+      photoItems.forEach(photoItem => {
+        const dataFull = photoItem.getAttribute('data-full');
+        if (dataFull) {
+          imageUrls.push(dataFull);
+        }
+      });
+      
+      console.log(`Job ${index + 1} images: ${imageUrls.length}`);
+      
+      // Extract timeline content
+      const timelineContent = timelineBlock.textContent?.trim() || '';
+      
+      // Determine chimney type based on content
+      let chimneyType = "masonry";
+      const content = timelineContent.toLowerCase();
+      if (content.includes('prefabricated') || content.includes('prefab')) {
+        chimneyType = "prefabricated";
+      }
+      
+      // Create job data
+      const jobData: JobData = {
+        id: `job-${index}-${Date.now()}`,
+        date: jobDate || new Date().toISOString().split('T')[0],
+        clientName: '', // Will be filled from main extraction
+        clientAddress: '', // Will be filled from main extraction
+        chimneyType: chimneyType,
+        timelineContent: timelineContent,
+        imageUrls: imageUrls,
+        timelineCoverImage: imageUrls[0] || '',
+        scrapedImages: imageUrls.map((url, imgIndex) => ({
+          id: `job-${index}-img-${imgIndex}-${Date.now()}`,
+          url: url,
+          alt: `Job ${index + 1} image ${imgIndex + 1}`
+        }))
+      };
+      
+      jobs.push(jobData);
+    });
+    
+    // Sort jobs by date (newest first)
+    jobs.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    console.log('Parsed jobs:', jobs);
+    return jobs;
+  };
+
+  // Function to find the previous job by date
+  const findPreviousJobByDate = (jobs: JobData[]): JobData | null => {
+    if (jobs.length < 2) {
+      return null; // Need at least 2 jobs to find a previous one
+    }
+    
+    // Jobs are already sorted by date (newest first)
+    // Return the second job (previous to the latest)
+    return jobs[1];
+  };
 
   // Function to parse HTML content using the same logic as Python code
   const parseHtmlContent = (htmlContent: string): ExtractedData => {
@@ -75,15 +178,15 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       }
     }
 
-    // Find timeline-block div and extract content
+    // Find timeline-block div and extract content (get the first/latest one)
     const timelineBlock = doc.querySelector('div.timeline-block');
     if (timelineBlock) {
       timelineContent = timelineBlock.textContent?.trim() || "";
       
-      // Extract image URLs from data-full attributes
-      const imageLinks = timelineBlock.querySelectorAll('a[data-full]');
-      imageLinks.forEach(link => {
-        const dataFull = link.getAttribute('data-full');
+      // Extract image URLs from photo-item elements with data-full attributes
+      const photoItems = timelineBlock.querySelectorAll('a.photo-item[data-full]');
+      photoItems.forEach(photoItem => {
+        const dataFull = photoItem.getAttribute('data-full');
         if (dataFull) {
           imageUrls.push(dataFull);
         }
@@ -144,16 +247,28 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       
       const htmlContent = await response.text();
       
-      // Parse the HTML content using our custom parser
+      // Print HTML content to console
+      console.log('=== HTML CONTENT ===');
+      console.log(htmlContent);
+      console.log('=== END HTML CONTENT ===');
+      
+      // Parse all jobs from HTML to find dates
+      const allJobsData = parseAllJobsFromHtml(htmlContent);
+      setAllJobs(allJobsData);
+      
+      // Parse the HTML content using our custom parser (for current job)
       const parsedData = parseHtmlContent(htmlContent);
       
       setExtractedData(parsedData);
       setShowEditForm(true);
       
       // Log the extracted data for debugging (same as Python print statements)
-      console.log(parsedData.timelineContent);
-      console.log("-----");
-      console.log(parsedData.imageUrls.length);
+      console.log('=== EXTRACTED DATA ===');
+      console.log('Current job data:', parsedData.timelineContent);
+      console.log('All jobs found:', allJobsData.length);
+      console.log('Current job images:', parsedData.imageUrls.length);
+      console.log('Jobs with dates:', allJobsData.map(job => ({ date: job.date, images: job.imageUrls.length })));
+      console.log('=== END EXTRACTED DATA ===');
       
     } catch (error) {
       console.error('Data extraction failed:', error);
@@ -163,8 +278,67 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     }
   };
 
+
   const handleDataChange = (field: keyof ExtractedData, value: string) => {
     setExtractedData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleDateSelection = (job: JobData) => {
+    setSelectedDateJob(job);
+    setSelectedImages([]); // Reset selected images when selecting a new date
+    setShowDateSelector(false);
+    setShowPreviousJobImages(true);
+  };
+
+  const handleImageSelection = (imageUrl: string) => {
+    setSelectedImages(prev => {
+      if (prev.includes(imageUrl)) {
+        // Remove image if already selected
+        return prev.filter(url => url !== imageUrl);
+      } else {
+        // Add image if not selected
+        return [...prev, imageUrl];
+      }
+    });
+  };
+
+  const handleSelectAllImages = () => {
+    if (!selectedDateJob) return;
+    
+    if (selectedImages.length === selectedDateJob.imageUrls.length) {
+      // If all images are selected, deselect all
+      setSelectedImages([]);
+    } else {
+      // Select all images
+      setSelectedImages([...selectedDateJob.imageUrls]);
+    }
+  };
+
+  const handleMergeSelectedDateImages = () => {
+    if (!selectedDateJob || selectedImages.length === 0) return;
+    
+    // Convert selected image URLs to ImageItem format
+    const selectedImageItems: ImageItem[] = selectedImages.map((url, index) => ({
+      id: `selected-${index}-${Date.now()}`,
+      url: url,
+      alt: `Selected image from ${selectedDateJob.date}`
+    }));
+    
+    // Merge only selected images with current job images
+    const mergedImages = [...extractedData.scrapedImages, ...selectedImageItems];
+    const mergedImageUrls = [...extractedData.imageUrls, ...selectedImages];
+    
+    setExtractedData(prev => ({
+      ...prev,
+      scrapedImages: mergedImages,
+      imageUrls: mergedImageUrls
+    }));
+    
+    setShowPreviousJobImages(false);
+    setSelectedDateJob(null);
+    setSelectedImages([]);
+    
+    console.log(`Merged ${selectedImages.length} selected images from ${selectedDateJob.date}`);
   };
 
   const handleContinue = () => {
@@ -210,6 +384,15 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
               className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {isLoading ? 'Extracting...' : 'Extract Data'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDateSelector(true)}
+              disabled={!url || allJobs.length === 0}
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              title="Select images from any available date"
+            >
+              Select Date Images
             </button>
             <button
               type="button"
@@ -440,6 +623,211 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Selector Modal */}
+      {showDateSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Select Date for Images</h3>
+                <button
+                  onClick={() => setShowDateSelector(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Choose a date to view and merge its images with your current job.
+              </p>
+            </div>
+            
+            <div className="p-4">
+              {allJobs.length > 0 ? (
+                <div className="space-y-3">
+                  {allJobs.map((job, index) => (
+                    <div 
+                      key={job.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer"
+                      onClick={() => handleDateSelection(job)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium text-gray-900">
+                            {job.date}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {job.imageUrls.length} image{job.imageUrls.length !== 1 ? 's' : ''} available
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500">
+                            {index === 0 ? 'Latest' : index === 1 ? 'Previous' : `${index + 1}${index === 2 ? 'rd' : index === 3 ? 'th' : 'th'}`}
+                          </span>
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                    <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Dates Found</h3>
+                  <p className="text-sm text-gray-600 mb-4">No jobs with dates were found in the HTML content.</p>
+                  <button
+                    onClick={() => setShowDateSelector(false)}
+                    className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Date Images Modal */}
+      {showPreviousJobImages && selectedDateJob && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Images from {selectedDateJob.date}</h3>
+                <button
+                  onClick={() => {
+                    setShowPreviousJobImages(false);
+                    setSelectedDateJob(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Found {selectedDateJob.imageUrls.length} image{selectedDateJob.imageUrls.length !== 1 ? 's' : ''} from {selectedDateJob.date}. 
+                Select the images you want to add to your current job.
+              </p>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleSelectAllImages}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {selectedImages.length === selectedDateJob.imageUrls.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    {selectedImages.length} of {selectedDateJob.imageUrls.length} selected
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4">
+              {selectedDateJob.imageUrls.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                    {selectedDateJob.imageUrls.map((imageUrl, index) => {
+                      const isSelected = selectedImages.includes(imageUrl);
+                      return (
+                        <div 
+                          key={index} 
+                          className={`relative group cursor-pointer ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+                          onClick={() => handleImageSelection(imageUrl)}
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`Image from ${selectedDateJob.date} ${index + 1}`}
+                            className={`w-full h-32 object-cover rounded-lg border-2 transition-all ${
+                              isSelected ? 'border-blue-500' : 'border-gray-200'
+                            }`}
+                          />
+                          
+                          {/* Selection checkbox */}
+                          <div className="absolute top-2 right-2">
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                              isSelected 
+                                ? 'bg-blue-500 border-blue-500' 
+                                : 'bg-white border-gray-300'
+                            }`}>
+                              {isSelected && (
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Date overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                            {selectedDateJob.date}
+                          </div>
+                          
+                          {/* Selection indicator */}
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-blue-500 bg-opacity-20 rounded-lg"></div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={handleMergeSelectedDateImages}
+                      disabled={selectedImages.length === 0}
+                      className={`px-6 py-2 rounded-lg transition-colors font-medium ${
+                        selectedImages.length === 0
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Merge Selected Images ({selectedImages.length})
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPreviousJobImages(false);
+                        setSelectedDateJob(null);
+                        setSelectedImages([]);
+                      }}
+                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                    <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Images Found</h3>
+                  <p className="text-sm text-gray-600 mb-4">No images were found for {selectedDateJob.date}.</p>
+                  <button
+                    onClick={() => {
+                      setShowPreviousJobImages(false);
+                      setSelectedDateJob(null);
+                    }}
+                    className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
