@@ -389,7 +389,7 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
               type="button"
               onClick={() => setShowDateSelector(true)}
               disabled={!url || allJobs.length === 0}
-              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-red-950 text-white rounded-md hover:bg-red-990 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-red-900 text-white rounded-md hover:bg-red-940 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               title="Select images from any available date"
             >
               Select Date Images
