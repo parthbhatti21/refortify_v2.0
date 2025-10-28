@@ -32,7 +32,7 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
   return (
     <div className="bg-white grid justify-items-center [align-items:start] w-full">
         <div 
-      className="bg-white overflow-hidden w-full max-w-[595px] h-auto aspect-[595/842] relative rounded-lg"
+      className="bg-white overflow-hidden w-full max-w-[595px] h-auto aspect-[595/842] relative "
       style={containerStyle}
     >
       
@@ -80,8 +80,8 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
             </div>
 
             <div className="absolute w-[199px] h-[188px] top-0 left-[488px]">
-                <div className="relative h-[188px] rounded-[48px]">
-                    <div className="absolute w-[199px] h-[188px] top-0 left-[0] bg-[#722420] rounded-t-[48px] rotate-180" />
+                <div className="relative h-[188px] rounded-b-[48px]">
+                    <div className="absolute w-[199px] h-[188px] top-0 left-[0] bg-[#722420] rounded-b-[48px] " />
 
                     <img
                         className="absolute w-[126px] h-[120px] top-[47px] left-[19px] aspect-[1.05] rounded-full"

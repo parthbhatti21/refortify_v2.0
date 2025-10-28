@@ -77,44 +77,62 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
           <div className="frame">
             <div className="rectangle" />
           </div>
-
+         
           <div
             className="div"
             style={{ 
               fontFamily: 'Times New Roman, Times, serif', 
               opacity: 1, 
-              top: '170px',
+              top: isPDF ? '170px' : '170px',
               // lineHeight: '1.9',
-              fontSize: '14px',
+              fontSize: '16px',
               fontWeight: '500',
+
               letterSpacing: '0.40px'
             }}
           >
+             {isPDF && <><p className="itWasA">&nbsp;</p></>}
+              
             Dear {formData.clientName || 'c1'},
           </div>
-          
-          <div className="email-content" style={emailStyle}>
+     
+
+
+          <div className="email-content" style={emailStyle} >
           <div className="itWasAContainer">
+            {isPDF && <><p className="itWasA">&nbsp;</p></>}
+            {/* {isPDF && <><p className="itWasA">&nbsp;</p></>} */}
 <p className="itWasA">    
+  
 It was a pleasure to provide service for your home and attached is a detailed service report for your review and a repair
 estimate if applicable. This service report is in sections which are as follows:</p>
-{isPDF && <><li className="itWasA">&nbsp;</li></>}
-<ul className="invoiceWithDescriptionEsti" style={{ lineHeight: isPDF ? '1.8' : 'normal' }}>
-<li className="itWasA" style={{ marginBottom: isPDF ? '8px' : '0' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Invoice with description</li>
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle" }}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Estimated Repairs with description, building codes and </li>
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0' }}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inspection photographs</li>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
 
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Inspection Photographs</li>
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Details to understand chimney parts</li>
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Top hat club membership</li>
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Thank You</li>
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Terms and Conditions</li>
+<ul className="invoiceWithDescriptionEsti" style={{ lineHeight: isPDF ? '1.8' : 'normal' }}>
+<li className="itWasA" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Invoice with description</li>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
+
+<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle" }}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Estimated Repairs with description, building codes and </li>
+
+<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inspection photographs</li>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
+<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Inspection Photographs</li>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
+<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Details to understand chimney parts</li>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
+<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Top hat club membership</li>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
+<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Thank You</li>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
+<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Terms and Conditions</li>
+{/* {isPDF && <><p className="itWasA">&nbsp;</p></>} */}
 </ul>
 {isPDF && <><p className="itWasA">&nbsp;</p></>}
 
 <p className="itWasA">Thank you so much for using our service. We strive to offer the best service, the best warranties, the best quality control and the best training in our industry. Your complete satisfaction is most important to everyone of the us at A Step in Time Chimney Sweeps.</p>
 
 {isPDF && <><p className="itWasA">&nbsp;</p></>}
+
 <p className="itWasA">Sincerely, </p>
 <p className="itWasA">Ray Gessner, P.E. </p>
 <p className="itWasA">C.E.O. - A STEP IN TIME CHIMNEY SWEEPS Ray@ChimneySweep.com </p>

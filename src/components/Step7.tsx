@@ -1256,11 +1256,11 @@ export const Page7: React.FC<Page7Props> = ({
               <div style={{ display: 'contents' }}>
                 <div style={{ 
                   backgroundColor: '#722420',
-                  height: isPDF ? '20px' : '30px'
+                  height: isPDF ? '20px' : '20px'
                 }}></div>
                 <div style={{ 
                   backgroundColor: '#722420',
-                  height: isPDF ? '20px' : '30px'
+                  height: isPDF ? '20px' : '20px'
                 }}></div>
                 <div style={{ 
                   backgroundColor: '#722420',
@@ -1268,7 +1268,7 @@ export const Page7: React.FC<Page7Props> = ({
                   fontWeight: '600',
                   fontSize: '12px',
                   letterSpacing: '0.42px',
-                  height: isPDF ? '20px' : '30px',
+                  height: isPDF ? '20px' : '20px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1277,18 +1277,16 @@ export const Page7: React.FC<Page7Props> = ({
                   TOTAL :
                 </div>
                 <div style={{ 
-                  backgroundColor: '#722420',
-                  color: '#ffffff',
-                  fontWeight: '600',
-                  fontSize: '12px',
-                  height: isPDF ? '20px' : '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                    padding: isPDF ? '0px 8px' : '2px 6px',
-                  boxSizing: 'border-box',
-                  lineHeight: '1.0'
+                backgroundColor: '#722420',
+                color: '#ffffff',
+                fontWeight: '600',
+                fontSize: '12px',
+                letterSpacing: '0.42px',
+                height: isPDF ? '20px' : '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center'
                 }}>
                   ${calculateTotal().toLocaleString()}
                 </div>

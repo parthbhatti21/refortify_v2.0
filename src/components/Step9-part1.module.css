@@ -1,0 +1,126 @@
+.step9part1 {
+  width: 100%;
+  height: 842px;
+  position: relative;
+  background-color: #fff;
+  overflow: hidden;
+  text-align: center;
+  font-size: 15px;
+  color: #000;
+  font-family: 'Times New Roman';
+}
+
+.frame {
+  position: absolute;
+  top: 26px;
+  left: 25px;
+  width: 546px;
+  height: 790px;
+}
+
+.frameChild {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  border: 2px solid #722420;
+  box-sizing: border-box;
+  width: 546px;
+  height: 790px;
+}
+
+.rectangle {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  border: 2px solid #722420;
+  box-sizing: border-box;
+  width: 536px;
+  height: 780px;
+}
+
+.understandingYourMasonryChiParent {
+  position: absolute;
+  top: 85px;
+  left: 44px;
+  width: 507px;
+  height: 683px;
+}
+
+.understandingYourMasonry {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  letter-spacing: 0.02em;
+  display: inline-block;
+  width: 507px;
+  height: 17px;
+}
+
+.chimneyCapTheContainer {
+  position: absolute;
+  top: 37px;
+  left: 0px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  line-height: 17px;
+  text-align: left;
+  display: inline-block;
+  width: 507px;
+  height: 646px;
+}
+
+.chimneyCapTheChimneyCapI {
+  margin: 0;
+  font-size: inherit;
+  padding-left: 15px;
+}
+
+.step9part1ChimneyCapTheChimneyCapI {
+  margin-bottom: 0px;
+}
+
+.chimneyCap {
+  font-family: 'Times New Roman';
+}
+
+.page18 {
+  width: 100%;
+  height: 842px;
+  position: relative;
+  background-color: #fff;
+  overflow: hidden;
+  text-align: center;
+  font-size: 15px;
+  color: #000;
+  font-family: 'Times New Roman';
+}
+
+.understandingYourPrefabricatParent {
+  position: absolute;
+  top: 85px;
+  left: 44px;
+  width: 507px;
+  height: 683px;
+}
+
+.understandingYourPrefabricat {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  letter-spacing: 0.02em;
+  display: inline-block;
+  width: 507px;
+  height: 17px;
+}
+
+.chimneyCapTheChimneyCapF {
+  margin: 0;
+  font-size: inherit;
+  padding-left: 15px;
+}
+
+.page18ChimneyCapTheChimneyCapF {
+  margin-bottom: 0px;
+}
+
+

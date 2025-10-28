@@ -1,34 +1,22 @@
 import React from 'react';
+import styles from './Step10Part5.module.css';
 
-interface Step10Part5Props {
-  isPDF?: boolean;
-  chimneyType?: string;
-}
-
-export const Step10Part5: React.FC<Step10Part5Props> = ({ isPDF = false, chimneyType = 'masonry' }) => {
+export const Step10Part5 = () => {
   return (
-    <div className="bg-white grid justify-items-center [align-items:start] w-full">
-      <div className="bg-white w-[590px] h-[842px]">
-        <div 
-          className="relative w-[590px] h-[842px] "
-          // style={isPDF ? {
-          //   left: '22.5px'
-          // } : {
-          //   left: '25px'
-          // }}
-        >
-          
-          <div 
-            className="absolute w-[590px] h-[842px] top-[0px] left-[0px] flex items-center justify-center"
-          >
-            <img 
-              src="/page17.png" 
-              alt="Step 10 Part 2 documentation"
-              className="w-[100%] h-[100%] object-contain"
-            />
-          </div>
-        </div>
+    <div className={styles.step10part5}>
+      <div className={styles.frame}>
+        <div className={styles.frameChild} />
+        <div className={styles.rectangle} />
       </div>
+      <img className={styles.titleIcon} alt="" src="/logo.webp" />
+      <img className={styles.screenshot20251024At0033} src="/thankyou.png" alt="" />
+      <b className={styles.thankYouFromContainer}>
+        <p className={styles.thankYou}>Thank you!</p>
+        <p className={styles.thankYou}>{`From the entire staff of A Step in Time, it has been a pleasure serving you. If you have any questions regarding your report then feel free to contact us at 757-498-8000.`}</p>
+        <p className={styles.thankYou}>{`Sincerely,`}</p>
+        <p className={styles.thankYou}>&nbsp;</p>
+        <p className={styles.thankYou}>Staff - A Step in Time</p>
+      </b>
     </div>
   );
 };

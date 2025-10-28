@@ -1,0 +1,116 @@
+.step9Part3 {
+	width: 100%;
+	height: 842px;
+	position: relative;
+	background-color: #fff;
+	overflow: hidden;
+	text-align: left;
+	font-size: 11px;
+	color: #000;
+	font-family: 'Times New Roman';
+}
+.frame {
+	position: absolute;
+	top: 26px;
+	left: 25px;
+	width: 546px;
+	height: 790px;
+}
+.frameChild {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	border: 2px solid #722420;
+	box-sizing: border-box;
+	width: 546px;
+	height: 790px;
+}
+.rectangle {
+	position: absolute;
+	top: 5px;
+	left: 5px;
+	border: 2px solid #722420;
+	box-sizing: border-box;
+	width: 536px;
+	height: 780px;
+}
+.chimneyClearancesBuildingCWrapper {
+	position: absolute;
+	top: 80px;
+	left: 44px;
+	width: 507px;
+	height: 682px;
+}
+.chimneyClearancesBuildingContainer {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	letter-spacing: 0.03em;
+	line-height: 16px;
+	display: inline-block;
+	width: 507px;
+	height: 682px;
+}
+.chimneyClearancesBuildingC {
+	margin: 0;
+	font-size: inherit;
+	padding-left: 15px;
+}
+.step9Part3ChimneyClearancesBuildingC {
+	margin-bottom: 0px;
+}
+.chimneyClearances {
+	font-family: 'Times New Roman';
+}
+
+/* Prefabricated page styles */
+.page13 {
+	width: 100%;
+	height: 842px;
+	position: relative;
+	background-color: #fff;
+	overflow: hidden;
+	text-align: left;
+	font-size: 11px;
+	color: #000;
+	font-family: 'Times New Roman';
+}
+.exposedNailHeadsAsACourtWrapper {
+	position: absolute;
+	top: 62px;
+	left: 44px;
+	width: 507px;
+	height: 736px;
+}
+.exposedNailHeadsContainer {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	letter-spacing: 0.03em;
+	line-height: 16px;
+	display: inline-block;
+	width: 507px;
+	height: 736px;
+}
+.blankLine {
+	margin: 0;
+}
+.exposedNailHeadsAsACourt {
+	margin: 0;
+	font-size: inherit;
+	padding-left: 15px;
+}
+.exposedNailHeads {
+	font-family: 'Times New Roman';
+}
+.gutterCleanlinessAsACourt {
+	margin-bottom: 0px;
+}
+.textWrapper {
+	position: absolute;
+	top: 700px;
+	left: 44px;
+	width: 507px;
+	height: 736px;
+}
+

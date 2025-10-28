@@ -1,0 +1,72 @@
+.step10part5 {
+  width: 100%;
+  height: 842px;
+  position: relative;
+  background-color: #fff;
+  overflow: hidden;
+  text-align: left;
+  font-size: 18px;
+  color: #000;
+  font-family: 'Times New Roman';
+}
+
+.frame {
+  position: absolute;
+  top: 26px;
+  left: 25px;
+  width: 546px;
+  height: 790px;
+}
+
+.frameChild {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  border: 2px solid #722420;
+  box-sizing: border-box;
+  width: 546px;
+  height: 790px;
+}
+
+.rectangle {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  border: 2px solid #722420;
+  box-sizing: border-box;
+  width: 536px;
+  height: 780px;
+}
+
+.titleIcon {
+  position: absolute;
+  top: 57px;
+  left: 192px;
+  width: 212.2px;
+  height: 89px;
+  object-fit: cover;
+}
+
+.screenshot20251024At0033 {
+  position: absolute;
+  top: 158px;
+  left: 46px;
+  width: 504px;
+  height: 330px;
+  object-fit: cover;
+}
+
+.thankYouFromContainer {
+  position: absolute;
+  top: 520px;
+  left: 73px;
+  display: inline-block;
+  width: 453px;
+  height: 324px;
+}
+
+.thankYou {
+  margin: 0;
+}
+
+
