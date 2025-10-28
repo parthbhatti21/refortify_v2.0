@@ -79,9 +79,9 @@ const Step9Part3: FunctionComponent<Step9Part3Props> = ({ chimneyType = 'masonry
       </div>
       <div className={styles.exposedNailHeadsAsACourtWrapper}>
         <div className={styles.exposedNailHeadsContainer}>
-          <li className={styles.blankLine}>
+          {/* <li className={styles.blankLine}> */}
             <span>&nbsp;</span>
-          </li>
+          {/* </li> */}
           <ul className={styles.exposedNailHeadsAsACourt}>
             <li className={styles.blankLine}>
               <b className={styles.exposedNailHeads}>Exposed Nail Heads</b>
