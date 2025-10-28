@@ -67,9 +67,10 @@ export interface FormData {
       description: string;
       unit: string;
       price: string;
-    }>;
-  };
-  repairEstimatePages?: Array<{
+      }>;
+    };
+    notes: string;
+    repairEstimatePages?: Array<{
     id: string;
     reviewImage: string;
     customRecommendation?: string; // Custom recommendation text
@@ -431,7 +432,8 @@ const MultiStepForm: React.FC = () => {
       rows: []
     },
     repairEstimatePages: [],
-    usedReviewImages: []
+    usedReviewImages: [],
+    notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -720,7 +722,8 @@ const MultiStepForm: React.FC = () => {
         rows: []
       },
       repairEstimatePages: [],
-      usedReviewImages: []
+      usedReviewImages: [],
+      notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
     });
     setCurrentStep('form');
   };
@@ -886,67 +889,81 @@ const MultiStepForm: React.FC = () => {
 
    const calculateSmartRepairEstimatePages = () => {
      // Check if summary table needs a separate page
-     const SUMMARY_PAGE_THRESHOLD = 630; // Match the threshold in Step5-part2.tsx
+     const SUMMARY_PAGE_THRESHOLD = 690; // Match the threshold in Step5-part2.tsx
      
      // Calculate if summary would exceed threshold
      const section1Rows = formData.repairEstimateData?.rows || [];
      const section2Rows = formData.recommendationSection2?.rows || [];
      
-     // Only check if both sections exist
-     if (formData.showRecommendationSection2 && section2Rows.length > 0) {
-       // Use the same dynamic height calculation as Step5-part2.tsx
-       const calculateTableHeight = (rows: any[]) => {
-         if (rows.length === 0) return 0;
-         const headerHeight = 20; // Header row height
-         let totalRowHeight = 0;
-         
-         // Calculate height for each row based on content
-         rows.forEach(row => {
-           const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
-             const lines = text.split('\n').length;
-             const wordCount = text.split(' ').length;
-             const charCount = text.length;
-             
-             let rowsNeeded = 1;
-             
-             if (lines > 1) {
-               rowsNeeded = Math.max(rowsNeeded, lines);
-             }
-             
-             const charRows = Math.ceil(charCount / baseLength);
-             rowsNeeded = Math.max(rowsNeeded, charRows);
-             
-             const wordRows = Math.ceil(wordCount / 8);
-             rowsNeeded = Math.max(rowsNeeded, wordRows);
-             
-             return Math.min(rowsNeeded, 4);
-           };
-           
-           const descriptionRows = calculateRowsNeeded(row.description);
-           const unitRows = calculateRowsNeeded(row.unit, 10);
-           const priceRows = calculateRowsNeeded(row.price, 10);
-           
-           const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
-           const rowHeight = 20 * maxRowsNeeded; // 20px per content row
-           totalRowHeight += rowHeight;
-         });
-         
-         return headerHeight + totalRowHeight;
-       };
+     // Check pagination for both summary (if Section 2 exists) and notes (always)
+     const calculateTableHeight = (rows: any[]) => {
+       if (rows.length === 0) return 0;
+       const headerHeight = 20; // Header row height
+       let totalRowHeight = 0;
        
-       const section1Top = 150;
-       const section1Height = calculateTableHeight(section1Rows);
-       const GAP_BETWEEN_TABLES = 80;
+       // Calculate height for each row based on content
+       rows.forEach(row => {
+         const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+           const lines = text.split('\n').length;
+           const wordCount = text.split(' ').length;
+           const charCount = text.length;
+           
+           let rowsNeeded = 1;
+           
+           if (lines > 1) {
+             rowsNeeded = Math.max(rowsNeeded, lines);
+           }
+           
+           const charRows = Math.ceil(charCount / baseLength);
+           rowsNeeded = Math.max(rowsNeeded, charRows);
+           
+           const wordRows = Math.ceil(wordCount / 8);
+           rowsNeeded = Math.max(rowsNeeded, wordRows);
+           
+           return Math.min(rowsNeeded, 4);
+         };
+         
+         const descriptionRows = calculateRowsNeeded(row.description);
+         const unitRows = calculateRowsNeeded(row.unit, 10);
+         const priceRows = calculateRowsNeeded(row.price, 10);
+         
+         const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
+         const rowHeight = 20 * maxRowsNeeded; // 20px per content row
+         totalRowHeight += rowHeight;
+       });
+       
+       return headerHeight + totalRowHeight;
+     };
+     
+     const section1Top = 150;
+     const section1Height = calculateTableHeight(section1Rows);
+     const GAP_BETWEEN_TABLES = 80;
+     
+     // Calculate notes position based on what content exists
+     let notesTop = 0;
+     if (formData.showRecommendationSection2 && section2Rows.length > 0) {
+       // Both sections exist - calculate summary and notes position
        const extraSpacing = Math.min(section1Rows.length * 2);
        const section2Top = section1Top + section1Height + GAP_BETWEEN_TABLES + extraSpacing;
        const section2Height = calculateTableHeight(section2Rows);
-       
-       // Calculate summary position exactly like in Step5-part2.tsx
        const summaryTop = section2Top + section2Height + GAP_BETWEEN_TABLES + extraSpacing;
        
-       if (summaryTop > SUMMARY_PAGE_THRESHOLD) {
-         return 2; // Main page + summary page
+       const SUMMARY_TABLE_HEIGHT = 80;
+       const NOTES_PAGE_THRESHOLD = 690; // Move notes to next page if it would exceed this
+       notesTop = summaryTop + SUMMARY_TABLE_HEIGHT + 30;
+       
+       // Check if summary needs new page
+       if (summaryTop > SUMMARY_PAGE_THRESHOLD || notesTop > NOTES_PAGE_THRESHOLD) {
+         return 2; // Main page + summary/notes page
        }
+     } else {
+       // Only Section 1 exists - notes go below Section 1
+       notesTop = section1Top + section1Height + GAP_BETWEEN_TABLES + 30;
+     }
+     
+     // Check if notes need new page
+     if (formData.notes && notesTop > SUMMARY_PAGE_THRESHOLD) {
+       return 2; // Main page + notes page
      }
      
      return 1; // Single page
@@ -1488,7 +1505,8 @@ const MultiStepForm: React.FC = () => {
         repairEstimateData: formData.repairEstimateData, 
         section1: { title: formData.recommendationSection1Title || 'Recommendations', rows: formData.repairEstimateData?.rows || [] },
         section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Recommendations (2)', rows: formData.recommendationSection2?.rows || [] } : undefined,
-        currentEstimatePage: pageNumber - 4 - totalInvoicePages 
+        currentEstimatePage: pageNumber - 4 - totalInvoicePages,
+        notes: formData.notes
       }) :
       pageNumber === 4 + totalInvoicePages + totalRepairEstimatePages + 1 ?
       React.createElement(Step6, { 
@@ -1729,7 +1747,7 @@ const MultiStepForm: React.FC = () => {
       {/* Content */}
       {currentStep === 'scrape' ? (
         <div className="card p-4 sm:p-8">
-          <DataScraper onDataExtracted={handleDataExtracted} setCurrentStep={setCurrentStep} setFormData={setFormData} />
+          <DataScraper onDataExtracted={handleDataExtracted} setCurrentStep={setCurrentStep} setFormData={(data) => setFormData({ ...data, notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.' })} />
         </div>
       ) : (
         <>
@@ -2587,6 +2605,21 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Notes Section */}
+                <div className="pt-4 border-t border-gray-200">
+                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    id="notes"
+                    value={formData.notes || 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'}
+                    onChange={(e) => updateFormData({ notes: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                    rows={3}
+                    placeholder="Enter notes for the repair estimate..."
+                  />
+                </div>
               </div>
             ) : isImagePage6(currentPage) ? (
               // Step 6 - Image Selection Interface
@@ -3206,6 +3239,7 @@ const MultiStepForm: React.FC = () => {
                   updateRepairEstimateData={(data) => updateFormData({ repairEstimateData: data })}
                   currentEstimatePage={currentPage - 4 - totalInvoicePages}
                   isPDF={false}
+                  notes={formData.notes}
                 />
               ) : isImagePage6(currentPage) ? (
                 <Step6 

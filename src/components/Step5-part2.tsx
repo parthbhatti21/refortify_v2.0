@@ -27,6 +27,7 @@ interface Step5Part2Props {
   updateRepairEstimateData?: (data: RepairEstimateData) => void;
   section1?: RecommendationSection;
   section2?: RecommendationSection;
+  notes?: string;
 }
 
 const Step5Part2: FunctionComponent<Step5Part2Props> = ({ 
@@ -40,7 +41,8 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
   },
   updateRepairEstimateData,
   section1,
-  section2
+  section2,
+  notes
 }) => {
   const [localData, setLocalData] = useState<RepairEstimateData>(repairEstimateData);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -120,11 +122,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
   const section2TableTop = section2Top + 30; // 30px gap between title and table
   
   // Summary table position (only when both sections exist)
-  const summaryTop = effectiveSection2 ? (section2Top + section2Height + GAP_BETWEEN_TABLES + extraSpacing + 20) : 0;
+  const summaryTop = effectiveSection2 ? (section2Top + section2Height + GAP_BETWEEN_TABLES + extraSpacing + 10) : 0;
   const summaryTableTop = summaryTop + 30; // 30px gap between title and table
   
   // Check if summary table needs to be moved to next page
-  const SUMMARY_PAGE_THRESHOLD = 640; // Move summary to next page if it would exceed this
+  const SUMMARY_PAGE_THRESHOLD = 580; // Move summary to next page if it would exceed this
   const summaryNeedsNewPage = summaryTop > SUMMARY_PAGE_THRESHOLD;
   
   // Calculate summary table height (fixed height for summary table)
@@ -135,6 +137,30 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
   
   // Determine if this is a summary-only page
   const isSummaryOnlyPage = effectiveSection2 && summaryNeedsNewPage && (currentEstimatePage || 1) > 1;
+  
+  // Notes section pagination logic - Notes are always visible when present
+  const NOTES_HEIGHT = notes ? (Math.ceil((notes.length || 0) / 80) * 20 + 40) : 0; // Approximate height based on text length
+  
+  // Calculate notes position based on what's shown on current page
+  let notesTop = 0;
+  if (showSummaryOnCurrentPage) {
+    // Notes below summary table
+    notesTop = summaryTableTop + SUMMARY_TABLE_HEIGHT + 25;
+  } else if (isSummaryOnlyPage) {
+    // Notes below summary table on separate page
+    notesTop = 270; // Position below summary table on separate page
+  } else {
+    // Notes below Section 2 or Section 1 if no Section 2
+    const lastSectionTop = effectiveSection2 ? section2Top : section1Top;
+    const lastSectionHeight = effectiveSection2 ? section2Height : section1Height;
+    notesTop = lastSectionTop + lastSectionHeight + GAP_BETWEEN_TABLES + 30;
+  }
+  
+  const NOTES_PAGE_THRESHOLD = 720; // Move notes to next page if it would exceed this
+  const notesNeedsNewPage = notes && notesTop > NOTES_PAGE_THRESHOLD;
+  
+  // Determine if this is a notes-only page (when notes don't fit with other content)
+  const isNotesOnlyPage = notes && notesNeedsNewPage && (currentEstimatePage || 1) > 1;
 
   // Helper to sync local and parent data
   const updateLocalData = (newData: RepairEstimateData) => {
@@ -167,8 +193,8 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
       
     
 
-          {/* Render Section 1 - Only show if not summary-only page */}
-          {!isSummaryOnlyPage && effectiveSection1.rows.length > 0 && (
+          {/* Render Section 1 - Only show if not summary-only page or notes-only page */}
+          {!isSummaryOnlyPage && !isNotesOnlyPage && effectiveSection1.rows.length > 0 && (
             <>
               {/* Section 1 Title */}
               <div style={{ position: 'absolute', top: `${section1Top}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
@@ -596,8 +622,8 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
             </>
           )}
 
-          {/* Render Section 2 - Only show if not summary-only page */}
-          {!isSummaryOnlyPage && effectiveSection2 && effectiveSection2.rows.length > 0 && (
+          {/* Render Section 2 - Only show if not summary-only page or notes-only page */}
+          {!isSummaryOnlyPage && !isNotesOnlyPage && effectiveSection2 && effectiveSection2.rows.length > 0 && (
             <>
               {/* Section 2 Title */}
               <div style={{ position: 'absolute', top: `${section2Top}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
@@ -1163,15 +1189,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'middle',
-                        textAlign: 'left',
+                        textAlign: 'center',
                         height: '20px',
                         boxSizing: 'border-box',
                         lineHeight: '1.0'
                       } : {
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        textAlign: 'left'
+                        justifyContent: 'center',
+                        textAlign: 'center'
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
@@ -1275,15 +1301,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'middle',
-                        textAlign: 'left',
+                        textAlign: 'center',
                         height: '20px',
                         boxSizing: 'border-box',
                         lineHeight: '1.0'
                       } : {
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        textAlign: 'left'
+                        justifyContent: 'center',
+                        textAlign: 'center'
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
@@ -1498,6 +1524,27 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 </div>
               </div>
             </>
+          )}
+
+          {/* Notes Section - Show when notes fit on current page */}
+          {notes && !notesNeedsNewPage && !isNotesOnlyPage && (
+            <div style={{ 
+              position: 'absolute', 
+              top: `${notesTop}px`,
+              left: '29px', 
+              right: '29px',
+              fontSize: '12px',
+              fontFamily: 'Inter, Arial, sans-serif',
+              color: '#000000',
+              lineHeight: '1.4'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
+                Notes:
+              </div>
+              <div style={{ paddingLeft: '10px' }}>
+                {notes}
+              </div>
+            </div>
           )}
 
           {/* Summary Table on Separate Page - When summary doesn't fit on main page */}
@@ -1974,6 +2021,48 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 </div>
               </div>
             </>
+          )}
+
+          {/* Notes Section - Show when summary is on separate page and notes fit */}
+          {isSummaryOnlyPage && notes && !notesNeedsNewPage && (
+            <div style={{ 
+              position: 'absolute', 
+              top: '270px', // Position below summary table on separate page
+              left: '29px', 
+              right: '29px',
+              fontSize: '12px',
+              fontFamily: 'Inter, Arial, sans-serif',
+              color: '#000000',
+              lineHeight: '1.4'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
+                Notes:
+              </div>
+              <div style={{ paddingLeft: '10px' }}>
+                {notes}
+              </div>
+            </div>
+          )}
+
+          {/* Notes Section - Show when notes need their own page */}
+          {isNotesOnlyPage && notes && (
+            <div style={{ 
+              position: 'absolute', 
+              top: '150px', // Position at top of page
+              left: '29px', 
+              right: '29px',
+              fontSize: '12px',
+              fontFamily: 'Inter, Arial, sans-serif',
+              color: '#000000',
+              lineHeight: '1.4'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
+                Notes:
+              </div>
+              <div style={{ paddingLeft: '10px' }}>
+                {notes}
+              </div>
+            </div>
           )}
 
           {/* Payment Method */}
