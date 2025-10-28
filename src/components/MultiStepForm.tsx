@@ -57,6 +57,18 @@ export interface FormData {
       price: string;
     }>;
   };
+  // Recommendations (Step5-part2) multi-section support
+  recommendationSection1Title?: string;
+  showRecommendationSection2?: boolean;
+  recommendationSection2Title?: string;
+  recommendationSection2?: {
+    rows: Array<{
+      id: string;
+      description: string;
+      unit: string;
+      price: string;
+    }>;
+  };
   repairEstimatePages?: Array<{
     id: string;
     reviewImage: string;
@@ -419,7 +431,14 @@ const MultiStepForm: React.FC = () => {
       rows: []
     },
     repairEstimatePages: [],
-    usedReviewImages: []
+    usedReviewImages: [],
+    // Recommendations (Step5-part2) multi-section support
+    recommendationSection1Title: 'Recommendations',
+    showRecommendationSection2: false,
+    recommendationSection2Title: 'Recommendations#2',
+    recommendationSection2: {
+      rows: []
+    }
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -873,12 +892,15 @@ const MultiStepForm: React.FC = () => {
   };
 
   const calculateSmartRepairEstimatePages = () => {
-    const totalRows = formData.repairEstimateData?.rows?.length || 0;
+    const rows1 = formData.repairEstimateData?.rows?.length || 0;
+    const rows2 = formData.showRecommendationSection2 ? (formData.recommendationSection2?.rows?.length || 0) : 0;
+    const totalRows = rows1 + rows2;
     if (totalRows === 0) return 1;
-    
-    // Use 15 rows per page to match Step5-part2
-    const ROWS_PER_PAGE = 15;
-    return Math.ceil(totalRows / ROWS_PER_PAGE);
+    // 10 rows per page total across both sections
+    const ROWS_PER_PAGE = 10;
+    const pagesForSection1 = Math.max(1, Math.ceil(rows1 / ROWS_PER_PAGE));
+    const pagesForSection2 = rows2 > 0 ? Math.ceil(rows2 / ROWS_PER_PAGE) : 0;
+    return pagesForSection1 + pagesForSection2;
   };
   
   const totalInvoicePages = calculateSmartInvoicePages();
@@ -1412,7 +1434,13 @@ const MultiStepForm: React.FC = () => {
       pageNumber >= 5 && pageNumber <= 4 + totalInvoicePages ?
       React.createElement(Step5, { isPDF: true, invoiceData: formData.invoiceData, currentInvoicePage: pageNumber - 4 }) :
       pageNumber > 4 + totalInvoicePages && pageNumber <= 4 + totalInvoicePages + totalRepairEstimatePages ?
-      React.createElement(Step5Part2, { isPDF: true, repairEstimateData: formData.repairEstimateData, currentEstimatePage: pageNumber - 4 - totalInvoicePages }) :
+      React.createElement(Step5Part2, { 
+        isPDF: true, 
+        repairEstimateData: formData.repairEstimateData, 
+        section1: { title: formData.recommendationSection1Title || 'Recommendations', rows: formData.repairEstimateData?.rows || [] },
+        section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Recommendations (2)', rows: formData.recommendationSection2?.rows || [] } : undefined,
+        currentEstimatePage: pageNumber - 4 - totalInvoicePages 
+      }) :
       pageNumber === 4 + totalInvoicePages + totalRepairEstimatePages + 1 ?
       React.createElement(Step6, { 
         isPDF: true, 
@@ -2286,7 +2314,7 @@ const MultiStepForm: React.FC = () => {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="block text-sm font-medium text-gray-700">
-                      Repair Estimate Items
+                      Recommendation Section 1
                     </label>
                     <button
                       type="button"
@@ -2310,6 +2338,15 @@ const MultiStepForm: React.FC = () => {
                     >
                       + Add Item
                     </button>
+                  </div>
+                  <div className="mb-2">
+                    <input
+                      type="text"
+                      placeholder="Title for Section 1"
+                      value={formData.recommendationSection1Title || ''}
+                      onChange={(e) => updateFormData({ recommendationSection1Title: e.target.value })}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                    />
                   </div>
                   
                   <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -2395,6 +2432,111 @@ const MultiStepForm: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Section 2 Controls */}
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-gray-700">Recommendation Section 2</div>
+                    {!formData.showRecommendationSection2 ? (
+                      <button
+                        type="button"
+                        onClick={() => updateFormData({ showRecommendationSection2: true, recommendationSection2: { rows: [] } })}
+                        className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
+                      >
+                        + Add Section 2
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => updateFormData({ showRecommendationSection2: false, recommendationSection2: { rows: [] }, recommendationSection2Title: '' })}
+                        className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm"
+                      >
+                        Delete Section 2
+                      </button>
+                    )}
+                  </div>
+
+                  {formData.showRecommendationSection2 && (
+                    <div className="mt-3 space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Title for Section 2"
+                        value={formData.recommendationSection2Title || ''}
+                        onChange={(e) => updateFormData({ recommendationSection2Title: e.target.value })}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-700">Items (Section 2)</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newRow = { id: Date.now().toString(), description: '', unit: '', price: '' };
+                            const existing = formData.recommendationSection2?.rows || [];
+                            updateFormData({ recommendationSection2: { rows: [...existing, newRow] } });
+                          }}
+                          className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
+                        >
+                          + Add Item (Section 2)
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {(formData.recommendationSection2?.rows || []).map((row) => (
+                          <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
+                            <input
+                              type="text"
+                              placeholder="Description"
+                              value={row.description}
+                              onChange={(e) => {
+                                const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                  r.id === row.id ? { ...r, description: e.target.value } : r
+                                );
+                                updateFormData({ recommendationSection2: { rows: updatedRows } });
+                              }}
+                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Unit"
+                              value={row.unit}
+                              onChange={(e) => {
+                                const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                  r.id === row.id ? { ...r, unit: e.target.value } : r
+                                );
+                                updateFormData({ recommendationSection2: { rows: updatedRows } });
+                              }}
+                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Price"
+                              value={row.price}
+                              onChange={(e) => {
+                                const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                  r.id === row.id ? { ...r, price: e.target.value } : r
+                                );
+                                updateFormData({ recommendationSection2: { rows: updatedRows } });
+                              }}
+                              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updatedRows = (formData.recommendationSection2?.rows || []).filter(r => r.id !== row.id);
+                                updateFormData({ recommendationSection2: { rows: updatedRows } });
+                              }}
+                              className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+                              title="Delete row"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : isImagePage6(currentPage) ? (
@@ -3003,7 +3145,15 @@ const MultiStepForm: React.FC = () => {
                 />
               ) : isRepairEstimatePage(currentPage) ? (
                 <Step5Part2 
-                  repairEstimateData={formData.repairEstimateData} 
+                  repairEstimateData={formData.repairEstimateData}
+                  section1={{
+                    title: formData.recommendationSection1Title || 'Recommendations',
+                    rows: formData.repairEstimateData?.rows || []
+                  }}
+                  section2={formData.showRecommendationSection2 ? {
+                    title: formData.recommendationSection2Title || 'Recommendations (2)',
+                    rows: formData.recommendationSection2?.rows || []
+                  } : undefined}
                   updateRepairEstimateData={(data) => updateFormData({ repairEstimateData: data })}
                   currentEstimatePage={currentPage - 4 - totalInvoicePages}
                   isPDF={false}
