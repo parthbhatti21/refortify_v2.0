@@ -5,7 +5,7 @@ import Login from './components/Login';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient';
 import './App.css';
-
+//
 function App() {
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
 
