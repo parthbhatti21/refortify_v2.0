@@ -436,6 +436,7 @@ const MultiStepForm: React.FC = () => {
     notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<'generating' | 'uploading' | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [preferGoogleDocs, setPreferGoogleDocs] = useState(true); // User preference for PDF viewing
@@ -828,12 +829,43 @@ const MultiStepForm: React.FC = () => {
       // Save PDF directly (no Google Docs viewer)
         const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
         pdf.save(fileName);
+        
+        // Also upload the generated PDF to the backend
+        try {
+          setGenerationStatus('uploading');
+          const pdfBlob: Blob = pdf.output('blob');
+          await uploadReportPdf(pdfBlob, fileName, formData.clientName || 'client');
+          alert('Report uploaded successfully.');
+        } catch (uploadError: any) {
+          const message = uploadError?.message || 'Unknown error';
+          alert(`Upload failed: ${message}`);
+        }
       
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again. Make sure all components are visible in the preview.');
     } finally {
       setIsGenerating(false);
+      setGenerationStatus(null);
+    }
+  };
+
+  // Upload the generated PDF to the backend using multipart/form-data
+  const uploadReportPdf = async (pdfBlob: Blob, fileName: string, clientName: string) => {
+    const formData = new FormData();
+    formData.append('file', pdfBlob, fileName);
+    formData.append('website', 'mysite');
+    formData.append('prefix', 'pdfs');
+    formData.append('client_name', clientName);
+    
+    const response = await fetch('https://admin-backend-stepintime.onrender.com/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`Upload failed: ${response.status} ${text}`);
     }
   };
 
@@ -848,6 +880,7 @@ const MultiStepForm: React.FC = () => {
     }
     
     // Generate PDF
+    setGenerationStatus('generating');
     await generatePDF();
   };
 
@@ -1677,6 +1710,20 @@ const MultiStepForm: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Generation/Upload Overlay */}
+      {isGenerating && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg px-6 py-5 border border-gray-200 max-w-sm w-full mx-4 text-center">
+            <div className="mx-auto mb-3 w-10 h-10 rounded-full border-4 border-[#F0D8D6] border-t-[#722420] animate-spin" />
+            <h4 className="text-base font-semibold text-gray-900 mb-1">
+              {generationStatus === 'uploading' ? 'Uploading report…' : 'Generating PDF…'}
+            </h4>
+            <p className="text-xs text-gray-500">
+              {generationStatus === 'uploading' ? 'Please wait while we upload your report.' : 'Rendering pages into a high-quality PDF.'}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Mobile Blocking Overlay */}
       {isMobile && (
         <div className="mobile-block-overlay">
@@ -3057,7 +3104,7 @@ const MultiStepForm: React.FC = () => {
                     className="w-full btn-primary"
                     disabled={isGenerating}
                   >
-                    {isGenerating ? 'Generating PDF...' : 'Generate Report'}
+                    {isGenerating ? (generationStatus === 'uploading' ? 'Uploading Report...' : 'Generating PDF...') : 'Generate Report'}
                   </button>
                 </>
               ) : (

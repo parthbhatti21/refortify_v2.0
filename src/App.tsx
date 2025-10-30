@@ -1,10 +1,11 @@
 import React from 'react';
 import MultiStepForm from './components/MultiStepForm';
+import Library from './components/Library';
 import './App.css';
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex flex-col">
             {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,10 +29,12 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
-        
-          
+      <main className="flex-1 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8 w-full">
+        {window.location.pathname === '/library' ? (
+          <Library />
+        ) : (
           <MultiStepForm />
+        )}
       </main>
 
       {/* Footer */}

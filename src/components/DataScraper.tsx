@@ -70,6 +70,44 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   const [allJobs, setAllJobs] = useState<JobData[]>([]);
   const [selectedDateJob, setSelectedDateJob] = useState<JobData | null>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [libraryRootDirs, setLibraryRootDirs] = useState<Array<{ name: string; prefix: string }>>([]);
+  const [libraryChildDirs, setLibraryChildDirs] = useState<Array<{ name: string; prefix: string }>>([]);
+
+  const openLibrary = async () => {
+    setShowLibrary(true);
+    setLibraryError(null);
+    setLibraryChildDirs([]);
+    setLibraryLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/directories');
+      if (!res.ok) throw new Error(`Failed to load directories: ${res.status}`);
+      const data = await res.json();
+      setLibraryRootDirs(Array.isArray(data.directories) ? data.directories : []);
+    } catch (e: any) {
+      setLibraryError(e?.message || 'Unable to load directories');
+    } finally {
+      setLibraryLoading(false);
+    }
+  };
+
+  const loadChildDirectories = async (prefix: string) => {
+    setLibraryError(null);
+    setLibraryLoading(true);
+    try {
+      const url = `http://localhost:8000/directories?bucket=parth-reportify&region=us-east-1&prefix=${encodeURIComponent(prefix)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to load subdirectories: ${res.status}`);
+      const data = await res.json();
+      setLibraryChildDirs(Array.isArray(data.directories) ? data.directories : []);
+    } catch (e: any) {
+      setLibraryError(e?.message || 'Unable to load subdirectories');
+    } finally {
+      setLibraryLoading(false);
+    }
+  };
 
   // Function to parse all jobs from HTML and extract their dates
   const parseAllJobsFromHtml = (htmlContent: string): JobData[] => {
@@ -389,7 +427,7 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
               type="button"
               onClick={() => setShowDateSelector(true)}
               disabled={!url || allJobs.length === 0}
-              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-red-900 text-white rounded-md hover:bg-red-940 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-[#722420] text-white rounded-md hover:bg-red-940 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               title="Select images from any available date"
             >
               Select Date Images
@@ -411,6 +449,16 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
             >
               Enter Manually
             </button>
+                  <div className="sm:ml-auto flex sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => { window.location.assign('/library'); }}
+                      className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] font-medium"
+                      title="Browse library directories"
+                    >
+                      Library
+                    </button>
+                  </div>
           </div>
         </form>
       </div>
@@ -828,6 +876,67 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Library Modal */}
+      {showLibrary && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Library</h3>
+              <button
+                onClick={() => setShowLibrary(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 space-y-6">
+              {libraryError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded">{libraryError}</div>
+              )}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Top-level directories</h4>
+                {libraryLoading && libraryRootDirs.length === 0 ? (
+                  <p className="text-sm text-gray-500">Loading…</p>
+                ) : libraryRootDirs.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {libraryRootDirs.map((d) => (
+                      <button
+                        key={d.prefix}
+                        onClick={() => loadChildDirectories(d.prefix)}
+                        className="w-full text-left p-3 border border-gray-200 rounded hover:border-blue-300 hover:bg-blue-50"
+                      >
+                        <div className="font-medium text-gray-900">{d.name}</div>
+                        <div className="text-xs text-gray-500">{d.prefix}</div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No directories found.</p>
+                )}
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Subdirectories</h4>
+                {libraryLoading && libraryChildDirs.length === 0 ? (
+                  <p className="text-sm text-gray-500">Loading…</p>
+                ) : libraryChildDirs.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {libraryChildDirs.map((d) => (
+                      <div key={d.prefix} className="p-3 border border-gray-200 rounded">
+                        <div className="font-medium text-gray-900">{d.name}</div>
+                        <div className="text-xs text-gray-500">{d.prefix}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Select a directory to view subdirectories.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
