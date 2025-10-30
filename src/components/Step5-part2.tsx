@@ -1541,7 +1541,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
                 Notes:
               </div>
-              <div style={{ paddingLeft: '10px' }}>
+              <div style={{ paddingLeft: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {notes}
               </div>
             </div>
@@ -2038,7 +2038,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
                 Notes:
               </div>
-              <div style={{ paddingLeft: '10px' }}>
+              <div style={{ paddingLeft: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {notes}
               </div>
             </div>
