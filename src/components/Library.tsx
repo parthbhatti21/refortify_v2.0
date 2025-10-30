@@ -14,22 +14,31 @@ interface FileItem {
 }
 
 const Library: React.FC = () => {
+  const API_BASE = process.env.REACT_APP_API_BASE ;
+  const API_KEY = process.env.REACT_APP_API_KEY;
+  console.log(API_BASE, API_KEY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<DirectoryItem[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [pathStack, setPathStack] = useState<DirectoryItem[]>([]); // breadcrumb of selected dirs
   const [search, setSearch] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const fetchList = async (prefix?: string) => {
     setLoading(true);
     setError(null);
     try {
-      // Call backend directly to avoid proxy mismatches
+      // Call backend with API key header
       const url = prefix
-        ? `https://admin-backend-stepintime.onrender.com/directories?bucket=parth-reportify&region=us-east-1&prefix=${encodeURIComponent(prefix)}`
-        : 'https://admin-backend-stepintime.onrender.com/directories';
-      const res = await fetch(url);
+        ? `${API_BASE}/directories?bucket=parth-reportify&region=us-east-1&prefix=${encodeURIComponent(prefix)}`
+        : `${API_BASE}/directories`;
+      const res = await fetch(url, {
+        headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined
+      });
       if (!res.ok) throw new Error(`Failed to load directories: ${res.status}`);
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
@@ -74,6 +83,32 @@ const Library: React.FC = () => {
     setPathStack(newStack);
     const last = newStack[newStack.length - 1];
     await fetchList(last?.prefix);
+  };
+
+  const openPreview = (file: FileItem) => {
+    setPreviewUrl(file.preview_url);
+    setPreviewName(file.key.split('/').slice(-1)[0]);
+    setPreviewLoading(true);
+    setShowPreview(true);
+  };
+
+  const handleDownload = (file: FileItem) => {
+    // Programmatic download to avoid exposing the signed URL in DOM markup
+    try {
+      const win = window.open(file.download_url, '_blank', 'noopener');
+      if (!win) {
+        // Fallback: create a temporary anchor and click it programmatically
+        const a = document.createElement('a');
+        a.href = file.download_url;
+        a.download = file.key.split('/').slice(-1)[0];
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (_) {
+      // no-op
+    }
   };
 
   const filteredDirs = items.filter(d =>
@@ -184,20 +219,18 @@ const Library: React.FC = () => {
                       <div className="text-xs text-gray-500">{new Date(f.last_modified).toLocaleString()} • {(f.size / (1024 * 1024)).toFixed(2)} MB</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <a
-                        href={f.preview_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => openPreview(f)}
                         className="px-3 py-2 text-sm rounded-md border border-[#722420] text-[#722420] hover:bg-[#f6eae9]"
                       >
                         Preview
-                      </a>
-                      <a
-                        href={f.download_url}
+                      </button>
+                      <button
+                        onClick={() => handleDownload(f)}
                         className="px-3 py-2 text-sm rounded-md bg-[#722420] text-white hover:bg-[#5a1d1a]"
                       >
                         Download
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -205,6 +238,41 @@ const Library: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl h-[85vh] flex flex-col">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <div className="min-w-0 pr-4">
+                <h4 className="text-base font-semibold text-gray-900 truncate">{previewName}</h4>
+                <p className="text-xs text-gray-500 truncate">PDF Preview</p>
+              </div>
+              <button
+                onClick={() => { setShowPreview(false); setPreviewUrl(null); }}
+                className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                aria-label="Close preview"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 relative bg-gray-50">
+              {previewLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full border-4 border-[#F0D8D6] border-t-[#722420] animate-spin" />
+                </div>
+              )}
+              {previewUrl && (
+                <iframe
+                  src={previewUrl}
+                  title={previewName}
+                  className="w-full h-full"
+                  onLoad={() => setPreviewLoading(false)}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

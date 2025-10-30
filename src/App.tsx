@@ -1,9 +1,28 @@
 import React from 'react';
 import MultiStepForm from './components/MultiStepForm';
 import Library from './components/Library';
+import Login from './components/Login';
+import { useEffect, useState } from 'react';
+import { supabase } from './lib/supabaseClient';
 import './App.css';
 
 function App() {
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsAuthed(!!data.session);
+    };
+    getSession();
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthed(!!session);
+    });
+    return () => { sub.subscription.unsubscribe(); };
+  }, []);
+
+  const otpPending = (() => { try { return localStorage.getItem('otp_pending') === '1'; } catch { return false; } })();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex flex-col">
             {/* Header */}
@@ -23,6 +42,14 @@ function App() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-xs sm:text-sm text-gray-500 text-center"> Quick report generator</span>
+              {isAuthed ? (
+                <button
+                  onClick={async () => { await supabase.auth.signOut(); }}
+                  className="px-3 py-1.5 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Logout
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -30,7 +57,11 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8 w-full">
-        {window.location.pathname === '/library' ? (
+        {isAuthed === null ? (
+          <div className="text-center text-gray-600">Loading…</div>
+        ) : (!isAuthed || otpPending) ? (
+          <Login />
+        ) : window.location.pathname === '/library' ? (
           <Library />
         ) : (
           <MultiStepForm />

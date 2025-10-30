@@ -863,6 +863,7 @@ const MultiStepForm: React.FC = () => {
       body: formData
     });
     
+    
     if (!response.ok) {
       const text = await response.text().catch(() => '');
       throw new Error(`Upload failed: ${response.status} ${text}`);
@@ -2249,7 +2250,7 @@ const MultiStepForm: React.FC = () => {
                               onClick={() => {
                                 const newRow = {
                                   id: Date.now().toString(),
-                                  description: 'Chimney Inspection - Level 1',
+                                  description: 'NFPA Level 1 Chimney Inspection(discounted)',
                                   unit: '1',
                                   price: '99.00'
                                 };
@@ -2265,14 +2266,14 @@ const MultiStepForm: React.FC = () => {
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
-                              Add Chimney Inspection - Level 1 ($99)
+                              Add NFPA Level 1 Chimney Inspection(discounted) ($99)
                             </button>
                             <button
                               type="button"
                               onClick={() => {
                                 const newRow = {
                                   id: Date.now().toString(),
-                                  description: 'Chimney Inspection - Level 2',
+                                  description: 'NFPA Level 1 Chimney Inspection and Sweep(discounted)',
                                   unit: '1',
                                   price: '149.00'
                                 };
@@ -2288,7 +2289,7 @@ const MultiStepForm: React.FC = () => {
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
-                              Add Chimney Inspection - Level 2 ($149)
+                              Add NFPA Level 1 Chimney Inspection and Sweep(discounted) ($149)
                             </button>
                             <div className="border-t my-1" />
                             <button
