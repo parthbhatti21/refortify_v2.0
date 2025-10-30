@@ -830,6 +830,7 @@ const MultiStepForm: React.FC = () => {
         const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
         pdf.save(fileName);
         
+        
         // Also upload the generated PDF to the backend
         try {
           setGenerationStatus('uploading');
@@ -852,15 +853,18 @@ const MultiStepForm: React.FC = () => {
 
   // Upload the generated PDF to the backend using multipart/form-data
   const uploadReportPdf = async (pdfBlob: Blob, fileName: string, clientName: string) => {
+    const API_BASE = process.env.REACT_APP_API_BASE || 'https://admin-backend-stepintime.onrender.com';
+    const API_KEY = process.env.REACT_APP_API_KEY;
     const formData = new FormData();
     formData.append('file', pdfBlob, fileName);
     formData.append('website', 'mysite');
     formData.append('prefix', 'pdfs');
     formData.append('client_name', clientName);
     
-    const response = await fetch('https://admin-backend-stepintime.onrender.com/upload', {
+    const response = await fetch(`${API_BASE}/upload`, {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined
     });
     
     
