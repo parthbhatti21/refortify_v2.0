@@ -1537,8 +1537,8 @@ const MultiStepForm: React.FC = () => {
       React.createElement(Step5Part2, { 
         isPDF: true, 
         repairEstimateData: formData.repairEstimateData, 
-        section1: { title: formData.recommendationSection1Title || 'Recommendations#1', rows: formData.repairEstimateData?.rows || [] },
-        section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Recommendations#2', rows: formData.recommendationSection2?.rows || [] } : undefined,
+        section1: { title: formData.recommendationSection1Title || 'Repair Estimate#1', rows: formData.repairEstimateData?.rows || [] },
+        section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Repair Estimate#2', rows: formData.recommendationSection2?.rows || [] } : undefined,
         currentEstimatePage: pageNumber - 4 - totalInvoicePages,
         notes: formData.notes
       }) :
@@ -2429,7 +2429,7 @@ const MultiStepForm: React.FC = () => {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="block text-sm font-medium text-gray-700">
-                      Recommendation Section 1
+                      Repair Estimate Section 1
                     </label>
                     <button
                       type="button"
@@ -2457,8 +2457,8 @@ const MultiStepForm: React.FC = () => {
                   <div className="mb-2">
                     <input
                       type="text"
-                      placeholder="Title for Recommendations#1"
-                      value={formData.recommendationSection1Title !== undefined ? formData.recommendationSection1Title : 'Recommendations#1'}
+                      placeholder="Title for Repair Estimate#1"
+                      value={formData.repairEstimateData?.estimateNumber || 'Repair Estimate#1'}
                       onChange={(e) => updateFormData({ recommendationSection1Title: e.target.value })}
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                     />
@@ -2552,14 +2552,14 @@ const MultiStepForm: React.FC = () => {
                 {/* Section 2 Controls */}
                 <div className="pt-2 border-t border-gray-200">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium text-gray-700">Recommendation Section 2</div>
+                    <div className="text-sm font-medium text-gray-700">Repair Estimate Section 2</div>
                     {!formData.showRecommendationSection2 ? (
                       <button
                         type="button"
                         onClick={() => updateFormData({ showRecommendationSection2: true, recommendationSection2: { rows: [] } })}
                         className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
                       >
-                        + Add Section 2
+                        + Add Repair Estimate Section 2
                       </button>
                     ) : (
                       <button
@@ -2567,7 +2567,7 @@ const MultiStepForm: React.FC = () => {
                         onClick={() => updateFormData({ showRecommendationSection2: false, recommendationSection2: { rows: [] }, recommendationSection2Title: '' })}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
                       >
-                        Remove Section 2
+                        Remove Repair Estimate Section 2
                       </button>
                     )}
                   </div>
@@ -2576,13 +2576,13 @@ const MultiStepForm: React.FC = () => {
                     <div className="mt-3 space-y-3">
                       <input
                         type="text"
-                        placeholder="Title for Recommendations#2"
-                        value={formData.recommendationSection2Title !== undefined ? formData.recommendationSection2Title : 'Recommendations#2'}
+                        placeholder="Title for Repair Estimate#2"
+                        value={formData.recommendationSection2Title !== undefined ? formData.recommendationSection2Title : 'Repair Estimate#2'}
                         onChange={(e) => updateFormData({ recommendationSection2Title: e.target.value })}
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                       />
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-700">Items (Section 2)</span>
+                        <span className="text-sm text-gray-700">Items (Repair Estimate Section 2)</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -3277,11 +3277,11 @@ const MultiStepForm: React.FC = () => {
                 <Step5Part2 
                   repairEstimateData={formData.repairEstimateData}
                   section1={{
-                    title: formData.recommendationSection1Title || 'Recommendations#1',
+                    title: formData.recommendationSection1Title || 'Repair Estimate#1',
                     rows: formData.repairEstimateData?.rows || []
                   }}
                   section2={formData.showRecommendationSection2 ? {
-                    title: formData.recommendationSection2Title || 'Recommendations#2',
+                    title: formData.recommendationSection2Title || 'Repair Estimate#2',
                     rows: formData.recommendationSection2?.rows || []
                   } : undefined}
                   updateRepairEstimateData={(data) => updateFormData({ repairEstimateData: data })}
