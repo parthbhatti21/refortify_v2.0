@@ -19,6 +19,7 @@ import Step10Part4 from './Step10Part4';
 import Step10Part5 from './Step10Part5';
 import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
+import { supabase } from '../lib/supabaseClient';
 
 export interface ImageItem {
   id: string;
@@ -436,7 +437,8 @@ const MultiStepForm: React.FC = () => {
     notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationStatus, setGenerationStatus] = useState<'generating' | 'uploading' | null>(null);
+  const [generationStatus, setGenerationStatus] = useState<'editing' | 'saving' | 'generating' | 'uploading' | null>(null);
+  const [isEditLoading, setIsEditLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [preferGoogleDocs, setPreferGoogleDocs] = useState(true); // User preference for PDF viewing
@@ -454,6 +456,22 @@ const MultiStepForm: React.FC = () => {
   const [showChangeImageModal, setShowChangeImageModal] = useState(false);
   const [showInvoiceQuickAdd, setShowInvoiceQuickAdd] = useState(false);
   const [predefinedSearchTerm, setPredefinedSearchTerm] = useState('');
+
+  // On refresh/load, clear previous saved snapshots for a clean session
+  useEffect(() => {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i) || '';
+        if (key.startsWith('sumoquote_v2_')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (err) {
+      // Ignore storage errors
+    }
+  }, []);
 
   // Toggle page inclusion in PDF
   const togglePageInclusion = (logicalStep: number) => {
@@ -559,6 +577,231 @@ const MultiStepForm: React.FC = () => {
 
   const updateFormData = (data: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...data }));
+  };
+
+  // Load existing report for editing when coming from Library
+  useEffect(() => {
+    const loadForEdit = async () => {
+      let ctxRaw: string | null = null;
+      try { ctxRaw = localStorage.getItem('edit_context'); } catch {}
+      if (!ctxRaw) return;
+      let ctx: any = null;
+      try { ctx = JSON.parse(ctxRaw); } catch { return; }
+      const clientId: string | undefined = ctx?.clientId;
+      const dateISO: string | undefined = ctx?.date;
+      if (!clientId || !dateISO) return;
+      try {
+        // Immediately switch UI to form and show loading to avoid flicker
+        setCurrentStep('form');
+        setCurrentPage(1);
+        setIsEditLoading(true);
+        setGenerationStatus('editing');
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr) throw userErr;
+        const userId = userData?.user?.id;
+        if (!userId) throw new Error('Not signed in');
+
+        const start = new Date(dateISO + 'T00:00:00Z').toISOString();
+        const end = new Date(new Date(dateISO).getTime() + 24*60*60*1000).toISOString();
+
+        const { data: reportsData, error: repErr } = await supabase
+          .from('reports')
+          .select('id, client_name, created_at')
+          .eq('client_id', clientId)
+          .eq('created_by', userId)
+          .gte('created_at', start)
+          .lt('created_at', end)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (repErr) throw repErr;
+        const report = (reportsData || [])[0];
+        if (!report) return;
+        const reportId = report.id as string;
+
+        // Fetch step JSONs in parallel
+        const [s1, s3, s5i, s5p2, s6, s7, s8] = await Promise.all([
+          supabase.from('step1_json').select('data').eq('report_id', reportId).single(),
+          supabase.from('step3_json').select('data').eq('report_id', reportId).single(),
+          supabase.from('step5_invoice_json').select('data').eq('report_id', reportId).single(),
+          supabase.from('step5_part2_json').select('data').eq('report_id', reportId).single(),
+          supabase.from('step6_json').select('data').eq('report_id', reportId).single(),
+          supabase.from('step7_json').select('data').eq('report_id', reportId).single(),
+          supabase.from('step8_json').select('data').eq('report_id', reportId).single(),
+        ]);
+
+        const step1 = (s1 as any)?.data?.data || {};
+        const step5Inv = (s5i as any)?.data?.data || {};
+        const step5p2 = (s5p2 as any)?.data?.data || {};
+        const step6j = (s6 as any)?.data?.data || {};
+        const step7j = (s7 as any)?.data?.data || {};
+        const step8j = (s8 as any)?.data?.data || {};
+
+        // Map to formData
+        const mapped: Partial<FormData> = {
+          clientName: step1['Client Name'] || report.client_name || '',
+          clientAddress: step1['Client Address'] || '',
+          chimneyType: (step1['Chimney Type'] || '').toString().toLowerCase(),
+          reportDate: step1['Report Date'] || new Date().toISOString().split('T')[0],
+          timelineCoverImage: step1['House Image Link'] || '',
+          invoiceData: {
+            invoiceNumber: step5Inv['Invoice Number'] || '',
+            paymentMethod: step5Inv['Method of Payment'] || '',
+            paymentNumber: step5Inv['Payment No'] || '',
+            rows: (step5Inv['Invoice Table'] || []).map((r: any) => ({
+              id: r.id || String(Math.random()),
+              description: r.description || '',
+              unit: r.unit || '',
+              price: r.price || ''
+            }))
+          },
+          notes: step5p2['Notes'] || '',
+          repairEstimateData: {
+            estimateNumber: step5p2['Estimate Number'] || '',
+            paymentMethod: step5p2['Method of Payment'] || '',
+            paymentNumber: step5p2['Payment No'] || '',
+            rows: (step5p2['Section 1 Rows'] || []).map((r: any) => ({
+              id: r.id || String(Math.random()),
+              description: r.description || '',
+              unit: r.unit || '',
+              price: r.price || ''
+            }))
+          },
+          recommendationSection1Title: step5p2['Section 1 Title'] || 'Repair Estimate 1',
+          showRecommendationSection2: !!step5p2['Section 2 Rows'],
+          recommendationSection2Title: step5p2['Section 2 Title'] || '',
+          recommendationSection2: step5p2['Section 2 Rows'] ? {
+            rows: (step5p2['Section 2 Rows'] || []).map((r: any) => ({
+              id: r.id || String(Math.random()),
+              description: r.description || '',
+              unit: r.unit || '',
+              price: r.price || ''
+            }))
+          } : undefined,
+          selectedImages: (step6j['Selected Images'] || []).map((img: any) => ({ id: img.id, url: img.url })),
+          // Build scrapedImages from selected (step6) + inspection (step8)
+          scrapedImages: (() => {
+            const selected = (step6j['Selected Images'] || []).map((img: any) => ({ id: img.id || `sel-${Math.random()}`, url: img.url }));
+            const inspection = (step8j['Inspection Images'] || step8j['inspectionImages'] || []).map((img: any) => ({ id: img.id || `ins-${Math.random()}`, url: img.url }));
+            const seen = new Set<string>();
+            const merged: any[] = [];
+            [...selected, ...inspection].forEach((img) => {
+              const key = img.url;
+              if (!seen.has(key)) { seen.add(key); merged.push(img); }
+            });
+            return merged;
+          })(),
+          repairEstimatePages: (step7j['Recommendations'] || []).map((p: any) => ({
+            id: String(Math.random()),
+            reviewImage: p.reviewImage,
+            customRecommendation: '',
+            repairEstimateData: {
+              manualEntry: false,
+              rows: (p.rows || []).map((r: any) => ({
+                id: r.id || String(Math.random()),
+                description: r.description || '',
+                unit: r.unit || '',
+                price: r.price || '',
+                recommendation: r.recommendation || ''
+              }))
+            }
+          }))
+        } as any;
+
+        setFormData(prev => ({ ...prev, ...mapped }));
+      } catch (e) {
+        // ignore
+      } finally {
+        // Clear any step caches to avoid stale state
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i) || '';
+            if (k.startsWith('sumoquote_v2_')) {
+              localStorage.removeItem(k);
+            }
+          }
+          localStorage.removeItem('edit_context');
+        } catch {}
+        setIsEditLoading(false);
+        setGenerationStatus(null);
+      }
+    };
+    loadForEdit();
+  }, []);
+
+  // Build a labeled snapshot for specific logical steps, skipping static pages
+  // May return a special key via __key to override default storage key when needed
+  const buildStepSnapshot = (logicalStep: number) => {
+    const formattedChimneyType = (formData.chimneyType || '').trim();
+    if (logicalStep === 1) {
+      return {
+        'Client Name': formData.clientName || '',
+        'Client Address': formData.clientAddress || '',
+        'Chimney Type': formattedChimneyType ? formattedChimneyType.charAt(0).toUpperCase() + formattedChimneyType.slice(1) : '',
+        'Report Date': formData.reportDate || '',
+        'House Image Link': formData.timelineCoverImage || ''
+      };
+    }
+    if (logicalStep === 3) {
+      return {
+        'Client Name': formData.clientName || ''
+      };
+    }
+    if (logicalStep === 5) {
+      // Distinguish between Invoice (Step 5) and Repair Estimate (Step 5 Part 2)
+      if (typeof isInvoicePage === 'function' && isInvoicePage(currentPage)) {
+        return {
+          'Invoice Number': formData.invoiceData?.invoiceNumber || '',
+          'Method of Payment': formData.invoiceData?.paymentMethod || '',
+          'Payment No': formData.invoiceData?.paymentNumber || '',
+          'Invoice Table': formData.invoiceData?.rows || []
+        };
+      }
+      if (typeof isRepairEstimatePage === 'function' && isRepairEstimatePage(currentPage)) {
+        // Step 5 Part 2 snapshot
+        const section1 = {
+          title: formData.recommendationSection1Title || 'Repair Estimate#1',
+          rows: formData.repairEstimateData?.rows || []
+        };
+        const hasSection2 = !!formData.showRecommendationSection2;
+        const section2 = hasSection2 ? {
+          title: formData.recommendationSection2Title || 'Repair Estimate#2',
+          rows: formData.recommendationSection2?.rows || []
+        } : undefined;
+        return {
+          __key: 'sumoquote_v2_step_5_part2',
+          data: {
+            'Estimate Number': formData.repairEstimateData?.estimateNumber || '',
+            'Method of Payment': formData.repairEstimateData?.paymentMethod || '',
+            'Payment No': formData.repairEstimateData?.paymentNumber || '',
+            'Section 1 Title': section1.title,
+            'Section 1 Rows': section1.rows,
+            ...(section2 ? {
+              'Section 2 Title': section2.title,
+              'Section 2 Rows': section2.rows
+            } : {}),
+            'Notes': formData.notes || ''
+          }
+        };
+      }
+    }
+    if (logicalStep === 6) {
+      // Step 6 - Selected Images
+      return {
+        'Selected Images': (formData.selectedImages || []).map(img => ({ id: img.id, url: img.url }))
+      };
+    }
+    if (logicalStep === 7) {
+      // Step 7 - Recommendation pages (image + table rows per recommendation)
+      const pages = formData.repairEstimatePages || [];
+      return {
+        'Recommendations': pages.map((p: any, idx: number) => ({
+          index: idx + 1,
+          reviewImage: p.reviewImage,
+          rows: (p.repairEstimateData?.rows) || []
+        }))
+      };
+    }
+    return null; // Do not save static or unsupported steps
   };
 
   // Helper functions for managing recommendation pages
@@ -884,6 +1127,17 @@ const MultiStepForm: React.FC = () => {
       return;
     }
     
+    // Save report and step-wise data to Supabase first
+    try {
+      setIsGenerating(true);
+      setGenerationStatus('saving');
+      await saveReportToSupabase();
+    } catch (err: any) {
+      console.error('Failed saving to Supabase:', err);
+      alert(`Failed saving to database: ${err?.message || 'Unknown error'}`);
+      // Continue to generate PDF even if DB save fails
+    }
+
     // Generate PDF
     setGenerationStatus('generating');
     await generatePDF();
@@ -915,6 +1169,128 @@ const MultiStepForm: React.FC = () => {
   const maxRowsPerPage = Math.floor(MAX_TABLE_HEIGHT / ROW_HEIGHT);
   const ITEMS_PER_PAGE = Math.max(1, maxRowsPerPage); // At least 1 row per page
   
+  // Persist the report and step-wise data to Supabase
+  const saveReportToSupabase = async (): Promise<string | null> => {
+    // Require authenticated user for RLS-backed writes
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr) throw userErr;
+    const userId = userData?.user?.id || null;
+    if (!userId) {
+      throw new Error('Not signed in. Please log in to save reports.');
+    }
+
+    // 1) Ensure client exists (reuse by full_name if present)
+    const clientName = (formData.clientName || '').trim();
+    let clientId: string | null = null;
+    if (clientName) {
+      const { data: existingClients, error: findClientError } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('full_name', clientName)
+        .eq('created_by', userId)
+        .limit(1);
+      if (findClientError) throw findClientError;
+      if (existingClients && existingClients.length > 0) {
+        clientId = existingClients[0].id;
+      } else {
+        const { data: insertedClient, error: insertClientError } = await supabase
+          .from('clients')
+          .insert({ full_name: clientName, created_by: userId })
+          .select('id')
+          .single();
+        if (insertClientError) throw insertClientError;
+        clientId = insertedClient?.id || null;
+      }
+    }
+
+    // 2) Create a new report (one client -> many reports)
+    const { data: reportRow, error: reportErr } = await supabase
+      .from('reports')
+      .insert({ client_name: clientName || null, client_id: clientId, created_by: userId })
+      .select('id')
+      .single();
+    if (reportErr) throw reportErr;
+    const reportId: string = reportRow.id;
+
+    // 3) JSON step tables upserts
+    // Step 1 JSON
+    const step1Json = {
+      'Client Name': formData.clientName || '',
+      'Client Address': formData.clientAddress || '',
+      'Chimney Type': (formData.chimneyType || '').trim(),
+      'Report Date': formData.reportDate || '',
+      'House Image Link': formData.timelineCoverImage || ''
+    };
+    const { error: s1JsonErr } = await supabase.from('step1_json').upsert({ report_id: reportId, data: step1Json }, { onConflict: 'report_id' });
+    if (s1JsonErr) throw s1JsonErr;
+
+    // Step 3 JSON
+    const step3Json = { 'Client Name': formData.clientName || '' };
+    const { error: s3JsonErr } = await supabase.from('step3_json').upsert({ report_id: reportId, data: step3Json }, { onConflict: 'report_id' });
+    if (s3JsonErr) throw s3JsonErr;
+
+    // Step 5 (Invoice) JSON
+    const invoice = formData.invoiceData || { rows: [] } as any;
+    const step5InvoiceJson = {
+      'Invoice Number': invoice.invoiceNumber || '',
+      'Method of Payment': invoice.paymentMethod || '',
+      'Payment No': invoice.paymentNumber || '',
+      'Invoice Table': invoice.rows || []
+    };
+    const { error: s5InvJsonErr } = await supabase.from('step5_invoice_json').upsert({ report_id: reportId, data: step5InvoiceJson }, { onConflict: 'report_id' });
+    if (s5InvJsonErr) throw s5InvJsonErr;
+
+    // Step 5 Part 2 JSON
+    const step5Part2Json = {
+      'Estimate Number': formData.repairEstimateData?.estimateNumber || '',
+      'Method of Payment': formData.repairEstimateData?.paymentMethod || '',
+      'Payment No': formData.repairEstimateData?.paymentNumber || '',
+      'Section 1 Title': (formData as any).recommendationSection1Title || 'Repair Estimate 1',
+      'Section 1 Rows': formData.repairEstimateData?.rows || [],
+      ...( (formData as any).showRecommendationSection2 ? {
+        'Section 2 Title': (formData as any).recommendationSection2Title || 'Repair Estimate 2',
+        'Section 2 Rows': ((formData as any).recommendationSection2?.rows) || []
+      } : {}),
+      'Notes': formData.notes || ''
+    };
+    const { error: s5p2JsonErr } = await supabase.from('step5_part2_json').upsert({ report_id: reportId, data: step5Part2Json }, { onConflict: 'report_id' });
+    if (s5p2JsonErr) throw s5p2JsonErr;
+
+    // Step 6 JSON (selected images)
+    const step6Json = {
+      'Selected Images': (formData.selectedImages || []).map(img => ({ id: img.id, url: img.url }))
+    };
+    const { error: s6JsonErr } = await supabase.from('step6_json').upsert({ report_id: reportId, data: step6Json }, { onConflict: 'report_id' });
+    if (s6JsonErr) throw s6JsonErr;
+
+    // Step 7 JSON (recommendations)
+    const step7Json = {
+      'Recommendations': (formData.repairEstimatePages || []).map((p: any, idx: number) => ({
+        index: idx + 1,
+        reviewImage: p.reviewImage,
+        rows: (p.repairEstimateData?.rows) || []
+      }))
+    };
+    const { error: s7JsonErr } = await supabase.from('step7_json').upsert({ report_id: reportId, data: step7Json }, { onConflict: 'report_id' });
+    if (s7JsonErr) throw s7JsonErr;
+
+    // Step 8 JSON (inspection images)
+    const allImages = formData.scrapedImages || [];
+    const selectedIds = new Set((formData.selectedImages || []).map(img => img.id));
+    const usedRecommendationImages = new Set<string>();
+    (formData.repairEstimatePages || []).forEach((page: any) => {
+      if (page.reviewImage) usedRecommendationImages.add(page.reviewImage);
+    });
+    const inspectionImages = allImages
+      .filter((img: any) => !selectedIds.has(img.id) && !usedRecommendationImages.has(img.url))
+      .map((img: any) => ({ id: img.id, url: img.url }));
+    const step8Json = { 'Inspection Images': inspectionImages };
+    const { error: s8JsonErr } = await supabase.from('step8_json').upsert({ report_id: reportId, data: step8Json }, { onConflict: 'report_id' });
+    if (s8JsonErr) throw s8JsonErr;
+
+    return reportId;
+  };
+
   // Smart pagination: ensure no row is cut off
   const calculateSmartInvoicePages = () => {
     const totalRows = formData.invoiceData?.rows?.length || 0;
@@ -1252,6 +1628,30 @@ const MultiStepForm: React.FC = () => {
   };
 
   const handleNextPage = () => {
+    // Persist step-wise labeled snapshot (if applicable), and latest snapshot
+    try {
+      const logicalStep = getLogicalStep(currentPage);
+      const stepSnapshot: any = buildStepSnapshot(logicalStep);
+      if (stepSnapshot) {
+        const now = new Date().toISOString();
+        const keyOverride = (stepSnapshot as any).__key;
+        const dataToStore = (stepSnapshot as any).data ? (stepSnapshot as any).data : stepSnapshot;
+        const storageKey = keyOverride || `sumoquote_v2_step_${logicalStep}`;
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({ step: logicalStep, data: dataToStore, savedAt: now })
+        );
+        // Maintain a lightweight index of saved steps
+        const existingIndexRaw = localStorage.getItem('sumoquote_v2_steps_index');
+        const existingIndex: number[] = existingIndexRaw ? JSON.parse(existingIndexRaw) : [];
+        if (!existingIndex.includes(logicalStep)) {
+          localStorage.setItem('sumoquote_v2_steps_index', JSON.stringify([...existingIndex, logicalStep].sort((a, b) => a - b)));
+        }
+      }
+    } catch (err) {
+      // Ignore storage errors (e.g., quota exceeded, private mode)
+    }
+
     // Mark current step as completed when moving to next page
     markStepCompleted(currentLogicalStep);
     
@@ -1716,15 +2116,15 @@ const MultiStepForm: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Generation/Upload Overlay */}
-      {isGenerating && (
+      {(isGenerating || isEditLoading) && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-lg px-6 py-5 border border-gray-200 max-w-sm w-full mx-4 text-center">
             <div className="mx-auto mb-3 w-10 h-10 rounded-full border-4 border-[#F0D8D6] border-t-[#722420] animate-spin" />
             <h4 className="text-base font-semibold text-gray-900 mb-1">
-              {generationStatus === 'uploading' ? 'Uploading report…' : 'Generating PDF…'}
+              {generationStatus === 'editing' ? 'Loading report…' : generationStatus === 'saving' ? 'Saving data…' : generationStatus === 'uploading' ? 'Uploading report…' : 'Generating PDF…'}
             </h4>
             <p className="text-xs text-gray-500">
-              {generationStatus === 'uploading' ? 'Please wait while we upload your report.' : 'Rendering pages into a high-quality PDF.'}
+              {generationStatus === 'editing' ? 'Preparing your report for editing.' : generationStatus === 'saving' ? 'Writing your report data to the database.' : generationStatus === 'uploading' ? 'Please wait while we upload your report.' : 'Rendering pages into a high-quality PDF.'}
             </p>
           </div>
         </div>
@@ -3109,7 +3509,13 @@ const MultiStepForm: React.FC = () => {
                     className="w-full btn-primary"
                     disabled={isGenerating}
                   >
-                    {isGenerating ? (generationStatus === 'uploading' ? 'Uploading Report...' : 'Generating PDF...') : 'Generate Report'}
+                    {isGenerating
+                      ? (generationStatus === 'saving'
+                          ? 'Saving Data...'
+                          : generationStatus === 'uploading'
+                            ? 'Uploading Report...'
+                            : 'Generating PDF...')
+                      : 'Generate Report'}
                   </button>
                 </>
               ) : (

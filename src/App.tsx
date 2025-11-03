@@ -8,6 +8,7 @@ import { supabase } from './lib/supabaseClient';
 import './App.css';
 function App() {
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  const [path, setPath] = useState<string>(() => window.location.pathname);
 
   useEffect(() => {
     const getSession = async () => {
@@ -18,7 +19,21 @@ function App() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthed(!!session);
     });
-    return () => { sub.subscription.unsubscribe(); };
+    const onPop = () => setPath(window.location.pathname);
+    const onNavigate = (e: any) => {
+      const to = e?.detail?.to || '/';
+      if (window.location.pathname !== to) {
+        window.history.pushState({}, '', to);
+        setPath(to);
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('app:navigate', onNavigate as any);
+    return () => {
+      sub.subscription.unsubscribe();
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('app:navigate', onNavigate as any);
+    };
   }, []);
 
   const otpPending = (() => { try { return localStorage.getItem('otp_pending') === '1'; } catch { return false; } })();
@@ -61,7 +76,7 @@ function App() {
           <div className="text-center text-gray-600">Loading…</div>
         ) : (!isAuthed || otpPending) ? (
           <Login />
-        ) : window.location.pathname === '/library' ? (
+        ) : path === '/library' ? (
           <Library />
         ) : (
           <MultiStepForm />
