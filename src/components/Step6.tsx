@@ -155,29 +155,25 @@ export const Page6: React.FC<Page6Props> = ({
                     />
                   </div>
                 ) : localSelectedImages.length === 2 ? (
-                  // Two images - stacked vertically centered
+                  // Two images - aligned horizontally side-by-side
                   <div 
-                    className="flex flex-col gap-4"
+                    className="flex flex-row gap-4"
                     style={{
-                      maxWidth: isPDF ? '85%' : '70%',
-                      maxHeight: isPDF ? '95%' : '90%',
+                      maxWidth: isPDF ? '480px' : '520px',
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginTop: isPDF ? '40px' : '0'
                     }}
                   >
                     {localSelectedImages.map((image, index) => (
-                      <div key={image.id} className="relative top-[10px]" style={{ top: isPDF ? '25px': '0'}}>
+                      <div key={image.id} className="relative">
                         <img
                           src={image.url}
                           alt={image.alt || `Project image ${index + 1}`}
                           className="shadow-md rounded-lg object-cover"
                           style={{
-                            maxWidth: isPDF ? '450px' : '500px',
-                            maxHeight: isPDF ? '250px' : '250px',
-                        
-                            width: 'auto',
-                            height: 'auto'
+                            width: isPDF ? '220px' : '240px',
+                            height: isPDF ? '250px' : '250px'
                           }}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
