@@ -55,6 +55,42 @@ const Page5: FunctionComponent<Page5Props> = ({
   
   const { totalPages, currentPageRows } = calculateSmartPagination();
 
+  // Calculate dynamic Total column width based on maximum total value
+  const calculateTotalColumnWidth = () => {
+    const minWidth = 60; // Minimum width for small numbers
+    const charWidth = 8; // Approximate width per character (including decimal point)
+    const padding = 16; // Total padding (8px on each side)
+    
+    // Find the maximum total value
+    let maxTotal = 0;
+    localData.rows.forEach(row => {
+      const unitPrice = parseFloat(row.unit) || 0;
+      const price = parseFloat(row.price) || 0;
+      const total = unitPrice * price;
+      if (total > maxTotal) maxTotal = total;
+    });
+    
+    // Calculate grand total
+    const grandTotal = localData.rows.reduce((sum, row) => {
+      const unitPrice = parseFloat(row.unit) || 0;
+      const price = parseFloat(row.price) || 0;
+      return sum + (unitPrice * price);
+    }, 0);
+    
+    // Use the larger of max row total or grand total
+    const largestValue = Math.max(maxTotal, grandTotal);
+    
+    // Format the number and calculate width needed
+    const formattedValue = largestValue.toFixed(2);
+    const valueWidth = formattedValue.length * charWidth + padding;
+    
+    // Return the larger of calculated width or minimum width
+    return Math.max(valueWidth, minWidth);
+  };
+  
+  const totalColumnWidth = calculateTotalColumnWidth();
+  const priceColumnWidth = Math.max(60, Math.ceil(totalColumnWidth / 2)); // Price column is half of total column width
+
   return (
     <div className={styles.page}>
       <div className={styles.overlapWrapper}>
@@ -91,7 +127,7 @@ const Page5: FunctionComponent<Page5Props> = ({
               ref={tableRef}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: '3fr 50px 60px 60px',
+                gridTemplateColumns: `3fr 50px ${priceColumnWidth}px ${totalColumnWidth}px`,
                 gap: '0px',
                 border: '1px solid #722420',
                 backgroundColor:'#722420 ',
@@ -265,7 +301,7 @@ const Page5: FunctionComponent<Page5Props> = ({
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
-                        textAlign: 'center',
+                        textAlign: 'left',
                         lineHeight: '1.0',
                         rowSpan: rowSpan,
                         height: `${descriptionHeight}px`,
@@ -274,7 +310,7 @@ const Page5: FunctionComponent<Page5Props> = ({
                       } : {
                         display: 'flex',
                         alignItems: 'flex-start',
-                        justifyContent: 'center',
+                        justifyContent: 'left',
                         textAlign: 'left',
                         paddingTop: '2px'
                       }),
@@ -490,9 +526,7 @@ const Page5: FunctionComponent<Page5Props> = ({
                       textAlign: 'center'
                     }),
                     fontSize: '12px',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word',
-                    whiteSpace: 'normal'
+                    whiteSpace: 'nowrap'
                   }}>
                     ${localData.rows.reduce((sum, row) => {
                       const unitPrice = parseFloat(row.unit) || 0;

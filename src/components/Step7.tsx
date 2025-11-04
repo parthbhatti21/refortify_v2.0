@@ -588,7 +588,7 @@ export const Page7: React.FC<Page7Props> = ({
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
-                        textAlign: 'center',
+                        textAlign: 'left',
                         lineHeight: '1.0',
                         height: `${20 * rowSpan}px`,
                         boxSizing: 'border-box',
@@ -596,8 +596,8 @@ export const Page7: React.FC<Page7Props> = ({
                       } : {
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
+                        justifyContent: 'flex-start',
+                        textAlign: 'left'
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: UNIFORM_FONT,
@@ -868,16 +868,18 @@ export const Page7: React.FC<Page7Props> = ({
                   textAlign: 'justify',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
-                  whiteSpace: 'normal',
+                  whiteSpace: 'pre-wrap',
                   hyphens: 'auto'
                 }}>
                   {(() => {
-                    const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                     const hasManualRows = tableRows.some(row => row.isManual);
-                    const allRecommendations = (customRecommendation && hasManualRows) ? 
-                      `${tableRecommendations} ${customRecommendation}`.trim() : 
-                      tableRecommendations;
-                    return allRecommendations;
+                    // If customRecommendation exists, use it (preserves line breaks)
+                    if (customRecommendation && hasManualRows) {
+                      return customRecommendation;
+                    }
+                    // Otherwise, combine table recommendations with newlines
+                    const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join('\n');
+                    return tableRecommendations;
                   })()}
                 </p>
               </div>
@@ -1153,8 +1155,8 @@ export const Page7: React.FC<Page7Props> = ({
                     padding: isPDF ? '0px 8px' : '4px 8px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
                     height: '22px',
                     boxSizing: 'border-box',
                     lineHeight: '1.0',
@@ -1312,14 +1314,16 @@ export const Page7: React.FC<Page7Props> = ({
               }}
             >
             <h4 className="font-bold mb-2 text-[#722420]" style={{ fontSize: UNIFORM_FONT }}>Professional Recommendations:</h4>
-              <p ref={previewRecTextRef} className="text-gray-700 leading-tight text-justify break-words whitespace-normal" style={{ fontSize: UNIFORM_FONT }}>
+              <p ref={previewRecTextRef} className="text-gray-700 leading-tight text-justify break-words whitespace-pre-wrap" style={{ fontSize: UNIFORM_FONT }}>
                 {(() => {
-                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
                   const hasManualRows = tableRows.some(row => row.isManual);
-                  const allRecommendations = (customRecommendation && hasManualRows) ? 
-                    `${tableRecommendations} ${customRecommendation}`.trim() : 
-                    tableRecommendations;
-                  return allRecommendations;
+                  // If customRecommendation exists, use it (preserves line breaks)
+                  if (customRecommendation && hasManualRows) {
+                    return customRecommendation;
+                  }
+                  // Otherwise, combine table recommendations with newlines
+                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join('\n');
+                  return tableRecommendations;
                 })()}
               </p>
             </div>

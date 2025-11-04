@@ -110,11 +110,86 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
 
   const section1Height = calculateTableHeight(effectiveSection1.rows);
   const section2Height = effectiveSection2 ? calculateTableHeight(effectiveSection2.rows) : 0;
+
+  // Calculate dynamic Total column width based on maximum total value for a section
+  const calculateTotalColumnWidth = (rows: RepairEstimateRow[]) => {
+    const minWidth = 60; // Minimum width for small numbers
+    const charWidth = 8; // Approximate width per character (including decimal point)
+    const padding = 16; // Total padding (8px on each side)
+    
+    if (rows.length === 0) return minWidth;
+    
+    // Find the maximum total value
+    let maxTotal = 0;
+    rows.forEach(row => {
+      const unitPrice = parseFloat(row.unit) || 0;
+      const price = parseFloat(row.price) || 0;
+      const total = unitPrice * price;
+      if (total > maxTotal) maxTotal = total;
+    });
+    
+    // Calculate section total
+    const sectionTotal = rows.reduce((sum, row) => {
+      const unitPrice = parseFloat(row.unit) || 0;
+      const price = parseFloat(row.price) || 0;
+      return sum + (unitPrice * price);
+    }, 0);
+    
+    // Use the larger of max row total or section total
+    const largestValue = Math.max(maxTotal, sectionTotal);
+    
+    // Format the number and calculate width needed
+    const formattedValue = largestValue.toFixed(2);
+    const valueWidth = formattedValue.length * charWidth + padding;
+    
+    // Return the larger of calculated width or minimum width
+    return Math.max(valueWidth, minWidth);
+  };
+
+  // Calculate Total column width for summary table (combines both sections)
+  const calculateSummaryTotalColumnWidth = () => {
+    const minWidth = 60;
+    const charWidth = 8;
+    const padding = 16;
+    
+    // Calculate totals for both sections
+    const sum1 = (effectiveSection1.rows || []).reduce((sum, row) => {
+      const unitPrice = parseFloat(row.unit) || 0;
+      const price = parseFloat(row.price) || 0;
+      return sum + (unitPrice * price);
+    }, 0);
+    
+    const sum2 = (effectiveSection2?.rows || []).reduce((sum, row) => {
+      const unitPrice = parseFloat(row.unit) || 0;
+      const price = parseFloat(row.price) || 0;
+      return sum + (unitPrice * price);
+    }, 0);
+    
+    const grandTotal = sum1 + sum2;
+    
+    // Format the number and calculate width needed
+    const formattedValue = grandTotal.toFixed(2);
+    const valueWidth = formattedValue.length * charWidth + padding;
+    
+    // Return the larger of calculated width or minimum width
+    return Math.max(valueWidth, minWidth);
+  };
+  
+  const section1TotalWidth = calculateTotalColumnWidth(effectiveSection1.rows);
+  const section2TotalWidth = effectiveSection2 ? calculateTotalColumnWidth(effectiveSection2.rows) : 60;
+  const summaryTotalWidth = calculateSummaryTotalColumnWidth();
+  
+  // Price column width is half of total column width for each section
+  const section1PriceWidth = Math.max(60, Math.ceil(section1TotalWidth / 2));
+  const section2PriceWidth = Math.max(60, Math.ceil(section2TotalWidth / 2));
+  const summaryPriceWidth = Math.max(60, Math.ceil(summaryTotalWidth / 2));
   const GAP_BETWEEN_TABLES = 80; // Base gap between tables
 
   // Dynamic positions
   const section1Top = 150;
-  const section1TableTop = 180;
+  // If only one section, start table at 170px (no title, but space from header)
+  // If section 2 exists, start at 180px (30px gap for title)
+  const section1TableTop = effectiveSection2 ? 180 : 170;
   
   // When Section 2 exists, position it below Section 1 with dynamic spacing
   const extraSpacing = Math.min(effectiveSection1.rows.length * 2); // Max 30px extra spacing
@@ -196,10 +271,12 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
           {/* Render Section 1 - Only show if not summary-only page or notes-only page */}
           {!isSummaryOnlyPage && !isNotesOnlyPage && effectiveSection1.rows.length > 0 && (
             <>
-              {/* Section 1 Title */}
-              <div style={{ position: 'absolute', top: `${section1Top}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
-                {effectiveSection1.title}
-              </div>
+              {/* Section 1 Title - Only show if there are 2 sections */}
+              {effectiveSection2 && (
+                <div style={{ position: 'absolute', top: `${section1Top}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
+                  {effectiveSection1.title}
+                </div>
+              )}
 
               {/* Section 1 Table */}
           <div style={{ 
@@ -214,7 +291,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               ref={tableRef}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: '3fr 50px 60px 60px',
+                gridTemplateColumns: `3fr 50px ${section1PriceWidth}px ${section1TotalWidth}px`,
                 gap: '0px',
                 border: '1px solid #722420',
                 backgroundColor:'#722420 ',
@@ -380,7 +457,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
-                        textAlign: 'center',
+                        textAlign: 'left',
                         lineHeight: '1.0',
                         rowSpan: rowSpan,
                         height: `${descriptionHeight}px`,
@@ -389,7 +466,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       } : {
                         display: 'flex',
                         alignItems: 'flex-start',
-                        justifyContent: 'center',
+                        justifyContent: 'flex-start',
                         textAlign: 'left',
                         paddingTop: '2px'
                       }),
@@ -494,13 +571,9 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'pre-wrap',
+                      whiteSpace: 'nowrap',
                       maxWidth: '100%',
-                      overflow: 'hidden',
-                      hyphens: 'auto',
-                      wordBreak: 'normal'
+                      overflow: 'hidden'
                     }}>
                       {total.toFixed(2)}
                     </div>
@@ -605,9 +678,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           textAlign: 'center'
                         }),
                         fontSize: '12px',
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
-                        whiteSpace: 'normal'
+                        whiteSpace: 'nowrap'
                       }}>
                         ${(effectiveSection1.rows || []).reduce((sum, row) => {
                           const unitPrice = parseFloat(row.unit) || 0;
@@ -642,7 +713,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 <div 
                   style={{ 
                     display: 'grid',
-                    gridTemplateColumns: '3fr 50px 60px 60px',
+                    gridTemplateColumns: `3fr 50px ${section2PriceWidth}px ${section2TotalWidth}px`,
                     gap: '0px',
                     border: '1px solid #722420',
                     backgroundColor:'#722420 ',
@@ -808,7 +879,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'top',
-                            textAlign: 'center',
+                            textAlign: 'left',
                             lineHeight: '1.0',
                             rowSpan: rowSpan,
                             height: `${descriptionHeight}px`,
@@ -817,7 +888,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           } : {
                             display: 'flex',
                             alignItems: 'flex-start',
-                            justifyContent: 'center',
+                            justifyContent: 'left',
                             textAlign: 'left',
                             paddingTop: '2px'
                           }),
@@ -922,13 +993,9 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           }),
                           borderBottom: '1px solid #e0e0e0',
                           fontSize: '12px',
-                          wordWrap: 'break-word',
-                          overflowWrap: 'break-word',
-                          whiteSpace: 'pre-wrap',
+                          whiteSpace: 'nowrap',
                           maxWidth: '100%',
-                          overflow: 'hidden',
-                          hyphens: 'auto',
-                          wordBreak: 'normal'
+                          overflow: 'hidden'
                         }}>
                           {total.toFixed(2)}
                         </div>
@@ -1033,9 +1100,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                        textAlign: 'center'
                      }),
                      fontSize: '12px',
-                     wordWrap: 'break-word',
-                     overflowWrap: 'break-word',
-                     whiteSpace: 'normal'
+                     whiteSpace: 'nowrap'
                    }}>
                         ${(effectiveSection2.rows || []).reduce((sum, row) => {
                        const unitPrice = parseFloat(row.unit) || 0;
@@ -1069,7 +1134,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               }}>
                 <div style={{ 
                   display: 'grid',
-                  gridTemplateColumns: '3fr 50px 60px 60px',
+                  gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
                   gap: '0px',
                   border: '1px solid #722420',
                   backgroundColor:'#722420 ',
@@ -1390,9 +1455,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
+                      whiteSpace: 'nowrap'
                     }}>
                       ${(effectiveSection2?.rows || []).reduce((sum, row) => {
                         const unitPrice = parseFloat(row.unit) || 0;
@@ -1502,9 +1565,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       }),
                       borderBottom: '1px solid #722420',
                       fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
+                      whiteSpace: 'nowrap'
                     }}>
                       ${(() => {
                         const sum1 = (effectiveSection1.rows || []).reduce((sum, row) => {
@@ -1566,7 +1627,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               }}>
                 <div style={{ 
                   display: 'grid',
-                  gridTemplateColumns: '3fr 50px 60px 60px',
+                  gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
                   gap: '0px',
                   border: '1px solid #722420',
                   backgroundColor:'#722420 ',
@@ -1775,9 +1836,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
+                      whiteSpace: 'nowrap'
                     }}>
                       ${(effectiveSection1.rows || []).reduce((sum, row) => {
                         const unitPrice = parseFloat(row.unit) || 0;
@@ -1887,9 +1946,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       }),
                       borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
+                      whiteSpace: 'nowrap'
                     }}>
                       ${(effectiveSection2?.rows || []).reduce((sum, row) => {
                         const unitPrice = parseFloat(row.unit) || 0;
@@ -1999,9 +2056,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       }),
                       borderBottom: '1px solid #722420',
                       fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
+                      whiteSpace: 'nowrap'
                     }}>
                       ${(() => {
                         const sum1 = (effectiveSection1.rows || []).reduce((sum, row) => {

@@ -556,3 +556,4 @@ REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 This document provides a comprehensive overview of all steps and features in the SumoQuote v2 project. Each step is designed to collect specific information and generate a professional chimney service report PDF.
 
 
+

@@ -97,7 +97,6 @@ const Library: React.FC = () => {
         const { data, error } = await supabase
           .from('clients')
           .select('id, full_name')
-          .eq('created_by', userId)
           .order('full_name', { ascending: true });
         if (error) throw error;
         setClients(data || []);
@@ -123,12 +122,17 @@ const Library: React.FC = () => {
           .from('reports')
           .select('created_at')
           .eq('client_id', selectedClientId)
-          .eq('created_by', userId as string)
           .order('created_at', { ascending: false });
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error fetching report dates:', error);
+          throw error;
+        }
+        console.log('Report dates data:', data);
         const uniqueDates = Array.from(new Set((data || []).map(r => (r as any).created_at?.slice(0,10)))).filter(Boolean) as string[];
+        console.log('Unique dates extracted:', uniqueDates);
         setReportDates(uniqueDates);
       } catch (e: any) {
+        console.error('Error loading report dates:', e);
         setError(e?.message || 'Unable to load report dates');
       } finally {
         setLoadingSupabase(false);
@@ -186,7 +190,6 @@ const Library: React.FC = () => {
         .from('reports')
         .select('id, client_name, created_at')
         .eq('client_id', selectedClientId)
-        .eq('created_by', userId)
         .gte('created_at', start)
         .lt('created_at', end)
         .order('created_at', { ascending: false })

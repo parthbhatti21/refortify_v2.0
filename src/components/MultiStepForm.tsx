@@ -608,7 +608,6 @@ const MultiStepForm: React.FC = () => {
           .from('reports')
           .select('id, client_name, created_at')
           .eq('client_id', clientId)
-          .eq('created_by', userId)
           .gte('created_at', start)
           .lt('created_at', end)
           .order('created_at', { ascending: false })
@@ -2862,7 +2861,7 @@ const MultiStepForm: React.FC = () => {
                     <input
                       type="text"
                       placeholder="Title for Repair Estimate#1"
-                      value={formData.repairEstimateData?.estimateNumber || 'Repair Estimate#1'}
+                      value={formData.recommendationSection1Title || 'Repair Estimate#1'}
                       onChange={(e) => updateFormData({ recommendationSection1Title: e.target.value })}
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                     />
@@ -3255,61 +3254,26 @@ const MultiStepForm: React.FC = () => {
                         {(getCurrentRecommendationPage()?.repairEstimateData.rows || []).map((row: any, index: number) => (
                           <tr key={row.id}>
                             <td className="px-3 py-2">
-                              {row.isManual ? (
-                                <input
-                                  type="text"
-                                  value={row.description}
-                                  onChange={(e) => {
-                                    const currentPage = getCurrentRecommendationPage();
-                                    if (currentPage) {
-                                      const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                        r.id === row.id ? { ...r, description: e.target.value } : r
-                                      );
-                                      updateCurrentRecommendationPage({
-                                        repairEstimateData: {
-                                          ...currentPage.repairEstimateData,
-                                          rows: updatedRows
-                                        }
-                                      });
-                                    }
-                                  }}
-                                  className="w-full p-1 border rounded text-sm"
-                                  placeholder="Enter description"
-                                />
-                              ) : (
-                                <select
-                                  value={row.description ? dropdownOptions.find(opt => opt.description === row.description)?.id || "" : ""}
-                                  onChange={(e) => {
-                                    const selectedOption = dropdownOptions.find(opt => opt.id === e.target.value);
-                                    const currentPage = getCurrentRecommendationPage();
-                                    if (selectedOption && currentPage) {
-                                      const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                        r.id === row.id ? { 
-                                          ...r, 
-                                          description: selectedOption.description,
-                                          unit: selectedOption.unit,
-                                          price: selectedOption.price,
-                                          recommendation: selectedOption.recommendation
-                                        } : r
-                                      );
-                                      updateCurrentRecommendationPage({
-                                        repairEstimateData: {
-                                          ...currentPage.repairEstimateData,
-                                          rows: updatedRows
-                                        }
-                                      });
-                                    }
-                                  }}
-                                  className="w-full p-1 border rounded text-sm"
-                                >
-                                  <option value="">Select option...</option>
-                                  {dropdownOptions.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                      {option.description}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
+                              <input
+                                type="text"
+                                value={row.description}
+                                onChange={(e) => {
+                                  const currentPage = getCurrentRecommendationPage();
+                                  if (currentPage) {
+                                    const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                      r.id === row.id ? { ...r, description: e.target.value } : r
+                                    );
+                                    updateCurrentRecommendationPage({
+                                      repairEstimateData: {
+                                        ...currentPage.repairEstimateData,
+                                        rows: updatedRows
+                                      }
+                                    });
+                                  }
+                                }}
+                                className="w-full p-1 border rounded text-sm"
+                                placeholder="Enter description"
+                              />
                             </td>
                             <td className="px-3 py-2">
                               <input
@@ -3389,20 +3353,40 @@ const MultiStepForm: React.FC = () => {
                 </div>
                 )}
 
-                {/* Custom Recommendation Input - Only show when there are custom rows */}
-                {getCurrentRecommendationPage()?.repairEstimateData.rows.some((row: any) => row.isManual) && (
-                  <div className="space-y-3">
-                    <h5 className="font-medium text-gray-700">Custom Recommendation</h5>
+                {/* Recommendation Section - Show when there are any rows */}
+                {getCurrentRecommendationPage()?.repairEstimateData.rows && getCurrentRecommendationPage()?.repairEstimateData.rows.length > 0 && (
+                  <div className="space-y-3 mt-4">
+                    <h5 className="font-medium text-gray-700">Professional Recommendation</h5>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Add your custom recommendation text:
+                        Recommendation Text:
                       </label>
                       <textarea
-                        value={getCurrentRecommendationPage()?.customRecommendation || ''}
-                        onChange={(e) => handleCustomRecommendationChange(e.target.value)}
-                        placeholder="Enter your custom recommendation here..."
-                        className="w-full h-24 p-3 text-sm border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        style={{ fontFamily: 'Inter, Arial, sans-serif' }}
+                        value={(() => {
+                          const currentPage = getCurrentRecommendationPage();
+                          if (!currentPage) return '';
+                          // Use custom recommendation if available, otherwise combine from rows
+                          const customRec = currentPage.customRecommendation || '';
+                          if (customRec) return customRec;
+                          // Combine recommendations from all rows, preserving line breaks
+                          const rowRecommendations = (currentPage.repairEstimateData.rows || [])
+                            .filter((r: any) => r.recommendation)
+                            .map((r: any) => r.recommendation)
+                            .join('\n');
+                          return rowRecommendations || '';
+                        })()}
+                        onChange={(e) => {
+                          // Update customRecommendation when user edits
+                          handleCustomRecommendationChange(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          // Allow Enter key to create new lines (default behavior)
+                          // No need to prevent default - let textarea handle it naturally
+                        }}
+                        placeholder="Enter recommendation text here..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+                        rows={6}
+                        style={{ fontFamily: 'Inter, Arial, sans-serif', whiteSpace: 'pre-wrap' }}
                       />
                       <p className="text-xs text-blue-600 mt-2">
                         This text will be displayed in the Professional Recommendations section on Recommendation Pages.
@@ -4069,20 +4053,23 @@ const MultiStepForm: React.FC = () => {
                     onClick={() => {
                       const currentPage = getCurrentRecommendationPage();
                       if (currentPage) {
-                        const newRow = {
-                          id: Date.now().toString(),
-                          srNo: currentPage.repairEstimateData.rows.length + 1,
-                          description: option.description,
-                          unit: option.unit,
-                          price: option.price,
-                          recommendation: option.recommendation,
-                          isManual: false
-                        };
+                      const newRow = {
+                        id: Date.now().toString(),
+                        srNo: currentPage.repairEstimateData.rows.length + 1,
+                        description: option.description,
+                        unit: option.unit,
+                        price: option.price,
+                        recommendation: option.recommendation,
+                        isManual: true // Make predefined entries editable by default
+                      };
+                        // Update recommendation textarea with the new row's recommendation if no custom recommendation exists
+                        const updatedRecommendation = currentPage.customRecommendation || option.recommendation || '';
                         updateCurrentRecommendationPage({
                           repairEstimateData: {
                             ...currentPage.repairEstimateData,
                             rows: [...currentPage.repairEstimateData.rows, newRow]
-                          }
+                          },
+                          customRecommendation: updatedRecommendation
                         });
                       }
                       setShowPredefinedModal(false);

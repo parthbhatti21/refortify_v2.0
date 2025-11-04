@@ -103,33 +103,17 @@ const Page3: React.FC<Page3Props> = ({ formData, isPDF = false }) => {
             {isPDF && <><p className="itWasA">&nbsp;</p></>}
             {/* {isPDF && <><p className="itWasA">&nbsp;</p></>} */}
 <p className="itWasA">    
-  
-It was a pleasure to provide service for your home and attached is a detailed service report for your review and a repair
-estimate if applicable. This service report is in sections which are as follows:</p>
+It was a pleasure to provide service for your home. Attached is your detailed service report and, if applicable, a repair estimate for your review.
+
+</p>
+{isPDF && <><p className="itWasA">&nbsp;</p></>}
+<p>We truly appreciate the opportunity to serve you and strive to provide the best service, warranties, quality control, and training in our industry. Your complete satisfaction is very important to all of us at A Step in Time Chimney Sweeps.
+</p>
+<p>&nbsp;</p>
 {isPDF && <><p className="itWasA">&nbsp;</p></>}
 
-<ul className="invoiceWithDescriptionEsti" style={{ lineHeight: isPDF ? '1.8' : 'normal' }}>
-<li className="itWasA" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Invoice with description</li>
-{isPDF && <><p className="itWasA">&nbsp;</p></>}
-
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '0px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle" }}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Estimated Repairs with description, building codes and </li>
-
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inspection photographs</li>
-{isPDF && <><p className="itWasA">&nbsp;</p></>}
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Inspection Photographs</li>
-{isPDF && <><p className="itWasA">&nbsp;</p></>}
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Details to understand chimney parts</li>
-{isPDF && <><p className="itWasA">&nbsp;</p></>}
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Top hat club membership</li>
-{isPDF && <><p className="itWasA">&nbsp;</p></>}
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Thank You</li>
-{isPDF && <><p className="itWasA">&nbsp;</p></>}
-<li className="estimatedRepairsWith" style={{ marginBottom: isPDF ? '8px' : '8px' }}><span style={{ fontSize: '8px', verticalAlign: isPDF?"middle":"middle"}}>&nbsp;&nbsp;&#9679;&nbsp;&nbsp;&nbsp;</span>Terms and Conditions</li>
-{/* {isPDF && <><p className="itWasA">&nbsp;</p></>} */}
-</ul>
-{isPDF && <><p className="itWasA">&nbsp;</p></>}
-
-<p className="itWasA">Thank you so much for using our service. We strive to offer the best service, the best warranties, the best quality control and the best training in our industry. Your complete satisfaction is most important to everyone of the us at A Step in Time Chimney Sweeps.</p>
+<p className="itWasA">
+Thank you again for choosing us. Please don’t hesitate to reach out if you have any questions or need additional assistance regarding your report.</p>
 
 {isPDF && <><p className="itWasA">&nbsp;</p></>}
 
