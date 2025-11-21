@@ -139,7 +139,127 @@ Create a `.env` file in the root directory for any environment-specific configur
 ```env
 REACT_APP_API_URL=your_api_url_here
 REACT_APP_PDF_QUALITY=0.78
+REACT_APP_GOOGLE_SHEETS_API_KEY=your_google_sheets_api_key
+REACT_APP_GOOGLE_SHEET_ID=your_google_sheet_id
+REACT_APP_GOOGLE_SHEET_RANGE=Sheet1!A:C
 ```
+
+#### Google Sheets Integration Setup
+
+The application includes autocomplete functionality for repair estimate table entries (description, unit, price) that pulls data from a Google Sheet.
+
+**Two Authentication Methods Available:**
+
+##### Method 1: Backend Proxy with Service Account (Recommended)
+
+This method uses `credentials.json` on your backend server, keeping credentials secure.
+
+**Backend Setup (Python/Node.js example):**
+
+1. **Place `credentials.json` in your backend project** (keep it secure, never commit to git)
+
+2. **Create a backend endpoint** `/google-sheets`:
+
+   **Python (Flask/FastAPI example):**
+   ```python
+   from google.oauth2 import service_account
+   from googleapiclient.discovery import build
+   import json
+   
+   # Load credentials
+   SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+   credentials = service_account.Credentials.from_service_account_file(
+       'credentials.json', scopes=SCOPES
+   )
+   service = build('sheets', 'v4', credentials=credentials)
+   
+   @app.route('/google-sheets', methods=['GET'])
+   def get_google_sheet():
+       sheet_id = request.args.get('sheetId')
+       range_name = request.args.get('range', 'Sheet1!A:C')
+       
+       result = service.spreadsheets().values().get(
+           spreadsheetId=sheet_id,
+           range=range_name
+       ).execute()
+       
+       return jsonify({'values': result.get('values', [])})
+   ```
+
+   **Node.js (Express example):**
+   ```javascript
+   const { google } = require('googleapis');
+   const credentials = require('./credentials.json');
+   
+   const auth = new google.auth.GoogleAuth({
+     credentials,
+     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+   });
+   
+   app.get('/google-sheets', async (req, res) => {
+     const { sheetId, range = 'Sheet1!A:C' } = req.query;
+     const sheets = google.sheets({ version: 'v4', auth });
+     
+     const response = await sheets.spreadsheets.values.get({
+       spreadsheetId: sheetId,
+       range,
+     });
+     
+     res.json({ values: response.data.values || [] });
+   });
+   ```
+
+3. **Share your Google Sheet with the service account email**:
+   - Open your `credentials.json`
+   - Find the `client_email` field
+   - Share your Google Sheet with that email address (Viewer permission is enough)
+
+4. **Configure Environment Variables**:
+   ```env
+   REACT_APP_API_BASE=https://your-backend-url.com
+   REACT_APP_API_KEY=your_backend_api_key  # If your backend requires API key
+   REACT_APP_GOOGLE_SHEET_ID=your_sheet_id
+   REACT_APP_GOOGLE_SHEET_RANGE=Sheet1!A:C  # Optional
+   ```
+
+##### Method 2: Direct API Key (Simpler, but less secure)
+
+1. **Create a Google Sheet** with the following structure:
+   - Column A: Description
+   - Column B: Unit
+   - Column C: Price
+   - First row can be headers (will be automatically detected)
+
+2. **Share the Google Sheet**:
+   - Open your Google Sheet
+   - Click "Share" button
+   - Set sharing to "Anyone with the link can view"
+
+3. **Get the Sheet ID**:
+   - From the Google Sheet URL: `https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit`
+   - Copy the `SHEET_ID` part
+
+4. **Get Google Sheets API Key**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable the "Google Sheets API"
+   - Create credentials (API Key)
+   - Restrict the API key to "Google Sheets API" for security
+
+5. **Configure Environment Variables**:
+   ```env
+   REACT_APP_GOOGLE_SHEETS_API_KEY=your_api_key
+   REACT_APP_GOOGLE_SHEET_ID=your_sheet_id
+   REACT_APP_GOOGLE_SHEET_RANGE=Sheet1!A:C  # Optional
+   ```
+
+**Features:**
+- Autocomplete dropdown appears when typing in description, unit, or price fields
+- Selecting from description field auto-fills all three fields (description, unit, price)
+- Fields remain fully editable after selection
+- Keyboard navigation (Arrow keys, Enter, Escape) supported
+- Searches are case-insensitive and match partial text
+- Automatically falls back to API key method if backend proxy is unavailable
 
 ### Customization
 - **Styling**: Modify Tailwind CSS classes or add custom CSS

@@ -129,7 +129,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                 display: 'grid',
                 gridTemplateColumns: `3fr 50px ${priceColumnWidth}px ${totalColumnWidth}px`,
                 gap: '0px',
-                border: '1px solid #722420',
                 backgroundColor:'#722420 ',
                 width: '100%',
                 maxWidth: '100%',
@@ -158,7 +157,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
@@ -184,7 +182,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
@@ -210,7 +207,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
@@ -236,7 +232,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
@@ -314,7 +309,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                         textAlign: 'left',
                         paddingTop: '2px'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -347,7 +341,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -380,7 +373,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -413,7 +405,6 @@ const Page5: FunctionComponent<Page5Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',

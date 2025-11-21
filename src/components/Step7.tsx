@@ -430,10 +430,10 @@ export const Page7: React.FC<Page7Props> = ({
                 display: 'grid',
                 gridTemplateColumns: '3fr 50px 60px 60px',
                 gap: '0px',
-                border: '1px solid #722420',
                 backgroundColor: '#722420',
                 fontSize: UNIFORM_FONT,
-                fontFamily: 'Inter, Arial, sans-serif'
+                fontFamily: 'Inter, Arial, sans-serif',
+                border: 'none'
               }}
             >
               {/* Header Row */}
@@ -450,15 +450,15 @@ export const Page7: React.FC<Page7Props> = ({
                     textAlign: 'center',
                     height: '20px',
                     boxSizing: 'border-box',
-                    lineHeight: '1.0'
+                    lineHeight: '1.0',
+                    borderBottom: '1px solid #722420'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
-                  fontSize: UNIFORM_FONT,
+                  fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
                   whiteSpace: 'normal'
@@ -475,15 +475,15 @@ export const Page7: React.FC<Page7Props> = ({
                     textAlign: 'center',
                     height: '20px',
                     boxSizing: 'border-box',
-                    lineHeight: '1.0'
+                    lineHeight: '1.0',
+                    borderBottom: '1px solid #722420'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
-                  fontSize: UNIFORM_FONT,
+                  fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
                   whiteSpace: 'normal'
@@ -493,22 +493,22 @@ export const Page7: React.FC<Page7Props> = ({
                   color: 'white',
                   fontWeight: 'bold',
                   minHeight: isPDF ? '20px' : '20px',
-                  padding: '4px 8px',
+                  padding: isPDF ? '0px 8px' : '4px 8px',
                   ...(isPDF ? {
                     display: 'table-cell',
                     verticalAlign: 'middle',
                     textAlign: 'center',
                     height: '20px',
                     boxSizing: 'border-box',
-                    lineHeight: '1.0'
+                    lineHeight: '1.0',
+                    borderBottom: '1px solid #722420'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
-                  fontSize: UNIFORM_FONT,
+                  fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
                   whiteSpace: 'normal'
@@ -525,15 +525,15 @@ export const Page7: React.FC<Page7Props> = ({
                     textAlign: 'center',
                     height: '20px',
                     boxSizing: 'border-box',
-                    lineHeight: '1.0'
+                    lineHeight: '1.0',
+                    borderBottom: '1px solid #722420'
                   } : {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center'
                   }),
-                  borderBottom: '1px solid #722420',
-                  fontSize: UNIFORM_FONT,
+                  fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
                   whiteSpace: 'normal'
@@ -544,38 +544,33 @@ export const Page7: React.FC<Page7Props> = ({
               {tableRows.map((row, index) => {
                 const total = row.unit * row.price;
                 
-                // Calculate how many rows are needed based on content length
-                const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                // Improved calculation for description wrapping
+                // Estimate characters per line based on column width (roughly 50-55 chars for description column in PDF)
+                const estimateDescriptionRows = (text: string) => {
                   const lines = text.split('\n').length;
-                  const wordCount = text.split(' ').length;
                   const charCount = text.length;
-                  
-                  // Calculate rows needed based on multiple factors
-                  let rowsNeeded = 1;
-                  
-                  // Factor in line breaks
-                  if (lines > 1) {
-                    rowsNeeded = Math.max(rowsNeeded, lines);
-                  }
-                  
-                  // Factor in character count (roughly 50 chars per row)
-                  const charRows = Math.ceil(charCount / baseLength);
-                  rowsNeeded = Math.max(rowsNeeded, charRows);
-                  
-                  // Factor in word count (roughly 8 words per row)
-                  const wordRows = Math.ceil(wordCount / 8);
-                  rowsNeeded = Math.max(rowsNeeded, wordRows);
-                  
-                  return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                  // For PDF, use more conservative estimate: ~50 chars per line to ensure enough space
+                  const charsPerLine = isPDF ? 50 : 65;
+                  const wrappedLines = Math.ceil(charCount / charsPerLine);
+                  // Add buffer for safety
+                  const totalRows = Math.max(lines, wrappedLines);
+                  return Math.max(totalRows, 1);
                 };
                 
-                const descriptionRows = calculateRowsNeeded(row.description);
-                const unitRows = calculateRowsNeeded(row.unit.toString(), 10);
-                const priceRows = calculateRowsNeeded(row.price.toString(), 10);
+                const descriptionRows = estimateDescriptionRows(row.description);
+                const unitRows = 1; // Unit and price are short, always 1 row
+                const priceRows = 1;
                 
                 const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
-                const isLongContent = maxRowsNeeded > 1;
                 const rowSpan = maxRowsNeeded;
+                
+                // Calculate proper height for PDF rendering to prevent overlaps
+                const baseRowHeight = isPDF ? 14 : 14;
+                const calculatedHeight = baseRowHeight * rowSpan;
+                
+                // Special height calculation for description column - ensure enough space for text
+                // Increased height for PDF to prevent text overflow with higher line height
+                const descriptionHeight = isPDF ? (20 * rowSpan) : (16 * rowSpan);
 
                 return (
                   <div key={row.id} style={{ display: 'contents' }}>
@@ -583,29 +578,32 @@ export const Page7: React.FC<Page7Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${descriptionHeight}px`,
+                      padding: isPDF ? '0px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'top',
                         textAlign: 'left',
                         lineHeight: '1.0',
-                        height: `${20 * rowSpan}px`,
+                        rowSpan: rowSpan,
+                        height: `${descriptionHeight}px`,
                         boxSizing: 'border-box',
                         paddingTop: '2px'
                       } : {
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        textAlign: 'left'
+                        alignItems: 'flex-start',
+                        justifyContent: 'left',
+                        textAlign: 'left',
+                        paddingTop: '2px'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
-                      fontSize: UNIFORM_FONT,
+                      fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'normal'
                     }}>
                       {row.description}
                     </div>
@@ -613,29 +611,31 @@ export const Page7: React.FC<Page7Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${descriptionHeight}px`,
+                      padding: isPDF ? '0px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
-                        verticalAlign: 'top',
+                        verticalAlign: 'middle',
                         textAlign: 'center',
+                        height: `${descriptionHeight}px`,
                         lineHeight: '1.0',
-                        height: `${20 * rowSpan}px`,
                         boxSizing: 'border-box',
-                        paddingTop: '2px'
+                        paddingTop: '2px',
+                        rowSpan: rowSpan
                       } : {
-                        display: 'flex',
-                        alignItems: 'center',
+                        display:  'flex',
+                        alignItems: 'flex-start',
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
-                      fontSize: UNIFORM_FONT,
+                      fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'normal'
                     }}>
                       {row.unit}
                     </div>
@@ -643,64 +643,68 @@ export const Page7: React.FC<Page7Props> = ({
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${calculatedHeight}px`,
+                      padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
-                        verticalAlign: 'top',
+                        verticalAlign: 'middle',
                         textAlign: 'center',
                         lineHeight: '1.0',
-                        height: `${20 * rowSpan}px`,
+                        height: `${descriptionHeight}px`,
                         boxSizing: 'border-box',
-                        paddingTop: '2px'
+                        paddingTop: '2px',
+                        rowSpan: rowSpan
                       } : {
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
-                      fontSize: UNIFORM_FONT,
+                      fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'normal'
                     }}>
-                      ${row.price.toLocaleString()}
+                      {row.price}
                     </div>
                     <div style={{
                       backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: '600',
-                      minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
-                      padding: isPDF ? '6px 8px' : '4px 8px',
+                      minHeight: `${calculatedHeight}px`,
+                      padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
-                        verticalAlign: 'top',
+                        verticalAlign: 'middle',
                         textAlign: 'center',
                         lineHeight: '1.0',
-                        height: `${20 * rowSpan}px`,
+                        height: `${descriptionHeight}px`,
                         boxSizing: 'border-box',
-                        paddingTop: '2px'
+                        paddingTop: '2px',
+                        rowSpan: rowSpan
                       } : {
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
-                      fontSize: UNIFORM_FONT,
+                      fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
-                      whiteSpace: 'normal',
+                      whiteSpace: 'pre-wrap',
                       maxWidth: '100%',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      hyphens: 'auto',
+                      wordBreak: 'normal'
                     }}>
-                      ${total.toLocaleString()}
+                      {total.toFixed(2)}
                     </div>
                     {/* Add empty rows for merged cells */}
-                    {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
+                    {rowSpan > 1 && Array.from({ length: rowSpan - 1 }, (_, i) => (
                       <div key={`empty-${i}`} style={{ display: 'contents' }}>
                         <div style={{ display: 'none' }}></div>
                         <div style={{ display: 'none' }}></div>
@@ -720,7 +724,7 @@ export const Page7: React.FC<Page7Props> = ({
                     color: 'white',
                     fontWeight: 'bold',
                     minHeight: isPDF ? '20px' : '20px',
-                    padding: '4px 8px',
+                    padding: isPDF ? '0px 8px' : '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
@@ -734,7 +738,7 @@ export const Page7: React.FC<Page7Props> = ({
                       justifyContent: 'center',
                       textAlign: 'center'
                     }),
-                    fontSize: UNIFORM_FONT,
+                    fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
                     whiteSpace: 'normal'
@@ -744,7 +748,7 @@ export const Page7: React.FC<Page7Props> = ({
                     color: 'white',
                     fontWeight: 'bold',
                     minHeight: isPDF ? '20px' : '20px',
-                    padding: '4px 8px',
+                    padding: isPDF ? '0px 8px' : '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
@@ -758,7 +762,7 @@ export const Page7: React.FC<Page7Props> = ({
                       justifyContent: 'center',
                       textAlign: 'center'
                     }),
-                    fontSize: UNIFORM_FONT,
+                    fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
                     whiteSpace: 'normal'
@@ -768,7 +772,7 @@ export const Page7: React.FC<Page7Props> = ({
                     color: 'white',
                     fontWeight: 'bold',
                     minHeight: isPDF ? '20px' : '20px',
-                    padding: '4px 8px',
+                    padding: isPDF ? '0px 8px' : '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
@@ -782,7 +786,7 @@ export const Page7: React.FC<Page7Props> = ({
                       justifyContent: 'center',
                       textAlign: 'center'
                     }),
-                    fontSize: UNIFORM_FONT,
+                    fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
                     whiteSpace: 'normal'
@@ -793,8 +797,8 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: '#722420',
                     color: 'white',
                     fontWeight: 'bold',
-                      minHeight: isPDF ? '20px' : '20px',
-                    padding: '4px 8px',
+                    minHeight: isPDF ? '20px' : '20px',
+                    padding: isPDF ? '0px 8px' : '4px 8px',
                     ...(isPDF ? {
                       display: 'table-cell',
                       verticalAlign: 'middle',
@@ -808,7 +812,7 @@ export const Page7: React.FC<Page7Props> = ({
                       justifyContent: 'center',
                       textAlign: 'center'
                     }),
-                    fontSize: UNIFORM_FONT,
+                    fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
                     whiteSpace: 'normal'
@@ -834,7 +838,7 @@ export const Page7: React.FC<Page7Props> = ({
             }}>
               <div ref={pdfRecBoxRef} style={{ 
                 backgroundColor: '#f8f9fa', 
-                border: '1px solid #e9ecef',
+                
                 borderRadius: '4px',
                 position: 'relative',
                 fontSize: UNIFORM_FONT,
@@ -866,10 +870,11 @@ export const Page7: React.FC<Page7Props> = ({
                   margin: '0',
                   fontFamily: 'Inter, Arial, sans-serif',
                   textAlign: 'justify',
-                  wordWrap: 'break-word',
+                  wordWrap: 'normal',
                   overflowWrap: 'break-word',
+                  wordBreak: 'normal',
                   whiteSpace: 'pre-wrap',
-                  hyphens: 'auto'
+                  hyphens: 'manual'
                 }}>
                   {(() => {
                     const hasManualRows = tableRows.some(row => row.isManual);
@@ -994,116 +999,74 @@ export const Page7: React.FC<Page7Props> = ({
               display: 'grid',
               gridTemplateColumns: '3fr 50px 60px 60px',
               gap: '0px',
-              border: '1px solid #722420',
-              backgroundColor:'#722420 ',
-              //  /backgroundColor: '#ffffff'
+              backgroundColor: '#722420'
             }}
           >
             {/* Header Row */}
             <div style={{ display: 'contents' }}>
                 <div style={{
-                  // margin: i .sPDF ? '8px 8px' : '8px 8px',
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight: isPDF ? '20px' : '20px',
+                  minHeight: '20px',
                   padding: '4px 8px',
-                  ...(isPDF ? {
-                    display: 'table-cell',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    height: '20px',
-                    boxSizing: 'border-box',
-                    lineHeight: '1.0'
-                  } : {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center'
-                  }),
-                  borderBottom: '1px solid #722420',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
-                  whiteSpace: 'normal'
+                  whiteSpace: 'normal',
+                  borderBottom: '1px solid #722420'
                 }}>Description</div>
                 <div style={{
-                  // margin: isPDF ? '8px 8px' : '8px 8px',
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight: isPDF ? '20px' : '20px',
+                  minHeight: '20px',
                   padding: '4px 8px',
-                  ...(isPDF ? {
-                    display: 'table-cell',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    height: '20px',
-                    boxSizing: 'border-box',
-                    lineHeight: '1.0'
-                  } : {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center'
-                  }),
-                  borderBottom: '1px solid #722420',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
-                  whiteSpace: 'normal'
+                  whiteSpace: 'normal',
+                  borderBottom: '1px solid #722420'
                 }}>Unit</div>
                 <div style={{
-                  // margin: isPDF ? '8px 8px' : '8px 8px',
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                  minHeight: isPDF ? '20px' : '20px',
+                  minHeight: '20px',
                   padding: '4px 8px',
-                  ...(isPDF ? {
-                    display: 'table-cell',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    height: '20px',
-                    boxSizing: 'border-box',
-                    lineHeight: '1.0'
-                  } : {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center'
-                  }),
-                  borderBottom: '1px solid #722420',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
-                  whiteSpace: 'normal'
+                  whiteSpace: 'normal',
+                  borderBottom: '1px solid #722420'
                 }}>Price</div>
                 <div style={{
-                  // margin: isPDF ? '8px 8px' : '8px 8px',
                   backgroundColor: '#722420',
                   color: 'white',
                   fontWeight: 'bold',
-                    minHeight: isPDF ? '20px' : '20px',
+                  minHeight: '20px',
                   padding: '4px 8px',
-                  ...(isPDF ? {
-                    display: 'table-cell',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    height: '20px',
-                    boxSizing: 'border-box',
-                    lineHeight: '1.0'
-                  } : {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center'
-                  }),
-                  borderBottom: '1px solid #722420',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
                   fontSize: '12px',
                   wordWrap: 'break-word',
                   overflowWrap: 'break-word',
-                  whiteSpace: 'normal'
+                  whiteSpace: 'normal',
+                  borderBottom: '1px solid #722420'
                 }}>Total</div>
               </div>
 
@@ -1137,13 +1100,27 @@ export const Page7: React.FC<Page7Props> = ({
                 return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
               };
               
-              const descriptionRows = calculateRowsNeeded(row.description);
-              const unitRows = calculateRowsNeeded(row.unit.toString(), 10);
-              const priceRows = calculateRowsNeeded(row.price.toString(), 10);
+              // Improved calculation for description wrapping
+              // Estimate characters per line based on column width (roughly 60-70 chars for description column)
+              const estimateDescriptionRows = (text: string) => {
+                const lines = text.split('\n').length;
+                const charCount = text.length;
+                // For description column (70% width), estimate ~65 chars per line
+                const wrappedLines = Math.ceil(charCount / 65);
+                return Math.max(lines, wrappedLines);
+              };
+              
+              const descriptionRows = estimateDescriptionRows(row.description);
+              const unitRows = 1; // Unit and price are short, always 1 row
+              const priceRows = 1;
               
               const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
               const isLongContent = maxRowsNeeded > 1;
               const rowSpan = maxRowsNeeded;
+              
+              // Calculate min height: base height per row + padding
+              const baseRowHeight = isPDF ? 16 : 16;
+              const minRowHeight = baseRowHeight * rowSpan;
 
               return (
                 <div key={row.id} style={{ display: 'contents' }}>
@@ -1151,23 +1128,23 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: 'normal',
-                    // minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
-                    padding: isPDF ? '0px 8px' : '4px 8px',
+                    minHeight: `${minRowHeight}px`,
+                    padding: '4px 8px',
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     justifyContent: 'flex-start',
                     textAlign: 'left',
-                    height: '22px',
                     boxSizing: 'border-box',
                     lineHeight: '1.0',
-                    borderBottom: '1px solid #e0e0e0',
                     fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
-                    whiteSpace: 'normal',
+                    whiteSpace: 'pre-wrap',
                     maxWidth: '100%',
                     overflow: 'hidden',
-                    wordBreak: 'normal'
+                    hyphens: 'auto',
+                    wordBreak: 'normal',
+                    paddingTop: '2px'
                   }}>
                     {row.description}
                   </div>
@@ -1175,16 +1152,14 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: 'normal',
-                    // minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
-                    padding: isPDF ? '0px 8px' : '4px 8px',
-                    height: '22px',
+                    minHeight: `${minRowHeight}px`,
+                    padding: '4px 8px',
                     boxSizing: 'border-box',
                     lineHeight: '1.0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
-                    borderBottom: '1px solid #e0e0e0',
                     fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
@@ -1198,16 +1173,14 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: 'normal',
-                    // minHeight: isPDF ? `${20 * rowSpan}px` : `${28 * rowSpan}px`,
-                    padding: isPDF ? '0px 8px' : '4px 8px',
-                    height: '22px',
+                    minHeight: `${minRowHeight}px`,
+                    padding: '4px 8px',
                     boxSizing: 'border-box',
                     lineHeight: '1.0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
-                    borderBottom: '1px solid #e0e0e0',
                     fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
@@ -1221,16 +1194,14 @@ export const Page7: React.FC<Page7Props> = ({
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
                     color: '#000000',
                     fontWeight: '600',
-                    // minHeight: isPDF ? `${20 *  rowSpan}px` : `${28 * rowSpan}px`,
-                    padding: isPDF ? '0px 8px' : '4px 8px',
-                    height: '22px',
+                    minHeight: `${minRowHeight}px`,
+                    padding: '4px 8px',
                     boxSizing: 'border-box',
                     lineHeight: '1.0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
-                    borderBottom: '1px solid #e0e0e0',
                     fontSize: '12px',
                     wordWrap: 'break-word',
                     overflowWrap: 'break-word',
@@ -1240,15 +1211,6 @@ export const Page7: React.FC<Page7Props> = ({
                   }}>
                     ${total.toLocaleString()}
                   </div>
-                  {/* Add empty rows for merged cells */}
-                  {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
-                    <div key={`empty-${i}`} style={{ display: 'contents' }}>
-                      <div style={{ display: 'none' }}></div>
-                      <div style={{ display: 'none' }}></div>
-                      <div style={{ display: 'none' }}></div>
-                      <div style={{ display: 'none' }}></div>
-                    </div>
-                  ))}
                 </div>
               );
             })}
@@ -1258,37 +1220,65 @@ export const Page7: React.FC<Page7Props> = ({
               <div style={{ display: 'contents' }}>
                 <div style={{ 
                   backgroundColor: '#722420',
-                  height: isPDF ? '20px' : '20px'
-                }}></div>
-                <div style={{ 
-                  backgroundColor: '#722420',
-                  height: isPDF ? '20px' : '20px'
-                }}></div>
-                <div style={{ 
-                  backgroundColor: '#722420',
-                  color: '#ffffff',
-                  fontWeight: '600',
-                  fontSize: '12px',
-                  letterSpacing: '0.42px',
-                  height: isPDF ? '20px' : '20px',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '20px',
+                  padding: '4px 8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}></div>
+                <div style={{ 
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '20px',
+                  padding: '4px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
+                }}></div>
+                <div style={{ 
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '20px',
+                  padding: '4px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
                 }}>
-                  TOTAL :
+                  TOTAL:
                 </div>
                 <div style={{ 
-                backgroundColor: '#722420',
-                color: '#ffffff',
-                fontWeight: '600',
-                fontSize: '12px',
-                letterSpacing: '0.42px',
-                height: isPDF ? '20px' : '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center'
+                  backgroundColor: '#722420',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  minHeight: '20px',
+                  padding: '4px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  fontSize: '12px',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'normal'
                 }}>
                   ${calculateTotal().toLocaleString()}
                 </div>
@@ -1314,7 +1304,13 @@ export const Page7: React.FC<Page7Props> = ({
               }}
             >
             <h4 className="font-bold mb-2 text-[#722420]" style={{ fontSize: UNIFORM_FONT }}>Professional Recommendations:</h4>
-              <p ref={previewRecTextRef} className="text-gray-700 leading-tight text-justify break-words whitespace-pre-wrap" style={{ fontSize: UNIFORM_FONT }}>
+              <p ref={previewRecTextRef} className="text-gray-700 leading-tight text-justify whitespace-pre-wrap" style={{ 
+                fontSize: UNIFORM_FONT,
+                wordWrap: 'normal',
+                overflowWrap: 'break-word',
+                wordBreak: 'normal',
+                hyphens: 'manual'
+              }}>
                 {(() => {
                   const hasManualRows = tableRows.some(row => row.isManual);
                   // If customRecommendation exists, use it (preserves line breaks)

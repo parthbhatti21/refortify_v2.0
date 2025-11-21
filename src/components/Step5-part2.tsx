@@ -293,7 +293,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 display: 'grid',
                 gridTemplateColumns: `3fr 50px ${section1PriceWidth}px ${section1TotalWidth}px`,
                 gap: '0px',
-                border: '1px solid #722420',
                 backgroundColor:'#722420 ',
               }}
             >
@@ -470,7 +469,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         textAlign: 'left',
                         paddingTop: '2px'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -503,7 +501,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -536,7 +533,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -569,7 +565,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       whiteSpace: 'nowrap',
                       maxWidth: '100%',
@@ -715,7 +710,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     display: 'grid',
                     gridTemplateColumns: `3fr 50px ${section2PriceWidth}px ${section2TotalWidth}px`,
                     gap: '0px',
-                    border: '1px solid #722420',
                     backgroundColor:'#722420 ',
                   }}
                 >
@@ -740,7 +734,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -765,7 +758,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -790,7 +782,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -815,7 +806,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -892,7 +882,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                             textAlign: 'left',
                             paddingTop: '2px'
                           }),
-                          borderBottom: '1px solid #e0e0e0',
                           fontSize: '12px',
                           wordWrap: 'break-word',
                           overflowWrap: 'break-word',
@@ -925,7 +914,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                             justifyContent: 'center',
                             textAlign: 'center'
                           }),
-                          borderBottom: '1px solid #e0e0e0',
                           fontSize: '12px',
                           wordWrap: 'break-word',
                           overflowWrap: 'break-word',
@@ -958,7 +946,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                             justifyContent: 'center',
                             textAlign: 'center'
                           }),
-                          borderBottom: '1px solid #e0e0e0',
                           fontSize: '12px',
                           wordWrap: 'break-word',
                           overflowWrap: 'break-word',
@@ -991,7 +978,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                             justifyContent: 'center',
                             textAlign: 'center'
                           }),
-                          borderBottom: '1px solid #e0e0e0',
                           fontSize: '12px',
                           whiteSpace: 'nowrap',
                           maxWidth: '100%',
@@ -1136,7 +1122,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   display: 'grid',
                   gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
                   gap: '0px',
-                  border: '1px solid #722420',
                   backgroundColor:'#722420 ',
                 }}>
                   {/* Header Row */}
@@ -1160,7 +1145,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1185,7 +1169,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1210,7 +1193,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1235,7 +1217,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1264,7 +1245,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1291,7 +1271,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1316,7 +1295,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1341,7 +1319,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1376,7 +1353,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1403,7 +1379,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1428,7 +1403,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1453,7 +1427,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
@@ -1486,7 +1459,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'flex-start',
                         textAlign: 'left'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1513,7 +1485,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1538,7 +1509,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1563,7 +1533,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
@@ -1629,7 +1598,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   display: 'grid',
                   gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
                   gap: '0px',
-                  border: '1px solid #722420',
                   backgroundColor:'#722420 ',
                 }}>
                   {/* Header Row */}
@@ -1653,7 +1621,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1678,7 +1645,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1703,7 +1669,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1728,7 +1693,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1757,7 +1721,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'flex-start',
                         textAlign: 'left'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1784,7 +1747,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1809,7 +1771,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1834,7 +1795,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
@@ -1867,7 +1827,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'flex-start',
                         textAlign: 'left'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1894,7 +1853,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1919,7 +1877,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -1944,7 +1901,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #e0e0e0',
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
@@ -1977,7 +1933,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'flex-start',
                         textAlign: 'left'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -2004,7 +1959,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -2029,7 +1983,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
@@ -2054,7 +2007,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         justifyContent: 'center',
                         textAlign: 'center'
                       }),
-                      borderBottom: '1px solid #722420',
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>

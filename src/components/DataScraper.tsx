@@ -119,15 +119,12 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     // Look for timeline-block elements (each represents a job/date)
     const timelineBlocks = doc.querySelectorAll('div.timeline-block');
     
-    console.log(`Found ${timelineBlocks.length} timeline blocks`);
-    
     timelineBlocks.forEach((timelineBlock, index) => {
       // Extract date from span.date element
       let jobDate = '';
       const dateElement = timelineBlock.querySelector('span.date');
       if (dateElement) {
         jobDate = dateElement.textContent?.trim() || '';
-        console.log(`Job ${index + 1} date: ${jobDate}`);
       }
       
       // Extract images from photo-grid
@@ -140,8 +137,6 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
           imageUrls.push(dataFull);
         }
       });
-      
-      console.log(`Job ${index + 1} images: ${imageUrls.length}`);
       
       // Extract timeline content
       const timelineContent = timelineBlock.textContent?.trim() || '';
@@ -180,7 +175,6 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       return dateB.getTime() - dateA.getTime();
     });
     
-    console.log('Parsed jobs:', jobs);
     return jobs;
   };
 
@@ -285,11 +279,6 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       
       const htmlContent = await response.text();
       
-      // Print HTML content to console
-      console.log('=== HTML CONTENT ===');
-      console.log(htmlContent);
-      console.log('=== END HTML CONTENT ===');
-      
       // Parse all jobs from HTML to find dates
       const allJobsData = parseAllJobsFromHtml(htmlContent);
       setAllJobs(allJobsData);
@@ -299,14 +288,6 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       
       setExtractedData(parsedData);
       setShowEditForm(true);
-      
-      // Log the extracted data for debugging (same as Python print statements)
-      console.log('=== EXTRACTED DATA ===');
-      console.log('Current job data:', parsedData.timelineContent);
-      console.log('All jobs found:', allJobsData.length);
-      console.log('Current job images:', parsedData.imageUrls.length);
-      console.log('Jobs with dates:', allJobsData.map(job => ({ date: job.date, images: job.imageUrls.length })));
-      console.log('=== END EXTRACTED DATA ===');
       
     } catch (error) {
       console.error('Data extraction failed:', error);
@@ -375,8 +356,6 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     setShowPreviousJobImages(false);
     setSelectedDateJob(null);
     setSelectedImages([]);
-    
-    console.log(`Merged ${selectedImages.length} selected images from ${selectedDateJob.date}`);
   };
 
   const handleContinue = () => {

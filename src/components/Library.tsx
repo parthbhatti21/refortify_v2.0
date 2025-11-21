@@ -453,7 +453,7 @@ const Library: React.FC = () => {
                       <option value="za">Z–A</option>
                     </select>
                   </div>
-                  <span className="text-xs text-gray-500">{filteredFiles.length} file{filteredFiles.length === 1 ? '' : 's'}</span>
+                <span className="text-xs text-gray-500">{filteredFiles.length} file{filteredFiles.length === 1 ? '' : 's'}</span>
                 </div>
               </div>
               <div className="space-y-3">

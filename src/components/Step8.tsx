@@ -22,6 +22,11 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
 
   const selectedIdSet = new Set((selectedImages || []).map(img => img.id));
 
+  // Don't render if there are no images to show
+  if (pageImages.length === 0 && isPDF) {
+    return null;
+  }
+
   if (isPDF) {
     return (
       <div style={{
@@ -224,7 +229,7 @@ const Page8: React.FC<Page8Props> = ({ isPDF = false, unusedImages = [], current
             {pageImages.map((image, index) => (
               <div
                 key={image.id}
-                className="w-full h-full overflow-hidden border border-[#722420] bg-white relative"
+                className="w-full h-full overflow-hidden border border-[#722420] bg-white relative group"
               >
                 <img
                   src={image.url}

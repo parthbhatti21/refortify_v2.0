@@ -12,6 +12,8 @@ import Step8 from './Step8';
 import Step9Part1 from './Step9-part1';
 import Step9Part2 from './Step9-part2';
 import Step9Part3 from './Step9-part3';
+import AutocompleteInput from './AutocompleteInput';
+import { SheetRow } from '../lib/googleSheetsService';
 import Step10Part1 from './Step10Part1';
 import Step10Part2 from './Step10Part2';
 import Step10Part3 from './Step10Part3';
@@ -89,6 +91,7 @@ export interface FormData {
     };
   }>;
   usedReviewImages?: string[]; // Track used images to remove from available list
+  excludedStep8Images?: string[]; // Track images excluded from Step 8
 }
 
 const dropdownOptions = [
@@ -944,7 +947,8 @@ const MultiStepForm: React.FC = () => {
       reportDate: data.reportDate,
       timelineCoverImage: data.timelineCoverImage,
       scrapedImages: data.scrapedImages,
-      selectedImages: [] // Initialize empty selection
+      selectedImages: [], // Initialize empty selection
+      excludedStep8Images: [] // Reset excluded images when new data is loaded
     });
     setCurrentStep('form');
   };
@@ -966,6 +970,7 @@ const MultiStepForm: React.FC = () => {
       },
       repairEstimatePages: [],
       usedReviewImages: [],
+      excludedStep8Images: [],
       notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
     });
     setCurrentStep('form');
@@ -1083,6 +1088,111 @@ const MultiStepForm: React.FC = () => {
           const message = uploadError?.message || 'Unknown error';
           alert(`Upload failed: ${message}`);
         }
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again. Make sure all components are visible in the preview.');
+    } finally {
+      setIsGenerating(false);
+      setGenerationStatus(null);
+    }
+  };
+
+  // Download PDF only (no saving to database or uploading)
+  const handleDownloadPDF = async () => {
+    // Check if required fields are filled
+    if (!formData.clientName || !formData.clientAddress || !formData.chimneyType) {
+      alert('Please fill in all required fields before downloading the PDF.');
+      return;
+    }
+    
+    setIsGenerating(true);
+    setGenerationStatus('generating');
+    try {
+      // Find the existing preview div that contains the Page components
+      const previewDiv = document.querySelector('[data-preview="true"]');
+      if (!previewDiv) {
+        throw new Error('Preview div not found. Please ensure you are on the form step.');
+      }
+
+      // Use state-based mobile detection
+      const isMobileDevice = isMobile;
+      
+      // Create a temporary clone for PDF generation with adjusted positioning
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '595px';
+      tempContainer.style.height = '842px';
+      tempContainer.style.backgroundColor = 'white';
+      tempContainer.style.overflow = 'hidden';
+      tempContainer.style.margin = '0';
+      tempContainer.style.padding = '0';
+      tempContainer.style.border = 'none';
+      tempContainer.style.outline = 'none';
+      
+      // Clone the preview content
+      const clonedContent = previewDiv.cloneNode(true) as HTMLElement;
+      
+      // Adjust the text position for PDF generation (move up by 5px)
+      const titleText = clonedContent.querySelector('.absolute.w-\\[402px\\]');
+      if (titleText) {
+        (titleText as HTMLElement).style.top = '-5px';
+      }
+      
+      // Mobile-specific adjustments for PDF generation
+      if (isMobileDevice) {
+        const page1Element = clonedContent.querySelector('[data-preview="true"] > div') as HTMLElement;
+        if (page1Element) {
+          page1Element.style.transform = 'none';
+          page1Element.style.scale = '1';
+          page1Element.style.width = '595px';
+          page1Element.style.height = '842px';
+          page1Element.style.maxWidth = '595px';
+          page1Element.style.maxHeight = '842px';
+          page1Element.style.position = 'relative';
+          page1Element.style.left = '0';
+          page1Element.style.top = '0';
+          page1Element.style.margin = '0';
+          page1Element.style.padding = '0';
+        }
+        
+        const allElements = clonedContent.querySelectorAll('*');
+        allElements.forEach((el) => {
+          const element = el as HTMLElement;
+          if (element.style.transform && element.style.transform.includes('scale')) {
+            element.style.transform = 'none';
+          }
+          if (element.style.scale) {
+            element.style.scale = '1';
+          }
+          element.style.margin = '0';
+          element.style.padding = '0';
+          
+          if (element.tagName === 'TABLE') {
+            element.style.borderCollapse = 'collapse';
+            element.style.borderSpacing = '0';
+          }
+        });
+      }
+      
+      tempContainer.appendChild(clonedContent);
+      document.body.appendChild(tempContainer);
+      
+      // Wait a moment for rendering
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Convert to PDF using jsPDF
+      const { default: jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
+      
+      // Generate PDF with both pages
+      await generateMultiPagePDF(pdf, isMobileDevice);
+      
+      // Save PDF directly (download only, no upload)
+      const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -1403,16 +1513,30 @@ const MultiStepForm: React.FC = () => {
       // Collect all images selected in Step 6 (invoice images)
       const selectedImageIds = new Set((formData.selectedImages || []).map(img => img.id));
       
-      // Return images that are not used in recommendations and not selected for invoice
+      // Collect all images excluded from Step 8
+      const excludedImageIds = new Set(formData.excludedStep8Images || []);
+      
+      // Return images that are not used in recommendations, not selected for invoice, and not excluded
       return allImages.filter(img => 
-        !usedImages.has(img.url) && !selectedImageIds.has(img.id)
+        !usedImages.has(img.url) && 
+        !selectedImageIds.has(img.id) &&
+        !excludedImageIds.has(img.id)
       );
     };
 
+    // Get excluded images for Step 8 (for display in restore section)
+    const getExcludedStep8Images = () => {
+      const allImages = formData.scrapedImages || [];
+      const excludedImageIds = new Set(formData.excludedStep8Images || []);
+      return allImages.filter(img => excludedImageIds.has(img.id));
+    };
+
     // Calculate total image pages needed (9 images per page)
+    // Return 0 if there are no images to avoid blank pages
     const getTotalImagePages = () => {
       const unusedImages = getUnusedImages();
-      return Math.max(1, Math.ceil(unusedImages.length / 9));
+      if (unusedImages.length === 0) return 0;
+      return Math.ceil(unusedImages.length / 9);
     };
     
     // Always include at least one page for step 7 (recommendation setup), plus any additional recommendation pages
@@ -1504,6 +1628,8 @@ const MultiStepForm: React.FC = () => {
 
   // Helper function to check if we're on an image page (step 8)
   const isImagePage = (pageNum: number): boolean => {
+    const totalImagePages = getTotalImagePages();
+    if (totalImagePages === 0) return false; // No image pages if there are no images
     const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
     const step9Pages = 3;
@@ -1998,7 +2124,7 @@ const MultiStepForm: React.FC = () => {
           return calculateRecommendationPages(rows);
         })()
       }) :
-      isImagePage(pageNumber) ?
+      isImagePage(pageNumber) && getTotalImagePages() > 0 ?
       React.createElement(Step8, { 
         isPDF: true, 
         unusedImages: getUnusedImages(),
@@ -2869,73 +2995,104 @@ const MultiStepForm: React.FC = () => {
                   
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {(formData.repairEstimateData?.rows || []).map((row, index) => (
-                      <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
-                        <input
-                          type="text"
-                          placeholder="Description"
+                      <div key={row.id} className="flex items-center gap-1 p-2 border border-gray-200 rounded-md w-full">
+                        <AutocompleteInput
                           value={row.description}
-                          onChange={(e) => {
+                          onChange={(value) => {
                             const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
-                              r.id === row.id ? { ...r, description: e.target.value } : r
+                              r.id === row.id ? { ...r, description: value } : r
                             );
                             updateFormData({ 
                               repairEstimateData: { 
-                                estimateNumber: '',
-                                paymentMethod: '',
-                                paymentNumber: '',
+                                estimateNumber: formData.repairEstimateData?.estimateNumber || '',
+                                paymentMethod: formData.repairEstimateData?.paymentMethod || '',
+                                paymentNumber: formData.repairEstimateData?.paymentNumber || '',
                                 rows: updatedRows
                               } 
                             });
                           }}
-                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Unit"
-                          value={row.unit}
-                          onChange={(e) => {
+                          onSelectRow={(selectedRow: SheetRow) => {
+                            // When a row is selected from description field, populate all three fields
+                            const priceValue = selectedRow.price || '';
+                            // Remove $ sign and store as plain number string (e.g., "400" not "$400")
+                            const priceWithoutDollar = priceValue.replace(/^\$/, '').trim();
+                            
                             const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
-                              r.id === row.id ? { ...r, unit: e.target.value } : r
+                              r.id === row.id ? { 
+                                ...r, 
+                                description: selectedRow.description,
+                                unit: selectedRow.unit || '1', // Default to "1" if not provided
+                                price: priceWithoutDollar // Store without $ sign
+                              } : r
                             );
                             updateFormData({ 
                               repairEstimateData: { 
-                                estimateNumber: '',
-                                paymentMethod: '',
-                                paymentNumber: '',
+                                estimateNumber: formData.repairEstimateData?.estimateNumber || '',
+                                paymentMethod: formData.repairEstimateData?.paymentMethod || '',
+                                paymentNumber: formData.repairEstimateData?.paymentNumber || '',
                                 rows: updatedRows
                               } 
                             });
                           }}
-                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                          placeholder="Description"
+                          field="description"
+                          className=" w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                          sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
+                          sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
                         />
-                        <input
-                          type="text"
-                          placeholder="Price"
-                          value={row.price}
-                          onChange={(e) => {
-                            const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
-                              r.id === row.id ? { ...r, price: e.target.value } : r
-                            );
-                            updateFormData({ 
-                              repairEstimateData: { 
-                                estimateNumber: '',
-                                paymentMethod: '',
-                                paymentNumber: '',
-                                rows: updatedRows
-                              } 
-                            });
-                          }}
-                          className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                        />
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <AutocompleteInput
+                            value={row.unit}
+                            onChange={(value) => {
+                              const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
+                                r.id === row.id ? { ...r, unit: value } : r
+                              );
+                              updateFormData({ 
+                                repairEstimateData: { 
+                                  estimateNumber: formData.repairEstimateData?.estimateNumber || '',
+                                  paymentMethod: formData.repairEstimateData?.paymentMethod || '',
+                                  paymentNumber: formData.repairEstimateData?.paymentNumber || '',
+                                  rows: updatedRows
+                                } 
+                              });
+                            }}
+                            placeholder="Unit"
+                            field="unit"
+                            className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                            sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
+                            sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                          />
+                          <input
+                            type="text"
+                            value={row.price}
+                            onChange={(e) => {
+                              // Remove $ sign if user types it
+                              const priceWithoutDollar = e.target.value.replace(/^\$/, '').trim();
+                              const updatedRows = (formData.repairEstimateData?.rows || []).map(r => 
+                                r.id === row.id ? { ...r, price: priceWithoutDollar } : r
+                              );
+                              updateFormData({ 
+                                repairEstimateData: { 
+                                  estimateNumber: formData.repairEstimateData?.estimateNumber || '',
+                                  paymentMethod: formData.repairEstimateData?.paymentMethod || '',
+                                  paymentNumber: formData.repairEstimateData?.paymentNumber || '',
+                                  rows: updatedRows
+                                } 
+                              });
+                            }}
+                            placeholder="Price"
+                            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
                             const updatedRows = (formData.repairEstimateData?.rows || []).filter(r => r.id !== row.id);
                             updateFormData({ 
                               repairEstimateData: { 
-                                estimateNumber: '',
-                                paymentMethod: '',
-                                paymentNumber: '',
+                                estimateNumber: formData.repairEstimateData?.estimateNumber || '',
+                                paymentMethod: formData.repairEstimateData?.paymentMethod || '',
+                                paymentNumber: formData.repairEstimateData?.paymentNumber || '',
                                 rows: updatedRows
                               } 
                             });
@@ -3241,27 +3398,32 @@ const MultiStepForm: React.FC = () => {
                       </button>
                     </div>
                   <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-red-50">
+                    <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                      <colgroup>
+                        <col style={{ width: '65%' }} />
+                        <col style={{ width: '10%' }} />
+                        <col style={{ width: '12%' }} />
+                        <col style={{ width: '15%' }} />
+                      </colgroup>
+                      <thead className="bg-[#722420]">
                         <tr>
-                          <th className="px-3 py-2 text-left">Description</th>
-                          <th className="px-3 py-2 text-left">Unit</th>
-                          <th className="px-3 py-2 text-left">Price</th>
-                          <th className="px-3 py-2 text-left">Actions</th>
+                          <th className="px-2 py-2 text-left text-white font-bold text-xs" style={{ borderBottom: '1px solid #722420' }}>Description</th>
+                          <th className="px-1 py-2 text-center text-white font-bold text-xs" style={{ borderBottom: '1px solid #722420' }}>Unit</th>
+                          <th className="px-1 py-2 text-center text-white font-bold text-xs" style={{ borderBottom: '1px solid #722420' }}>Price</th>
+                          <th className="px-2 py-2 text-center text-white font-bold text-xs" style={{ borderBottom: '1px solid #722420' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(getCurrentRecommendationPage()?.repairEstimateData.rows || []).map((row: any, index: number) => (
                           <tr key={row.id}>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={row.description}
-                                onChange={(e) => {
+                            <td className="px-2 py-2" style={{ width: '65%' }}>
+                              <AutocompleteInput
+                                value={row.description || ''}
+                                onChange={(value) => {
                                   const currentPage = getCurrentRecommendationPage();
                                   if (currentPage) {
                                     const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                      r.id === row.id ? { ...r, description: e.target.value } : r
+                                      r.id === row.id ? { ...r, description: value } : r
                                     );
                                     updateCurrentRecommendationPage({
                                       repairEstimateData: {
@@ -3271,55 +3433,87 @@ const MultiStepForm: React.FC = () => {
                                     });
                                   }
                                 }}
-                                className="w-full p-1 border rounded text-sm"
+                                onSelectRow={(selectedRow: SheetRow) => {
+                                  // When a row is selected from description field, populate all three fields
+                                  const currentPage = getCurrentRecommendationPage();
+                                  if (currentPage) {
+                                    const priceValue = selectedRow.price || '';
+                                    // Parse price: remove $ and convert to number
+                                    const numericPrice = priceValue.replace(/^\$/, '').trim();
+                                    const parsedPrice = numericPrice ? parseFloat(numericPrice) || 0 : 0;
+                                    
+                                    const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                      r.id === row.id ? { 
+                                        ...r, 
+                                        description: selectedRow.description,
+                                        unit: selectedRow.unit ? parseInt(selectedRow.unit) || 1 : 1, // Default to 1 if not provided
+                                        price: parsedPrice // Store as number for calculations
+                                      } : r
+                                    );
+                                    updateCurrentRecommendationPage({
+                                      repairEstimateData: {
+                                        ...currentPage.repairEstimateData,
+                                        rows: updatedRows
+                                      }
+                                    });
+                                  }
+                                }}
                                 placeholder="Enter description"
+                                field="description"
+                                className="w-full min-w-0 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
+                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
                               />
                             </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                value={row.unit}
-                            onChange={(e) => {
-                              const currentPage = getCurrentRecommendationPage();
-                              if (currentPage) {
-                                const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                  r.id === row.id ? { ...r, unit: parseInt(e.target.value) || 0 } : r
-                                );
-                                updateCurrentRecommendationPage({
-                                  repairEstimateData: {
-                                    ...currentPage.repairEstimateData,
-                                    rows: updatedRows
+                            <td className="px-1 py-2" style={{ width: '8%' }}>
+                              <AutocompleteInput
+                                value={String(row.unit || '')}
+                                onChange={(value) => {
+                                  const currentPage = getCurrentRecommendationPage();
+                                  if (currentPage) {
+                                    const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                      r.id === row.id ? { ...r, unit: parseInt(value) || 0 } : r
+                                    );
+                                    updateCurrentRecommendationPage({
+                                      repairEstimateData: {
+                                        ...currentPage.repairEstimateData,
+                                        rows: updatedRows
+                                      }
+                                    });
                                   }
-                                });
-                              }
-                            }}
-                                className="w-full p-1 border rounded text-sm"
-                                min="0"
+                                }}
+                                placeholder="Unit"
+                                field="unit"
+                                className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
+                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
                               />
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-1 py-2" style={{ width: '12%' }}>
                               <input
-                                type="number"
-                                value={row.price}
-                            onChange={(e) => {
-                              const currentPage = getCurrentRecommendationPage();
-                              if (currentPage) {
-                                const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                  r.id === row.id ? { ...r, price: parseInt(e.target.value) || 0 } : r
-                                );
-                                updateCurrentRecommendationPage({
-                                  repairEstimateData: {
-                                    ...currentPage.repairEstimateData,
-                                    rows: updatedRows
+                                type="text"
+                                value={row.price ? `$${row.price}` : ''}
+                                onChange={(e) => {
+                                  const currentPage = getCurrentRecommendationPage();
+                                  if (currentPage) {
+                                    // Remove $ and parse as float
+                                    const numericValue = e.target.value.replace(/^\$/, '').trim();
+                                    const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                      r.id === row.id ? { ...r, price: parseFloat(numericValue) || 0 } : r
+                                    );
+                                    updateCurrentRecommendationPage({
+                                      repairEstimateData: {
+                                        ...currentPage.repairEstimateData,
+                                        rows: updatedRows
+                                      }
+                                    });
                                   }
-                                });
-                              }
-                            }}
-                                className="w-full p-1 border rounded text-sm"
-                                min="0"
+                                }}
+                                placeholder="Price"
+                                className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                               />
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-1 py-2" style={{ width: '15%' }}>
                               <button
                             onClick={() => {
                               const currentPage = getCurrentRecommendationPage();
@@ -3333,7 +3527,7 @@ const MultiStepForm: React.FC = () => {
                                 });
                               }
                             }}
-                                className="px-2 py-1 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-xs"
+                                className="w-full  py-0.5 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-xs whitespace-nowrap"
                               >
                                 Remove
                               </button>
@@ -3365,9 +3559,10 @@ const MultiStepForm: React.FC = () => {
                         value={(() => {
                           const currentPage = getCurrentRecommendationPage();
                           if (!currentPage) return '';
-                          // Use custom recommendation if available, otherwise combine from rows
-                          const customRec = currentPage.customRecommendation || '';
-                          if (customRec) return customRec;
+                          // Use custom recommendation if it's explicitly set (even if empty), otherwise combine from rows
+                          if (currentPage.customRecommendation !== undefined && currentPage.customRecommendation !== null) {
+                            return currentPage.customRecommendation;
+                          }
                           // Combine recommendations from all rows, preserving line breaks
                           const rowRecommendations = (currentPage.repairEstimateData.rows || [])
                             .filter((r: any) => r.recommendation)
@@ -3396,21 +3591,94 @@ const MultiStepForm: React.FC = () => {
                 )}
               </div>
             ) : isImagePage(currentPage) ? (
-              <div className="text-center py-8">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <div className="text-blue-600 mb-4">
-                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
+              <div className="py-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <h4 className="text-lg font-semibold text-black mb-2">Step 8 - Inspection Images</h4>
-                  <p className="text-black mb-4">
-                    This page displays inspection images in a static format. Images are automatically arranged and cannot be modified in this view.
+                  <p className="text-sm text-black mb-2">
+                    Manage which images appear in the inspection images section. Remove images you don't want to include.
                   </p>
-                  <p className="text-sm text-black">
-                    Page {getImagePageIndex(currentPage) + 1} of {getTotalImagePages()}
+                  <p className="text-xs text-gray-600">
+                    Showing {getUnusedImages().length} image(s) • Page {getImagePageIndex(currentPage) + 1} of {getTotalImagePages()}
                   </p>
                 </div>
+                
+                {/* All Unused Images List */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-semibold text-gray-700 mb-2">All Available Images</h5>
+                  <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white">
+                    {getUnusedImages().length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        No images available. All images have been used in other steps or removed.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {getUnusedImages().map((image) => (
+                          <div
+                            key={image.id}
+                            className="relative aspect-square border border-gray-300 rounded overflow-hidden group hover:border-red-500 transition-colors"
+                          >
+                            <img
+                              src={image.url}
+                              alt="Inspection"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              onClick={() => {
+                                const excluded = formData.excludedStep8Images || [];
+                                if (!excluded.includes(image.id)) {
+                                  updateFormData({
+                                    excludedStep8Images: [...excluded, image.id]
+                                  });
+                                }
+                              }}
+                              className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Remove from Step 8"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Excluded Images Section */}
+                {getExcludedStep8Images().length > 0 && (
+                  <div className="mb-4">
+                    <h5 className="text-sm font-semibold text-gray-700 mb-2">
+                      Removed Images ({getExcludedStep8Images().length})
+                    </h5>
+                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-gray-50">
+                      <div className="grid grid-cols-4 gap-2">
+                        {getExcludedStep8Images().map((image) => (
+                          <div
+                            key={image.id}
+                            className="relative aspect-square border-2 border-dashed border-gray-400 rounded overflow-hidden cursor-pointer hover:border-[#722420] transition-colors"
+                            onClick={() => {
+                              const excluded = formData.excludedStep8Images || [];
+                              updateFormData({
+                                excludedStep8Images: excluded.filter(id => id !== image.id)
+                              });
+                            }}
+                            title="Click to restore"
+                          >
+                            <img
+                              src={image.url}
+                              alt="Excluded"
+                              className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xs font-bold text-gray-600 bg-white/80 px-1 rounded">
+                                Restore
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : getLogicalStep(currentPage) === 9 ? (
               <div className="text-center py-8">
@@ -3487,20 +3755,33 @@ const MultiStepForm: React.FC = () => {
                     </button>
                   )}
                   
-                  <button 
-                    type="button"
-                    onClick={handleSubmit}
-                    className="w-full btn-primary"
-                    disabled={isGenerating}
-                  >
-                    {isGenerating
-                      ? (generationStatus === 'saving'
-                          ? 'Saving Data...'
-                          : generationStatus === 'uploading'
-                            ? 'Uploading Report...'
-                            : 'Generating PDF...')
-                      : 'Generate Report'}
-                  </button>
+                  <div className="space-y-2">
+                    <button 
+                      type="button"
+                      onClick={handleDownloadPDF}
+                      className="w-full px-4 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isGenerating}
+                    >
+                      {isGenerating && generationStatus === 'generating'
+                        ? 'Generating PDF...'
+                        : 'Download PDF'}
+                    </button>
+                    
+                    <button 
+                      type="button"
+                      onClick={handleSubmit}
+                      className="w-full btn-primary"
+                      disabled={isGenerating}
+                    >
+                      {isGenerating
+                        ? (generationStatus === 'saving'
+                            ? 'Saving Data...'
+                            : generationStatus === 'uploading'
+                              ? 'Uploading Report...'
+                              : 'Generating PDF...')
+                        : 'Generate Report'}
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className="text-center py-4">
@@ -3723,13 +4004,23 @@ const MultiStepForm: React.FC = () => {
                   />
                  )
                ) : isImagePage(currentPage) ? (
-                 <Step8 
-                   isPDF={false} 
-                   unusedImages={getUnusedImages()} 
-                   currentPage={getImagePageIndex(currentPage) + 1}
-                   totalPages={getTotalImagePages()}
-                   selectedImages={formData.selectedImages || []}
-                 />
+                 getTotalImagePages() > 0 ? (
+                   <Step8 
+                     isPDF={false} 
+                     unusedImages={getUnusedImages()} 
+                     currentPage={getImagePageIndex(currentPage) + 1}
+                     totalPages={getTotalImagePages()}
+                     selectedImages={formData.selectedImages || []}
+                   />
+                 ) : (
+                   <div className="text-center py-8">
+                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                       <p className="text-sm text-yellow-800">
+                         No images available for Step 8. All images have been used in other steps or removed.
+                       </p>
+                     </div>
+                   </div>
+                 )
                 ) : getLogicalStep(currentPage) === 9 && currentPage === (totalPages - 7) ? (
                   <Step9Part1 
                     chimneyType={
@@ -4062,8 +4353,10 @@ const MultiStepForm: React.FC = () => {
                         recommendation: option.recommendation,
                         isManual: true // Make predefined entries editable by default
                       };
-                        // Update recommendation textarea with the new row's recommendation if no custom recommendation exists
-                        const updatedRecommendation = currentPage.customRecommendation || option.recommendation || '';
+                        // Update recommendation textarea with the new row's recommendation only if custom recommendation is not explicitly set
+                        const updatedRecommendation = (currentPage.customRecommendation !== undefined && currentPage.customRecommendation !== null) 
+                          ? currentPage.customRecommendation 
+                          : (option.recommendation || '');
                         updateCurrentRecommendationPage({
                           repairEstimateData: {
                             ...currentPage.repairEstimateData,
