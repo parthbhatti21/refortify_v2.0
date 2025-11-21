@@ -32,8 +32,7 @@ export const fetchGoogleSheetData = async (
     
     // Use direct Google Sheets API only (no backend proxy)
     if (!apiKey) {
-      // Silently return empty array if API key not configured
-      // This is optional functionality, so don't show warnings in production
+      console.warn('⚠ REACT_APP_GOOGLE_SHEETS_API_KEY not found in fetchGoogleSheetData. Check Vercel environment variables.');
       return [];
     }
     
