@@ -40,14 +40,26 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       const effectiveSheetId = sheetId || process.env.REACT_APP_GOOGLE_SHEET_ID;
       
       if (!effectiveSheetId) {
+        console.warn('⚠ Google Sheet ID not provided. Autocomplete will not work.');
+        console.warn('⚠ Set REACT_APP_GOOGLE_SHEET_ID or pass sheetId prop to AutocompleteInput.');
         return;
       }
       
       try {
+        setIsLoading(true);
         const data = await fetchGoogleSheetData(effectiveSheetId, sheetRange);
         setSheetData(data);
-      } catch (error) {
-        // Silently fail
+        if (data.length === 0) {
+          console.warn(`⚠ No data loaded from Google Sheet. Check:`);
+          console.warn(`  1. Sheet ID: ${effectiveSheetId}`);
+          console.warn(`  2. Range: ${sheetRange}`);
+          console.warn(`  3. Environment variables are set in deployment`);
+          console.warn(`  4. Sheet is shared publicly (if using API key method)`);
+        }
+      } catch (error: any) {
+        console.error('✗ Failed to load Google Sheet data:', error.message);
+      } finally {
+        setIsLoading(false);
       }
     };
 

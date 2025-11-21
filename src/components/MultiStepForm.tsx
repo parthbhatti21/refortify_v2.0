@@ -2853,9 +2853,8 @@ const MultiStepForm: React.FC = () => {
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {(formData.invoiceData?.rows || []).map((row, index) => (
                       <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
-                        <input
-                          type="text"
-                          placeholder="Description"
+                        <textarea
+                          placeholder="Description (Press Enter for new line)"
                           value={row.description}
                           onChange={(e) => {
                             const updatedRows = (formData.invoiceData?.rows || []).map(r => 
@@ -2869,8 +2868,25 @@ const MultiStepForm: React.FC = () => {
                                 rows: updatedRows
                               } 
                             });
+                            // Auto-resize textarea
+                            const textarea = e.target as HTMLTextAreaElement;
+                            textarea.style.height = 'auto';
+                            const newHeight = Math.max(parseFloat(getComputedStyle(textarea).lineHeight) || 20, textarea.scrollHeight);
+                            textarea.style.height = `${newHeight}px`;
                           }}
-                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420] resize-y"
+                          rows={1}
+                          style={{ 
+                            minHeight: '2rem',
+                            lineHeight: '1.25rem',
+                            whiteSpace: 'pre-wrap',
+                            wordWrap: 'break-word',
+                            overflow: 'hidden'
+                          }}
+                          onKeyDown={(e) => {
+                            // Allow Enter to create new lines (default behavior)
+                            // Don't prevent default - let textarea handle it naturally
+                          }}
                         />
                         <input
                           type="text"
@@ -3417,13 +3433,13 @@ const MultiStepForm: React.FC = () => {
                         {(getCurrentRecommendationPage()?.repairEstimateData.rows || []).map((row: any, index: number) => (
                           <tr key={row.id}>
                             <td className="px-2 py-2" style={{ width: '65%' }}>
-                              <AutocompleteInput
+                              <textarea
                                 value={row.description || ''}
-                                onChange={(value) => {
+                                onChange={(e) => {
                                   const currentPage = getCurrentRecommendationPage();
                                   if (currentPage) {
                                     const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                      r.id === row.id ? { ...r, description: value } : r
+                                      r.id === row.id ? { ...r, description: e.target.value } : r
                                     );
                                     updateCurrentRecommendationPage({
                                       repairEstimateData: {
@@ -3432,47 +3448,37 @@ const MultiStepForm: React.FC = () => {
                                       }
                                     });
                                   }
+                                  // Auto-resize textarea
+                                  const textarea = e.target as HTMLTextAreaElement;
+                                  textarea.style.height = 'auto';
+                                  const newHeight = Math.max(parseFloat(getComputedStyle(textarea).lineHeight) || 20, textarea.scrollHeight);
+                                  textarea.style.height = `${newHeight}px`;
                                 }}
-                                onSelectRow={(selectedRow: SheetRow) => {
-                                  // When a row is selected from description field, populate all three fields
-                                  const currentPage = getCurrentRecommendationPage();
-                                  if (currentPage) {
-                                    const priceValue = selectedRow.price || '';
-                                    // Parse price: remove $ and convert to number
-                                    const numericPrice = priceValue.replace(/^\$/, '').trim();
-                                    const parsedPrice = numericPrice ? parseFloat(numericPrice) || 0 : 0;
-                                    
-                                    const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                      r.id === row.id ? { 
-                                        ...r, 
-                                        description: selectedRow.description,
-                                        unit: selectedRow.unit ? parseInt(selectedRow.unit) || 1 : 1, // Default to 1 if not provided
-                                        price: parsedPrice // Store as number for calculations
-                                      } : r
-                                    );
-                                    updateCurrentRecommendationPage({
-                                      repairEstimateData: {
-                                        ...currentPage.repairEstimateData,
-                                        rows: updatedRows
-                                      }
-                                    });
-                                  }
+                                placeholder="Enter description (Press Enter for new line)"
+                                className="w-full min-w-0 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420] resize-y"
+                                rows={1}
+                                style={{ 
+                                  minHeight: '2rem',
+                                  lineHeight: '1.25rem',
+                                  whiteSpace: 'pre-wrap',
+                                  wordWrap: 'break-word',
+                                  overflow: 'hidden'
                                 }}
-                                placeholder="Enter description"
-                                field="description"
-                                className="w-full min-w-0 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
-                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                                onKeyDown={(e) => {
+                                  // Allow Enter to create new lines (default behavior)
+                                  // Don't prevent default - let textarea handle it naturally
+                                }}
                               />
                             </td>
                             <td className="px-1 py-2" style={{ width: '8%' }}>
-                              <AutocompleteInput
+                              <input
+                                type="text"
                                 value={String(row.unit || '')}
-                                onChange={(value) => {
+                                onChange={(e) => {
                                   const currentPage = getCurrentRecommendationPage();
                                   if (currentPage) {
                                     const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                      r.id === row.id ? { ...r, unit: parseInt(value) || 0 } : r
+                                      r.id === row.id ? { ...r, unit: parseInt(e.target.value) || 0 } : r
                                     );
                                     updateCurrentRecommendationPage({
                                       repairEstimateData: {
@@ -3483,10 +3489,7 @@ const MultiStepForm: React.FC = () => {
                                   }
                                 }}
                                 placeholder="Unit"
-                                field="unit"
                                 className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
-                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
                               />
                             </td>
                             <td className="px-1 py-2" style={{ width: '12%' }}>
@@ -3559,8 +3562,10 @@ const MultiStepForm: React.FC = () => {
                         value={(() => {
                           const currentPage = getCurrentRecommendationPage();
                           if (!currentPage) return '';
-                          // Use custom recommendation if it's explicitly set (even if empty), otherwise combine from rows
-                          if (currentPage.customRecommendation !== undefined && currentPage.customRecommendation !== null) {
+                          // Use custom recommendation if it's explicitly set and not empty, otherwise combine from rows
+                          if (currentPage.customRecommendation !== undefined && 
+                              currentPage.customRecommendation !== null && 
+                              currentPage.customRecommendation.trim() !== '') {
                             return currentPage.customRecommendation;
                           }
                           // Combine recommendations from all rows, preserving line breaks
@@ -4353,10 +4358,18 @@ const MultiStepForm: React.FC = () => {
                         recommendation: option.recommendation,
                         isManual: true // Make predefined entries editable by default
                       };
-                        // Update recommendation textarea with the new row's recommendation only if custom recommendation is not explicitly set
-                        const updatedRecommendation = (currentPage.customRecommendation !== undefined && currentPage.customRecommendation !== null) 
-                          ? currentPage.customRecommendation 
-                          : (option.recommendation || '');
+                        // If customRecommendation is empty/undefined, set it to the new option's recommendation
+                        // If it already has content, replace it with the new recommendation (user can edit if needed)
+                        let updatedRecommendation: string;
+                        const existingRecommendation = currentPage.customRecommendation?.trim() || '';
+                        if (existingRecommendation !== '') {
+                          // If there's existing content, replace it with the new recommendation
+                          // (User might want to see the latest selected recommendation)
+                          updatedRecommendation = option.recommendation || '';
+                        } else {
+                          // If empty or undefined, use the option's recommendation
+                          updatedRecommendation = option.recommendation || '';
+                        }
                         updateCurrentRecommendationPage({
                           repairEstimateData: {
                             ...currentPage.repairEstimateData,

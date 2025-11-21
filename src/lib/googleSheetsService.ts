@@ -10,8 +10,13 @@ export interface SheetRow {
   price: string;
 }
 
+// Cache to prevent duplicate API calls
+const sheetDataCache = new Map<string, { data: SheetRow[]; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+const pendingRequests = new Map<string, Promise<SheetRow[]>>(); // Track pending requests
+
 /**
- * Fetches data from Google Sheets using direct API call
+ * Fetches data from Google Sheets using direct Google API
  * Requires REACT_APP_GOOGLE_SHEETS_API_KEY environment variable
  * 
  * @param sheetId - The Google Sheet ID (from the sheet URL)
@@ -25,24 +30,83 @@ export const fetchGoogleSheetData = async (
   try {
     const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
     
-    // Use direct Google Sheets API (no backend needed)
+    // Use direct Google Sheets API only (no backend proxy)
     if (!apiKey) {
+      console.warn('⚠ REACT_APP_GOOGLE_SHEETS_API_KEY not set. Google Sheets autocomplete will not work.');
+      console.warn('⚠ Please set REACT_APP_GOOGLE_SHEETS_API_KEY in your environment variables.');
       return [];
     }
     
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
-    const response = await fetch(url);
+    // Create cache key from sheetId and range
+    const cacheKey = `${sheetId}:${range}`;
     
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`Failed to fetch Google Sheet data: ${response.status} ${errorText}`);
+    // Check cache first
+    const cached = sheetDataCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log(`✓ Google Sheets data loaded from cache: ${cached.data.length} rows`);
+      return cached.data;
     }
-
-    const data = await response.json();
-    const parsed = parseSheetData(data.values || []);
     
-    return parsed;
+    // Check if there's already a pending request for this key
+    const pendingRequest = pendingRequests.get(cacheKey);
+    if (pendingRequest) {
+      console.log('⏳ Reusing pending Google Sheets API request...');
+      return await pendingRequest;
+    }
+    
+    // Create new request
+    const requestPromise = (async () => {
+      try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
+          const errorMessage = `Failed to fetch Google Sheet data: ${response.status} ${errorText}`;
+          console.error(`✗ ${errorMessage}`);
+          
+          // Check for common errors
+          if (response.status === 403) {
+            console.error('✗ API key may be invalid or restricted. Check Google Cloud Console settings.');
+            console.error('✗ Make sure the Google Sheet is shared publicly (Anyone with the link can view).');
+          } else if (response.status === 404) {
+            console.error('✗ Sheet not found. Check that the sheet ID is correct.');
+          } else if (response.status === 400) {
+            console.error('✗ Invalid request. Check that the sheet range is correct.');
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        const parsed = parseSheetData(data.values || []);
+        
+        // Cache the result
+        sheetDataCache.set(cacheKey, {
+          data: parsed,
+          timestamp: Date.now()
+        });
+        
+        if (parsed.length > 0) {
+          console.log(`✓ Google Sheets data loaded via Google API: ${parsed.length} rows`);
+        } else {
+          console.warn('⚠ Google Sheets data loaded but no valid rows found. Check sheet format.');
+        }
+        
+        return parsed;
+      } finally {
+        // Remove from pending requests
+        pendingRequests.delete(cacheKey);
+      }
+    })();
+    
+    // Store pending request
+    pendingRequests.set(cacheKey, requestPromise);
+    
+    return await requestPromise;
   } catch (error: any) {
+    console.error('✗ Error fetching Google Sheet data:', error.message);
+    // Don't throw - return empty array to allow app to continue
     return [];
   }
 };

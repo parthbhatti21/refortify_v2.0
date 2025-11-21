@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchGoogleSheetData } from '../lib/googleSheetsService';
 
 interface ImageItem {
   id: string;
@@ -75,6 +76,39 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [libraryRootDirs, setLibraryRootDirs] = useState<Array<{ name: string; prefix: string }>>([]);
   const [libraryChildDirs, setLibraryChildDirs] = useState<Array<{ name: string; prefix: string }>>([]);
+  const [sheetDataLoaded, setSheetDataLoaded] = useState(false);
+  const [sheetDataError, setSheetDataError] = useState<string | null>(null);
+
+  // Load Google Sheets data on component mount
+  useEffect(() => {
+    const loadGoogleSheetsData = async () => {
+      const sheetId = process.env.REACT_APP_GOOGLE_SHEET_ID;
+      const sheetRange = process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:C';
+      
+      if (!sheetId) {
+        console.warn('⚠ REACT_APP_GOOGLE_SHEET_ID not set. Google Sheets autocomplete will not be available.');
+        setSheetDataError('Google Sheet ID not configured');
+        return;
+      }
+
+      try {
+        console.log('📊 Loading Google Sheets data on data extraction page...');
+        const data = await fetchGoogleSheetData(sheetId, sheetRange);
+        if (data.length > 0) {
+          setSheetDataLoaded(true);
+          console.log(`✓ Google Sheets data preloaded: ${data.length} rows ready for Step 5 Part 2`);
+        } else {
+          setSheetDataError('No data found in Google Sheet');
+          console.warn('⚠ Google Sheets loaded but no data found');
+        }
+      } catch (error: any) {
+        setSheetDataError(error.message || 'Failed to load Google Sheets data');
+        console.error('✗ Failed to preload Google Sheets data:', error.message);
+      }
+    };
+
+    loadGoogleSheetsData();
+  }, []);
 
   const openLibrary = async () => {
     setShowLibrary(true);
