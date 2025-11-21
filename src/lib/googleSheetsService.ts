@@ -32,8 +32,8 @@ export const fetchGoogleSheetData = async (
     
     // Use direct Google Sheets API only (no backend proxy)
     if (!apiKey) {
-      console.warn('⚠ REACT_APP_GOOGLE_SHEETS_API_KEY not set. Google Sheets autocomplete will not work.');
-      console.warn('⚠ Please set REACT_APP_GOOGLE_SHEETS_API_KEY in your environment variables.');
+      // Silently return empty array if API key not configured
+      // This is optional functionality, so don't show warnings in production
       return [];
     }
     

@@ -38,10 +38,10 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   useEffect(() => {
     const loadSheetData = async () => {
       const effectiveSheetId = sheetId || process.env.REACT_APP_GOOGLE_SHEET_ID;
+      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
       
-      if (!effectiveSheetId) {
-        console.warn('⚠ Google Sheet ID not provided. Autocomplete will not work.');
-        console.warn('⚠ Set REACT_APP_GOOGLE_SHEET_ID or pass sheetId prop to AutocompleteInput.');
+      if (!effectiveSheetId || !apiKey) {
+        // Silently skip if not configured - autocomplete is optional
         return;
       }
       

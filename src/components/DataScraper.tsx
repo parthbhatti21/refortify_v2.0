@@ -84,10 +84,22 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     const loadGoogleSheetsData = async () => {
       const sheetId = process.env.REACT_APP_GOOGLE_SHEET_ID;
       const sheetRange = process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:C';
+      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
       
-      if (!sheetId) {
-        console.warn('⚠ REACT_APP_GOOGLE_SHEET_ID not set. Google Sheets autocomplete will not be available.');
-        setSheetDataError('Google Sheet ID not configured');
+      // Debug: Log environment variable status (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Google Sheets Config Check:', {
+          hasSheetId: !!sheetId,
+          hasApiKey: !!apiKey,
+          sheetIdLength: sheetId?.length || 0,
+          apiKeyLength: apiKey?.length || 0
+        });
+      }
+      
+      if (!sheetId || !apiKey) {
+        // Silently skip if not configured - this is optional functionality
+        // Note: In Vercel, environment variables must be set before build
+        // After setting env vars, you must redeploy for them to take effect
         return;
       }
 
@@ -98,11 +110,9 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
           setSheetDataLoaded(true);
           console.log(`✓ Google Sheets data preloaded: ${data.length} rows ready for Step 5 Part 2`);
         } else {
-          setSheetDataError('No data found in Google Sheet');
           console.warn('⚠ Google Sheets loaded but no data found');
         }
       } catch (error: any) {
-        setSheetDataError(error.message || 'Failed to load Google Sheets data');
         console.error('✗ Failed to preload Google Sheets data:', error.message);
       }
     };
