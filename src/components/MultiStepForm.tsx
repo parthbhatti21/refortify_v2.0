@@ -1206,7 +1206,7 @@ const MultiStepForm: React.FC = () => {
   // Upload the generated PDF to the backend using multipart/form-data
   const uploadReportPdf = async (pdfBlob: Blob, fileName: string, clientName: string) => {
     const API_BASE = process.env.REACT_APP_API_BASE || 'https://admin-backend-stepintime.onrender.com';
-    const API_KEY = process.env.REACT_APP_API_KEY;
+    const API_KEY = process.env.REACT_APP_API_KEY || 'bestcompanyever23325';
     const formData = new FormData();
     formData.append('file', pdfBlob, fileName);
     formData.append('website', 'mysite');
@@ -3053,7 +3053,7 @@ const MultiStepForm: React.FC = () => {
                           placeholder="Description"
                           field="description"
                           className=" w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                          sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
+                          sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
                           sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
                         />
                         <div className="flex items-center gap-1 flex-shrink-0">
@@ -3075,7 +3075,7 @@ const MultiStepForm: React.FC = () => {
                             placeholder="Unit"
                             field="unit"
                             className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                            sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID}
+                            sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
                             sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
                           />
                           <input

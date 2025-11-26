@@ -28,7 +28,7 @@ export const fetchGoogleSheetData = async (
   range: string = 'Sheet1!A:B' // Default to 2 columns (Description, Price)
 ): Promise<SheetRow[]> => {
   try {
-    const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
+    const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBq1Jx-kOaZgPq413w57G9lGQvDgj-xN-k';
     
     // Use direct Google Sheets API only (no backend proxy)
     if (!apiKey) {

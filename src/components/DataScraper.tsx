@@ -82,9 +82,9 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   // Load Google Sheets data on component mount
   useEffect(() => {
     const loadGoogleSheetsData = async () => {
-      const sheetId = process.env.REACT_APP_GOOGLE_SHEET_ID;
+      const sheetId = process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q';
       const sheetRange = process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:C';
-      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
+      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBq1Jx-kOaZgPq413w57G9lGQvDgj-xN-k';
       
       // Debug: Log environment variable status (works in both dev and production)
       console.log('🔍 Google Sheets Config Check:', {
