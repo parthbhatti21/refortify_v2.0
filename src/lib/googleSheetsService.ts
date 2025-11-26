@@ -56,11 +56,11 @@ export const fetchGoogleSheetData = async (
     // Create new request
     const requestPromise = (async () => {
       try {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
           const errorMessage = `Failed to fetch Google Sheet data: ${response.status} ${errorText}`;
           console.error(`✗ ${errorMessage}`);
           
@@ -75,10 +75,10 @@ export const fetchGoogleSheetData = async (
           }
           
           throw new Error(errorMessage);
-        }
+    }
 
-        const data = await response.json();
-        const parsed = parseSheetData(data.values || []);
+    const data = await response.json();
+    const parsed = parseSheetData(data.values || []);
         
         // Cache the result
         sheetDataCache.set(cacheKey, {
@@ -91,8 +91,8 @@ export const fetchGoogleSheetData = async (
         } else {
           console.warn('⚠ Google Sheets data loaded but no valid rows found. Check sheet format.');
         }
-        
-        return parsed;
+    
+    return parsed;
       } finally {
         // Remove from pending requests
         pendingRequests.delete(cacheKey);

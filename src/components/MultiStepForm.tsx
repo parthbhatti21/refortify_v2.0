@@ -3620,7 +3620,7 @@ const MultiStepForm: React.FC = () => {
                         {getUnusedImages().map((image) => (
                           <div
                             key={image.id}
-                            className="relative aspect-square border border-gray-300 rounded overflow-hidden group hover:border-red-500 transition-colors"
+                            className="relative aspect-square border border-gray-300 rounded overflow-hidden hover:border-red-500 transition-colors"
                           >
                             <img
                               src={image.url}
@@ -3636,7 +3636,7 @@ const MultiStepForm: React.FC = () => {
                                   });
                                 }
                               }}
-                              className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg"
                               title="Remove from Step 8"
                             >
                               ×
@@ -4010,13 +4010,13 @@ const MultiStepForm: React.FC = () => {
                  )
                ) : isImagePage(currentPage) ? (
                  getTotalImagePages() > 0 ? (
-                   <Step8 
-                     isPDF={false} 
-                     unusedImages={getUnusedImages()} 
-                     currentPage={getImagePageIndex(currentPage) + 1}
-                     totalPages={getTotalImagePages()}
-                     selectedImages={formData.selectedImages || []}
-                   />
+                 <Step8 
+                   isPDF={false} 
+                   unusedImages={getUnusedImages()} 
+                   currentPage={getImagePageIndex(currentPage) + 1}
+                   totalPages={getTotalImagePages()}
+                   selectedImages={formData.selectedImages || []}
+                 />
                  ) : (
                    <div className="text-center py-8">
                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
