@@ -38,7 +38,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   useEffect(() => {
     const loadSheetData = async () => {
       const effectiveSheetId = sheetId || process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q';
-      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBq1Jx-kOaZgPq413w57G9lGQvDgj-xN-k';
+      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBixMaBdYAqO8_I9qlBlwU6nQkjiDCt-uc';
       
       if (!effectiveSheetId || !apiKey) {
         // Silently skip if not configured - autocomplete is optional

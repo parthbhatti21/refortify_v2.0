@@ -79,46 +79,24 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   const [sheetDataLoaded, setSheetDataLoaded] = useState(false);
   const [sheetDataError, setSheetDataError] = useState<string | null>(null);
 
-  // Load Google Sheets data on component mount
+  // Load Google Sheets data on component mount (silent unless there's an error)
   useEffect(() => {
     const loadGoogleSheetsData = async () => {
       const sheetId = process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q';
       const sheetRange = process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:C';
-      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBq1Jx-kOaZgPq413w57G9lGQvDgj-xN-k';
+      const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBixMaBdYAqO8_I9qlBlwU6nQkjiDCt-uc';
       
-      // Debug: Log environment variable status (works in both dev and production)
-      console.log('🔍 Google Sheets Config Check:', {
-        hasSheetId: !!sheetId,
-        hasApiKey: !!apiKey,
-        sheetIdPreview: sheetId ? `${sheetId.substring(0, 10)}...` : 'not set',
-        apiKeyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : 'not set',
-        environment: process.env.NODE_ENV
-      });
-      
-      if (!sheetId) {
-        console.warn('⚠ REACT_APP_GOOGLE_SHEET_ID not found. Check Vercel environment variables and redeploy.');
-        return;
-      }
-
-      if (!apiKey) {
-        console.warn('⚠ REACT_APP_GOOGLE_SHEETS_API_KEY not found. Check Vercel environment variables and redeploy.');
+      if (!sheetId || !apiKey) {
         return;
       }
 
       try {
-        console.log('📊 Loading Google Sheets data on data extraction page...');
-        console.log('📊 Sheet ID:', sheetId.substring(0, 20) + '...');
-        console.log('📊 Range:', sheetRange);
         const data = await fetchGoogleSheetData(sheetId, sheetRange);
         if (data.length > 0) {
           setSheetDataLoaded(true);
-          console.log(`✓ Google Sheets data preloaded: ${data.length} rows ready for Step 5 Part 2`);
-        } else {
-          console.warn('⚠ Google Sheets API call succeeded but no data found. Check sheet range and data format.');
         }
       } catch (error: any) {
-        console.error('✗ Failed to preload Google Sheets data:', error.message);
-        console.error('✗ Error details:', error);
+        console.error('✗ Failed to preload Google Sheets data:', error?.message || error);
       }
     };
 

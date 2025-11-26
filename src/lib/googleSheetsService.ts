@@ -28,7 +28,7 @@ export const fetchGoogleSheetData = async (
   range: string = 'Sheet1!A:B' // Default to 2 columns (Description, Price)
 ): Promise<SheetRow[]> => {
   try {
-    const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBq1Jx-kOaZgPq413w57G9lGQvDgj-xN-k';
+    const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBixMaBdYAqO8_I9qlBlwU6nQkjiDCt-uc';
     
     // Use direct Google Sheets API only (no backend proxy)
     if (!apiKey) {
@@ -39,17 +39,15 @@ export const fetchGoogleSheetData = async (
     // Create cache key from sheetId and range
     const cacheKey = `${sheetId}:${range}`;
     
-    // Check cache first
+    // Check cache first (silent)
     const cached = sheetDataCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log(`✓ Google Sheets data loaded from cache: ${cached.data.length} rows`);
       return cached.data;
     }
     
-    // Check if there's already a pending request for this key
+    // Check if there's already a pending request for this key (silent)
     const pendingRequest = pendingRequests.get(cacheKey);
     if (pendingRequest) {
-      console.log('⏳ Reusing pending Google Sheets API request...');
       return await pendingRequest;
     }
     
@@ -59,23 +57,14 @@ export const fetchGoogleSheetData = async (
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
     const response = await fetch(url);
     
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
           const errorMessage = `Failed to fetch Google Sheet data: ${response.status} ${errorText}`;
-          console.error(`✗ ${errorMessage}`);
           
-          // Check for common errors
-          if (response.status === 403) {
-            console.error('✗ API key may be invalid or restricted. Check Google Cloud Console settings.');
-            console.error('✗ Make sure the Google Sheet is shared publicly (Anyone with the link can view).');
-          } else if (response.status === 404) {
-            console.error('✗ Sheet not found. Check that the sheet ID is correct.');
-          } else if (response.status === 400) {
-            console.error('✗ Invalid request. Check that the sheet range is correct.');
-          }
-          
+          // Log a single concise error
+          console.error('✗ Google Sheets API error:', errorMessage);
           throw new Error(errorMessage);
-    }
+        }
 
     const data = await response.json();
     const parsed = parseSheetData(data.values || []);
@@ -86,13 +75,7 @@ export const fetchGoogleSheetData = async (
           timestamp: Date.now()
         });
         
-        if (parsed.length > 0) {
-          console.log(`✓ Google Sheets data loaded via Google API: ${parsed.length} rows`);
-        } else {
-          console.warn('⚠ Google Sheets data loaded but no valid rows found. Check sheet format.');
-        }
-    
-    return parsed;
+        return parsed;
       } finally {
         // Remove from pending requests
         pendingRequests.delete(cacheKey);
@@ -104,7 +87,7 @@ export const fetchGoogleSheetData = async (
     
     return await requestPromise;
   } catch (error: any) {
-    console.error('✗ Error fetching Google Sheet data:', error.message);
+    console.error('✗ Error fetching Google Sheet data:', error?.message || error);
     // Don't throw - return empty array to allow app to continue
     return [];
   }
