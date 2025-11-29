@@ -3196,43 +3196,67 @@ const MultiStepForm: React.FC = () => {
                       </div>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {(formData.recommendationSection2?.rows || []).map((row) => (
-                          <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
-                            <input
-                              type="text"
-                              placeholder="Description"
+                          <div key={row.id} className="flex items-center gap-1 p-2 border border-gray-200 rounded-md w-full">
+                            <AutocompleteInput
                               value={row.description}
-                              onChange={(e) => {
+                              onChange={(value) => {
                                 const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
-                                  r.id === row.id ? { ...r, description: e.target.value } : r
+                                  r.id === row.id ? { ...r, description: value } : r
                                 );
                                 updateFormData({ recommendationSection2: { rows: updatedRows } });
                               }}
-                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Unit"
-                              value={row.unit}
-                              onChange={(e) => {
+                              onSelectRow={(selectedRow: SheetRow) => {
+                                // When a row is selected from description field, populate all three fields
+                                const priceValue = selectedRow.price || '';
+                                // Remove $ sign and store as plain number string (e.g., "400" not "$400")
+                                const priceWithoutDollar = priceValue.replace(/^\$/, '').trim();
+                                
                                 const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
-                                  r.id === row.id ? { ...r, unit: e.target.value } : r
+                                  r.id === row.id ? { 
+                                    ...r, 
+                                    description: selectedRow.description,
+                                    unit: selectedRow.unit || '1', // Default to "1" if not provided
+                                    price: priceWithoutDollar // Store without $ sign
+                                  } : r
                                 );
                                 updateFormData({ recommendationSection2: { rows: updatedRows } });
                               }}
-                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                              placeholder="Description"
+                              field="description"
+                              className="w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                              sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                              sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
                             />
-                            <input
-                              type="text"
-                              placeholder="Price"
-                              value={row.price}
-                              onChange={(e) => {
-                                const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
-                                  r.id === row.id ? { ...r, price: e.target.value } : r
-                                );
-                                updateFormData({ recommendationSection2: { rows: updatedRows } });
-                              }}
-                              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                            />
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <AutocompleteInput
+                                value={row.unit}
+                                onChange={(value) => {
+                                  const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                    r.id === row.id ? { ...r, unit: value } : r
+                                  );
+                                  updateFormData({ recommendationSection2: { rows: updatedRows } });
+                                }}
+                                placeholder="Unit"
+                                field="unit"
+                                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                              />
+                              <AutocompleteInput
+                                value={row.price}
+                                onChange={(value) => {
+                                  const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                    r.id === row.id ? { ...r, price: value } : r
+                                  );
+                                  updateFormData({ recommendationSection2: { rows: updatedRows } });
+                                }}
+                                placeholder="Price"
+                                field="price"
+                                className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                              />
+                            </div>
                             <button
                               type="button"
                               onClick={() => {
