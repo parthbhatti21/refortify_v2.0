@@ -16,7 +16,7 @@ interface FileItem {
 
 const Library: React.FC = () => {
   const API_BASE = process.env.REACT_APP_API_BASE || 'https://admin-backend-stepintime.onrender.com';
-  const API_KEY = process.env.REACT_APP_API_KEY;
+  const API_KEY = process.env.REACT_APP_API_KEY || 'bestcompanyever23325';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<DirectoryItem[]>([]);
@@ -57,10 +57,10 @@ const Library: React.FC = () => {
     try {
       // Call backend with API key header
       const url = prefix
-        ? `${API_BASE}/directories?bucket=parth-reportify&region=us-east-1&prefix=${encodeURIComponent(prefix)}`
+        ? `${API_BASE}/directories?prefix=${encodeURIComponent(prefix)}`
         : `${API_BASE}/directories`;
       const res = await fetch(url, {
-        headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined
+        headers: { 'X-API-Key': API_KEY }
       });
       if (!res.ok) throw new Error(`Failed to load directories: ${res.status}`);
       const contentType = res.headers.get('content-type') || '';
@@ -152,8 +152,8 @@ const Library: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const url = `${API_BASE}/directories?bucket=${encodeURIComponent(S3_BUCKET)}&region=${encodeURIComponent(S3_REGION)}&prefix=${encodeURIComponent(prefix)}`;
-      const res = await fetch(url, { headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined });
+      const url = `${API_BASE}/directories?prefix=${encodeURIComponent(prefix)}`;
+      const res = await fetch(url, { headers: { 'X-API-Key': API_KEY } });
       if (!res.ok) throw new Error(`Failed to load reports for ${dateISO}: ${res.status}`);
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {

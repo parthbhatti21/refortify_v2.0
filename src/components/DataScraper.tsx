@@ -51,6 +51,8 @@ interface ExtractedData {
 }
 
 const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentStep, setFormData }) => {
+  const API_BASE = process.env.REACT_APP_API_BASE || 'https://admin-backend-stepintime.onrender.com';
+  const API_KEY = process.env.REACT_APP_API_KEY || 'bestcompanyever23325';
   const [url, setUrl] = useState('https://app.companycam.com/timeline/ZzQLL3MY3C1dtVjb');
   const [isLoading, setIsLoading] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData>({
@@ -109,7 +111,9 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     setLibraryChildDirs([]);
     setLibraryLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/directories');
+      const res = await fetch(`${API_BASE}/directories`, {
+        headers: { 'X-API-Key': API_KEY }
+      });
       if (!res.ok) throw new Error(`Failed to load directories: ${res.status}`);
       const data = await res.json();
       setLibraryRootDirs(Array.isArray(data.directories) ? data.directories : []);
@@ -124,8 +128,10 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
     setLibraryError(null);
     setLibraryLoading(true);
     try {
-      const url = `http://localhost:8000/directories?bucket=parth-reportify&region=us-east-1&prefix=${encodeURIComponent(prefix)}`;
-      const res = await fetch(url);
+      const url = `${API_BASE}/directories?prefix=${encodeURIComponent(prefix)}`;
+      const res = await fetch(url, {
+        headers: { 'X-API-Key': API_KEY }
+      });
       if (!res.ok) throw new Error(`Failed to load subdirectories: ${res.status}`);
       const data = await res.json();
       setLibraryChildDirs(Array.isArray(data.directories) ? data.directories : []);

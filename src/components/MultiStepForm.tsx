@@ -1552,11 +1552,11 @@ const MultiStepForm: React.FC = () => {
   useEffect(() => {
     if (!hasInitializedPages.current) {
       // First initialization: include all pages
-      const allPages = new Set<number>();
-      for (let page = 1; page <= totalPages; page++) {
-        allPages.add(page);
-      }
-      setIncludedPages(allPages);
+    const allPages = new Set<number>();
+    for (let page = 1; page <= totalPages; page++) {
+      allPages.add(page);
+    }
+    setIncludedPages(allPages);
       hasInitializedPages.current = true;
     } else {
       // Subsequent changes: preserve existing exclusions, only add new pages
