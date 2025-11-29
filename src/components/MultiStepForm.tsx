@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import Step1 from './Step1';
 import Step2 from './Step2';
@@ -447,6 +447,7 @@ const MultiStepForm: React.FC = () => {
   const [preferGoogleDocs, setPreferGoogleDocs] = useState(true); // User preference for PDF viewing
   const [includeRepairEstimate, setIncludeRepairEstimate] = useState(true); // Step 7 is always included
   const [includedPages, setIncludedPages] = useState<Set<number>>(new Set()); // Will be initialized in useEffect
+  const hasInitializedPages = useRef(false); // Track if pages have been initialized
   const [cropData, setCropData] = useState<{
     x: number;
     y: number;
@@ -1547,13 +1548,35 @@ const MultiStepForm: React.FC = () => {
     const step10Pages = 5;
     const totalPages = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + Math.max(1, totalRecommendationPages) + totalImagePages + step9Pages + step10Pages;
   
-  // Initialize all pages as included by default
+  // Initialize all pages as included by default, but preserve user exclusions when totalPages changes
   useEffect(() => {
-    const allPages = new Set<number>();
-    for (let page = 1; page <= totalPages; page++) {
-      allPages.add(page);
+    if (!hasInitializedPages.current) {
+      // First initialization: include all pages
+      const allPages = new Set<number>();
+      for (let page = 1; page <= totalPages; page++) {
+        allPages.add(page);
+      }
+      setIncludedPages(allPages);
+      hasInitializedPages.current = true;
+    } else {
+      // Subsequent changes: preserve existing exclusions, only add new pages
+      setIncludedPages(prev => {
+        const updated = new Set(prev);
+        // Remove pages that no longer exist
+        Array.from(prev).forEach(page => {
+          if (page > totalPages) {
+            updated.delete(page);
+          }
+        });
+        // Add new pages (they should be included by default)
+        for (let page = 1; page <= totalPages; page++) {
+          if (!updated.has(page)) {
+            updated.add(page);
+          }
+        }
+        return updated;
+      });
     }
-    setIncludedPages(allPages);
   }, [totalPages]);
 
   // Helper function to determine the logical step (1-10) based on current page
