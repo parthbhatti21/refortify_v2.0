@@ -15,9 +15,8 @@ interface FileItem {
 }
 
 const Library: React.FC = () => {
-  const API_BASE = process.env.REACT_APP_API_BASE ;
+  const API_BASE = process.env.REACT_APP_API_BASE || 'https://admin-backend-stepintime.onrender.com';
   const API_KEY = process.env.REACT_APP_API_KEY;
-  console.log(API_BASE, API_KEY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<DirectoryItem[]>([]);
