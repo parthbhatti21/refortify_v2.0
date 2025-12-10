@@ -28,6 +28,7 @@ interface Step5Part2Props {
   section1?: RecommendationSection;
   section2?: RecommendationSection;
   notes?: string;
+  dataSourceUrl?: string;
 }
 
 const Step5Part2: FunctionComponent<Step5Part2Props> = ({ 
@@ -42,7 +43,8 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
   updateRepairEstimateData,
   section1,
   section2,
-  notes
+  notes,
+  dataSourceUrl
 }) => {
   const [localData, setLocalData] = useState<RepairEstimateData>(repairEstimateData);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -1572,7 +1574,13 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 Notes:
               </div>
               <div style={{ paddingLeft: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {notes}
+                {(() => {
+                  const baseNotes = notes || '';
+                  if (dataSourceUrl && !baseNotes.includes('Link to view timeline:')) {
+                    return `${baseNotes}\n\nLink to view timeline: ${dataSourceUrl}`;
+                  }
+                  return baseNotes;
+                })()}
               </div>
             </div>
           )}
@@ -2046,7 +2054,13 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 Notes:
               </div>
               <div style={{ paddingLeft: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {notes}
+                {(() => {
+                  const baseNotes = notes || '';
+                  if (dataSourceUrl && !baseNotes.includes('Link to view timeline:')) {
+                    return `${baseNotes}\n\nLink to view timeline: ${dataSourceUrl}`;
+                  }
+                  return baseNotes;
+                })()}
               </div>
             </div>
           )}
@@ -2066,8 +2080,14 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
                 Notes:
               </div>
-              <div style={{ paddingLeft: '10px' }}>
-                {notes}
+              <div style={{ paddingLeft: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {(() => {
+                  const baseNotes = notes || '';
+                  if (dataSourceUrl && !baseNotes.includes('Link to view timeline:')) {
+                    return `${baseNotes}\n\nLink to view timeline: ${dataSourceUrl}`;
+                  }
+                  return baseNotes;
+                })()}
               </div>
             </div>
           )}

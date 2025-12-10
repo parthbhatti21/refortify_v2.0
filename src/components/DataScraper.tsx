@@ -15,6 +15,7 @@ interface DataScraperProps {
     reportDate: string; 
     timelineCoverImage: string;
     scrapedImages: ImageItem[];
+    dataSourceUrl?: string;
   }) => void;
   setCurrentStep: (step: 'scrape' | 'form') => void;
   setFormData: (data: { 
@@ -399,7 +400,8 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       chimneyType: extractedData.chimneyType,
       reportDate: extractedData.reportDate,
       timelineCoverImage: extractedData.timelineCoverImage || '', // Use specific timeline cover image
-      scrapedImages: extractedData.scrapedImages || []
+      scrapedImages: extractedData.scrapedImages || [],
+      dataSourceUrl: url // Pass the data source URL
     });
   };
 

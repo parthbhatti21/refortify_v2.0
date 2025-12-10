@@ -31,6 +31,11 @@ interface Page7Props {
   customRecommendation?: string;
   currentPage?: number;
   totalPages?: number;
+  imagePositionX?: number; // Image X position in pixels
+  imagePositionY?: number; // Image Y position in pixels
+  imageWidth?: number; // Image width in pixels
+  imageHeight?: number; // Image height in pixels
+  onImagePositionChange?: (x: number, y: number, width: number, height: number) => void; // Callback for position/size changes
 }
 const dropdownOptions = [
   {
@@ -318,7 +323,12 @@ export const Page7: React.FC<Page7Props> = ({
   reviewImage,
   customRecommendation,
   currentPage = 1,
-  totalPages = 1
+  totalPages = 1,
+  imagePositionX,
+  imagePositionY,
+  imageWidth,
+  imageHeight,
+  onImagePositionChange
 }) => {
   const UNIFORM_FONT = '10px';
   const tableRows = repairEstimateData?.rows || [];
@@ -335,6 +345,15 @@ export const Page7: React.FC<Page7Props> = ({
   const previewRecTextRef = React.useRef<HTMLParagraphElement>(null);
   const [previewTableHeight, setPreviewTableHeight] = useState<number>(0);
   const [previewRecTextHeight, setPreviewRecTextHeight] = useState<number>(0);
+
+  // Drag and resize state
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeType, setResizeType] = useState<'width' | 'height' | 'both' | null>(null);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const imageContainerRef = React.useRef<HTMLDivElement>(null);
+  const pageContainerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isPDF) return;
@@ -366,6 +385,177 @@ export const Page7: React.FC<Page7Props> = ({
     const unusedImages = selectedImages.filter(img => !img.used);
     setAvailableImages(unusedImages);
   }, [selectedImages]);
+
+  // Calculate default dimensions for image
+  const getDefaultImageDimensions = React.useMemo(() => {
+    const baseMaxWidth = tableRows.length <= 1 ? (() => {
+      const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+      const hasManualRows = tableRows.some(row => row.isManual);
+      const allRecommendations = (customRecommendation && hasManualRows) ? 
+        `${tableRecommendations} ${customRecommendation}`.trim() : 
+        tableRecommendations;
+      const textLength = allRecommendations.length;
+      
+      if (textLength > 2000) return 280;
+      if (textLength > 1200) return 320;
+      if (textLength > 1000) return 350;
+      return 390;
+    })() : 450;
+    
+    const baseMaxHeight = tableRows.length <= 1 ? (() => {
+      const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+      const hasManualRows = tableRows.some(row => row.isManual);
+      const allRecommendations = (customRecommendation && hasManualRows) ? 
+        `${tableRecommendations} ${customRecommendation}`.trim() : 
+        tableRecommendations;
+      const textLength = allRecommendations.length;
+      
+      if (textLength > 2000) return 190;
+      if (textLength > 1500) return 220;
+      if (textLength > 1000) return 250;
+      return 280;
+    })() : 400;
+    
+    return { width: baseMaxWidth, height: baseMaxHeight };
+  }, [tableRows, customRecommendation]);
+
+  // Calculate default position for image
+  const getDefaultImagePosition = React.useMemo(() => {
+    const currentWidth = imageWidth || getDefaultImageDimensions.width;
+    const currentHeight = imageHeight || getDefaultImageDimensions.height;
+    
+    if (imagePositionX !== undefined && imagePositionY !== undefined) {
+      return { x: imagePositionX, y: imagePositionY };
+    }
+    
+    // Default to center
+    const pageWidth = 546;
+    const pageHeight = 790;
+    const recommendationText = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+    const textLength = recommendationText.length;
+    let bottomOffset = 50;
+    if (textLength > 2000) bottomOffset = 5;
+    else if (textLength > 1500) bottomOffset = 10;
+    else if (textLength > 1000) bottomOffset = 20;
+    else if (textLength > 500) bottomOffset = 35;
+    
+    return {
+      x: (pageWidth - currentWidth) / 2,
+      y: tableRows.length <= 1 ? 
+        (pageHeight - currentHeight - bottomOffset) :
+        (pageHeight - currentHeight) / 2
+    };
+  }, [imagePositionX, imagePositionY, imageWidth, imageHeight, getDefaultImageDimensions, tableRows]);
+
+  // Local state for image position and size (for dragging/resizing)
+  // Initialize with props or defaults
+  const [localX, setLocalX] = useState(imagePositionX ?? getDefaultImagePosition.x);
+  const [localY, setLocalY] = useState(imagePositionY ?? getDefaultImagePosition.y);
+  const [localWidth, setLocalWidth] = useState(imageWidth || getDefaultImageDimensions.width);
+  const [localHeight, setLocalHeight] = useState(imageHeight || getDefaultImageDimensions.height);
+
+  // Update local state when props change
+  useEffect(() => {
+    if (imagePositionX !== undefined) setLocalX(imagePositionX);
+    if (imagePositionY !== undefined) setLocalY(imagePositionY);
+    if (imageWidth !== undefined) setLocalWidth(imageWidth);
+    if (imageHeight !== undefined) setLocalHeight(imageHeight);
+  }, [imagePositionX, imagePositionY, imageWidth, imageHeight]);
+
+  // Drag handlers
+  const handleImageMouseDown = (e: React.MouseEvent) => {
+    if (isPDF) return;
+    e.preventDefault();
+    setIsDragging(true);
+    const rect = pageContainerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setDragStart({
+        x: e.clientX - rect.left - localX,
+        y: e.clientY - rect.top - localY
+      });
+    }
+  };
+
+  // Resize handlers
+  const handleResizeMouseDown = (e: React.MouseEvent, type: 'width' | 'height' | 'both') => {
+    if (isPDF) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeType(type);
+    const rect = pageContainerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
+        width: localWidth,
+        height: localHeight
+      });
+    }
+  };
+
+  // Global mouse move handler for dragging and resizing
+  useEffect(() => {
+    if (!isDragging && !isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!pageContainerRef.current) return;
+      const rect = pageContainerRef.current.getBoundingClientRect();
+      
+      if (isDragging) {
+        const newX = e.clientX - rect.left - dragStart.x;
+        const newY = e.clientY - rect.top - dragStart.y;
+        
+        // Constrain to page bounds
+        const minX = 29;
+        const maxX = 546 - localWidth - 29;
+        const minY = 0;
+        const maxY = 790 - localHeight;
+        
+        setLocalX(Math.max(minX, Math.min(maxX, newX)));
+        setLocalY(Math.max(minY, Math.min(maxY, newY)));
+      } else if (isResizing && resizeType) {
+        const deltaX = e.clientX - resizeStart.x;
+        const deltaY = e.clientY - resizeStart.y;
+        
+        if (resizeType === 'width') {
+          // Only resize width
+          const newWidth = Math.max(100, Math.min(500, resizeStart.width + deltaX));
+          setLocalWidth(newWidth);
+        } else if (resizeType === 'height') {
+          // Only resize height
+          const newHeight = Math.max(100, Math.min(600, resizeStart.height + deltaY));
+          setLocalHeight(newHeight);
+        } else if (resizeType === 'both') {
+          // Resize both width and height independently
+          const newWidth = Math.max(100, Math.min(500, resizeStart.width + deltaX));
+          const newHeight = Math.max(100, Math.min(600, resizeStart.height + deltaY));
+          setLocalWidth(newWidth);
+          setLocalHeight(newHeight);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging || isResizing) {
+        setIsDragging(false);
+        setIsResizing(false);
+        setResizeType(null);
+        // Save position and size
+        if (onImagePositionChange) {
+          onImagePositionChange(localX, localY, localWidth, localHeight);
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+            return () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+          }, [isDragging, isResizing, resizeType, dragStart, resizeStart, localX, localY, localWidth, localHeight, onImagePositionChange]);
 
 
   const markImageAsUsed = (imageId: string) => {
@@ -891,62 +1081,89 @@ export const Page7: React.FC<Page7Props> = ({
             </div>
           )}
 
-          {/* Review Image Section */}
-          {reviewImage && shouldShowImageOnCurrentPage() && (
-            <div 
-              style={{
-                position: 'absolute',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                ...(tableRows.length <= 1 ? {
-                  // Single row: place above bottom based on measured recommendations height
-                  bottom: `${Math.max(5, 20 - Math.min(15, Math.floor((pdfRecTextHeight || 0) / 50)))}px`
-                } : {
-                  // Multiple rows: center on image-only page
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                })
-              }}
-            >
-              <img
-                src={reviewImage}
-                alt="Review image"
+          {/* Review Image Section - PDF Mode */}
+          {reviewImage && shouldShowImageOnCurrentPage() && (() => {
+            // Calculate default dimensions if not set
+            const getDefaultDimensions = () => {
+              const baseMaxWidth = tableRows.length <= 1 ? (() => {
+                const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                const allRecommendations = customRecommendation ? 
+                  `${tableRecommendations} ${customRecommendation}`.trim() : 
+                  tableRecommendations;
+                const textLength = allRecommendations.length;
+                
+                if (textLength > 2000) return 280;
+                if (textLength > 1500) return 320;
+                if (textLength > 1000) return 350;
+                return 390;
+              })() : 450;
+              
+              const baseMaxHeight = tableRows.length <= 1 ? (() => {
+                const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
+                const allRecommendations = customRecommendation ? 
+                  `${tableRecommendations} ${customRecommendation}`.trim() : 
+                  tableRecommendations;
+                const textLength = allRecommendations.length;
+                
+                if (textLength > 2000) return 190;
+                if (textLength > 1500) return 220;
+                if (textLength > 1000) return 250;
+                return 280;
+              })() : 400;
+              
+              return { width: baseMaxWidth, height: baseMaxHeight };
+            };
+
+            const defaultDims = getDefaultDimensions();
+            const finalWidth = imageWidth || defaultDims.width;
+            const finalHeight = imageHeight || defaultDims.height;
+
+            // Calculate default position if not set
+            const getDefaultPosition = () => {
+              if (imagePositionX !== undefined && imagePositionY !== undefined) {
+                return { x: imagePositionX, y: imagePositionY };
+              }
+              
+              // Default to center
+              const pageWidth = 546;
+              const pageHeight = 790;
+              return {
+                x: (pageWidth - finalWidth) / 2,
+                y: tableRows.length <= 1 ? 
+                  (pageHeight - finalHeight - Math.max(5, 20 - Math.min(15, Math.floor((pdfRecTextHeight || 0) / 50)))) :
+                  (pageHeight - finalHeight) / 2
+              };
+            };
+
+            const defaultPos = getDefaultPosition();
+            const finalX = imagePositionX ?? defaultPos.x;
+            const finalY = imagePositionY ?? defaultPos.y;
+            
+            return (
+              <div 
                 style={{
-                  maxWidth: tableRows.length <= 1 ? (() => {
-                    const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                    const allRecommendations = customRecommendation ? 
-                      `${tableRecommendations} ${customRecommendation}`.trim() : 
-                      tableRecommendations;
-                    const textLength = allRecommendations.length;
-                    
-                    if (textLength > 2000) return '280px';
-                    if (textLength > 1500) return '320px';
-                    if (textLength > 1000) return '350px';
-                    return '390px';
-                  })() : '450px',
-                  maxHeight: tableRows.length <= 1 ? (() => {
-                    const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                    const allRecommendations = customRecommendation ? 
-                      `${tableRecommendations} ${customRecommendation}`.trim() : 
-                      tableRecommendations;
-                    const textLength = allRecommendations.length;
-                    
-                    if (textLength > 2000) return '190px';
-                    if (textLength > 1500) return '220px';
-                    if (textLength > 1000) return '250px';
-                    return '280px';
-                  })() : '400px',
-                  objectFit: 'contain',
-                  borderRadius: tableRows.length <= 1 ? '4px' : '8px',
-                  border: tableRows.length <= 1 ? '1px solid #e9ecef' : '2px solid #e9ecef',
-                  boxShadow: tableRows.length <= 1 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.15)'
+                  position: 'absolute',
+                  left: `${finalX}px`,
+                  top: `${finalY}px`,
+                  width: `${finalWidth}px`,
+                  height: `${finalHeight}px`
                 }}
-              />
-            </div>
-          )}
+              >
+                <img
+                  src={reviewImage}
+                  alt="Review image"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'fill',
+                    borderRadius: tableRows.length <= 1 ? '4px' : '8px',
+                    border: tableRows.length <= 1 ? '1px solid #e9ecef' : '2px solid #e9ecef',
+                    boxShadow: tableRows.length <= 1 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.15)'
+                  }}
+                />
+              </div>
+            );
+          })()}
 
           {/* Frame Border */}
           <div className="w-[546px] h-[790px] border-2 border-solid border-[#722420] absolute top-0 left-0">
@@ -960,7 +1177,7 @@ export const Page7: React.FC<Page7Props> = ({
   // For non-PDF mode, render the preview in the standard layout
   return (
     <div className="bg-white w-[595px] h-[842px] mx-auto page7-scale-wrapper">
-      <div className="relative w-[546px] h-[790px] top-[26px] left-[22.5px]">
+      <div ref={pageContainerRef} className="relative w-[546px] h-[790px] top-[26px] left-[22.5px]">
         {/* Header Section */}
         <div 
           className="w-[393px] h-[106px] absolute top-[25px]"
@@ -1326,60 +1543,93 @@ export const Page7: React.FC<Page7Props> = ({
           </div>
         )}
 
-        {/* Review Image Section */}
+        {/* Review Image Section - Draggable and Resizable */}
         {reviewImage && shouldShowImageOnCurrentPage() && (
-          <div 
-            className={`absolute left-[50%] transform -translate-x-1/2 ${tableRows.length <= 1 ? '' : 'top-[50%] -translate-y-1/2 flex items-center justify-center'}`}
-            style={tableRows.length <= 1 ? {
-              bottom: (() => {
-                const recommendationText = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                const textLength = recommendationText.length;
-                
-                // Dynamic positioning based on text length
-                if (textLength > 2000) return '5px';       // Very long text - very low position
-                if (textLength > 1500) return '10px';      // Long text - low position  
-                if (textLength > 1000) return '20px';      // Medium text - medium position
-                if (textLength > 500) return '35px';       // Short text - higher position
-                return '50px';                             // Very short or no text - highest position
-              })()
-            } : {}}
+          <div
+            ref={imageContainerRef}
+            style={{
+              position: 'absolute',
+              left: `${localX}px`,
+              top: `${localY}px`,
+              width: `${localWidth}px`,
+              height: `${localHeight}px`,
+              cursor: isPDF ? 'default' : (isDragging ? 'grabbing' : 'grab'),
+              userSelect: 'none',
+              zIndex: 10
+            }}
+            onMouseDown={handleImageMouseDown}
           >
             <img
               src={reviewImage}
               alt="Review image"
+              draggable={false}
               style={{
-                maxWidth: tableRows.length <= 1 ? (() => {
-                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const hasManualRows = tableRows.some(row => row.isManual);
-                  const allRecommendations = (customRecommendation && hasManualRows) ? 
-                    `${tableRecommendations} ${customRecommendation}`.trim() : 
-                    tableRecommendations;
-                  const textLength = allRecommendations.length;
-                  
-                  if (textLength > 2000) return '280px';
-                  if (textLength > 1200) return '320px';
-                  if (textLength > 1000) return '350px';
-                  return '390px';
-                })() : '450px',
-                maxHeight: tableRows.length <= 1 ? (() => {
-                  const tableRecommendations = tableRows.filter(row => row.recommendation).map(row => row.recommendation).join(' ');
-                  const hasManualRows = tableRows.some(row => row.isManual);
-                  const allRecommendations = (customRecommendation && hasManualRows) ? 
-                    `${tableRecommendations} ${customRecommendation}`.trim() : 
-                    tableRecommendations;
-                  const textLength = allRecommendations.length;
-                  
-                  if (textLength > 2000) return '190px';
-                  if (textLength > 1500) return '220px';
-                  if (textLength > 1000) return '250px';
-                  return '280px';
-                })() : '400px',
-                objectFit: 'contain',
+                width: '100%',
+                height: '100%',
+                objectFit: 'fill',
                 borderRadius: tableRows.length <= 1 ? '4px' : '8px',
                 border: tableRows.length <= 1 ? '1px solid #e9ecef' : '2px solid #e9ecef',
-                boxShadow: tableRows.length <= 1 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.15)'
+                boxShadow: tableRows.length <= 1 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : '0 4px 12px rgba(0, 0, 0, 0.15)',
+                pointerEvents: 'none'
               }}
             />
+            {!isPDF && (
+              <>
+                {/* Corner resize handle (both width and height) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-8px',
+                    right: '-8px',
+                    width: '16px',
+                    height: '16px',
+                    backgroundColor: '#722420',
+                    border: '2px solid white',
+                    borderRadius: '50%',
+                    cursor: 'nwse-resize',
+                    zIndex: 11,
+                    pointerEvents: 'auto'
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, 'both')}
+                />
+                {/* Right edge resize handle (width only) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    right: '-8px',
+                    transform: 'translateY(-50%)',
+                    width: '16px',
+                    height: '40px',
+                    backgroundColor: '#722420',
+                    border: '2px solid white',
+                    borderRadius: '8px',
+                    cursor: 'ew-resize',
+                    zIndex: 11,
+                    pointerEvents: 'auto'
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, 'width')}
+                />
+                {/* Bottom edge resize handle (height only) */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '40px',
+                    height: '16px',
+                    backgroundColor: '#722420',
+                    border: '2px solid white',
+                    borderRadius: '8px',
+                    cursor: 'ns-resize',
+                    zIndex: 11,
+                    pointerEvents: 'auto'
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, 'height')}
+                />
+              </>
+            )}
           </div>
         )}
 

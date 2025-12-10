@@ -38,6 +38,7 @@ export interface FormData {
   timelineCoverImage?: string; // Timeline cover image from scraped data
   scrapedImages?: ImageItem[]; // All images from DataScraper
   selectedImages?: ImageItem[]; // Selected images for Page6
+  dataSourceUrl?: string; // Data source URL from DataScraper
   invoiceData?: {
     invoiceNumber: string;
     paymentMethod: string;
@@ -77,6 +78,10 @@ export interface FormData {
     id: string;
     reviewImage: string;
     customRecommendation?: string; // Custom recommendation text
+    imagePositionX?: number; // Image X position in pixels (relative to page)
+    imagePositionY?: number; // Image Y position in pixels (relative to page)
+    imageWidth?: number; // Image width in pixels
+    imageHeight?: number; // Image height in pixels
     repairEstimateData: {
       manualEntry: boolean;
       rows: Array<{
@@ -939,6 +944,7 @@ const MultiStepForm: React.FC = () => {
     reportDate: string;
     timelineCoverImage: string;
     scrapedImages: ImageItem[];
+    dataSourceUrl?: string;
   }) => {
     setFormData({
       ...formData,
@@ -948,6 +954,7 @@ const MultiStepForm: React.FC = () => {
       reportDate: data.reportDate,
       timelineCoverImage: data.timelineCoverImage,
       scrapedImages: data.scrapedImages,
+      dataSourceUrl: data.dataSourceUrl,
       selectedImages: [], // Initialize empty selection
       excludedStep8Images: [] // Reset excluded images when new data is loaded
     });
@@ -2092,7 +2099,8 @@ const MultiStepForm: React.FC = () => {
         section1: { title: formData.recommendationSection1Title || 'Repair Estimate#1', rows: formData.repairEstimateData?.rows || [] },
         section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Repair Estimate#2', rows: formData.recommendationSection2?.rows || [] } : undefined,
         currentEstimatePage: pageNumber - 4 - totalInvoicePages,
-        notes: formData.notes
+        notes: formData.notes,
+        dataSourceUrl: formData.dataSourceUrl
       }) :
       pageNumber === 4 + totalInvoicePages + totalRepairEstimatePages + 1 ?
       React.createElement(Step6, { 
@@ -2108,6 +2116,10 @@ const MultiStepForm: React.FC = () => {
         repairEstimateData: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.repairEstimateData || { manualEntry: false, rows: [] },
         reviewImage: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.reviewImage || '',
         customRecommendation: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.customRecommendation || '',
+        imagePositionX: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.imagePositionX,
+        imagePositionY: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.imagePositionY,
+        imageWidth: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.imageWidth,
+        imageHeight: formData.repairEstimatePages?.[getRecommendationPageIndex(pageNumber)]?.imageHeight,
         currentPage: (() => {
           const pageIndex = getRecommendationPageIndex(pageNumber);
           const page = formData.repairEstimatePages?.[pageIndex];
@@ -3229,33 +3241,33 @@ const MultiStepForm: React.FC = () => {
                             />
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <AutocompleteInput
-                                value={row.unit}
+                              value={row.unit}
                                 onChange={(value) => {
-                                  const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
                                     r.id === row.id ? { ...r, unit: value } : r
-                                  );
-                                  updateFormData({ recommendationSection2: { rows: updatedRows } });
-                                }}
+                                );
+                                updateFormData({ recommendationSection2: { rows: updatedRows } });
+                              }}
                                 placeholder="Unit"
                                 field="unit"
-                                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                                 sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
                                 sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
-                              />
+                            />
                               <AutocompleteInput
-                                value={row.price}
+                              value={row.price}
                                 onChange={(value) => {
-                                  const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
                                     r.id === row.id ? { ...r, price: value } : r
-                                  );
-                                  updateFormData({ recommendationSection2: { rows: updatedRows } });
-                                }}
+                                );
+                                updateFormData({ recommendationSection2: { rows: updatedRows } });
+                              }}
                                 placeholder="Price"
                                 field="price"
-                                className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                                 sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
                                 sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
-                              />
+                            />
                             </div>
                             <button
                               type="button"
@@ -3284,8 +3296,38 @@ const MultiStepForm: React.FC = () => {
                   </label>
                   <textarea
                     id="notes"
-                    value={formData.notes !== undefined ? formData.notes : 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'}
-                    onChange={(e) => updateFormData({ notes: e.target.value })}
+                    value={(() => {
+                      const baseNotes = formData.notes !== undefined ? formData.notes : 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.';
+                      if (formData.dataSourceUrl && !baseNotes.includes('Link to view timeline:')) {
+                        return `${baseNotes}\n\nLink to view timeline: ${formData.dataSourceUrl}`;
+                      }
+                      return baseNotes;
+                    })()}
+                    onChange={(e) => {
+                      const fullText = e.target.value;
+                      // Extract the link part if it exists at the end
+                      const linkPattern = /\n\nLink to view timeline:\s*(.+)$/;
+                      const linkMatch = fullText.match(linkPattern);
+                      
+                      if (linkMatch) {
+                        // Link found at the end - extract it and save separately
+                        const url = linkMatch[1].trim();
+                        const notesWithoutLink = fullText.replace(linkPattern, '').trim();
+                        updateFormData({ 
+                          notes: notesWithoutLink,
+                          dataSourceUrl: url
+                        });
+                      } else {
+                        // No link pattern found - check if user removed it
+                        // If we had a URL before but it's not in the text now, clear it
+                        if (formData.dataSourceUrl && !fullText.includes('Link to view timeline:')) {
+                          updateFormData({ notes: fullText, dataSourceUrl: '' });
+                        } else {
+                          // Just update notes, preserve existing URL
+                          updateFormData({ notes: fullText });
+                        }
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
                     rows={3}
                     placeholder="Enter notes for the repair estimate..."
@@ -3440,6 +3482,7 @@ const MultiStepForm: React.FC = () => {
                             >
                               Delete Current Page
                             </button>
+                            
                           </>
                         )}
                       </div>
@@ -3641,7 +3684,15 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   </div>
                 )}
+                {getCurrentRecommendationPage()?.reviewImage && (
+                              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-sm text-blue-800">
+                                  💡 <strong>Tip:</strong> Drag the image to move it, or drag the resize handle (bottom-right corner) to resize it.
+                                </p>
+                              </div>
+                            )}
               </div>
+              
             ) : isImagePage(currentPage) ? (
               <div className="py-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -3808,7 +3859,7 @@ const MultiStepForm: React.FC = () => {
                   )}
                   
                   <div className="space-y-2">
-                    <button 
+                    {/* <button 
                       type="button"
                       onClick={handleDownloadPDF}
                       className="w-full px-4 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -3817,7 +3868,7 @@ const MultiStepForm: React.FC = () => {
                       {isGenerating && generationStatus === 'generating'
                         ? 'Generating PDF...'
                         : 'Download PDF'}
-                    </button>
+                    </button> */}
                     
                     <button 
                       type="button"
@@ -4015,6 +4066,7 @@ const MultiStepForm: React.FC = () => {
                   currentEstimatePage={currentPage - 4 - totalInvoicePages}
                   isPDF={false}
                   notes={formData.notes}
+                  dataSourceUrl={formData.dataSourceUrl}
                 />
               ) : isImagePage6(currentPage) ? (
                 <Step6 
@@ -4040,6 +4092,18 @@ const MultiStepForm: React.FC = () => {
                       const rows = currentPage.repairEstimateData?.rows || [];
                       return calculateRecommendationPages(rows);
                     })()}
+                    imagePositionX={getCurrentRecommendationPage()?.imagePositionX}
+                    imagePositionY={getCurrentRecommendationPage()?.imagePositionY}
+                    imageWidth={getCurrentRecommendationPage()?.imageWidth}
+                    imageHeight={getCurrentRecommendationPage()?.imageHeight}
+                    onImagePositionChange={(x, y, width, height) => {
+                      updateCurrentRecommendationPage({
+                        imagePositionX: x,
+                        imagePositionY: y,
+                        imageWidth: width,
+                        imageHeight: height
+                      });
+                    }}
                   />
                 ) : (
                   // Show empty Step7 when no recommendation pages exist

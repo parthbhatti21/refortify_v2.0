@@ -57,14 +57,14 @@ export const fetchGoogleSheetData = async (
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
     const response = await fetch(url);
     
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
           const errorMessage = `Failed to fetch Google Sheet data: ${response.status} ${errorText}`;
           
           // Log a single concise error
           console.error('✗ Google Sheets API error:', errorMessage);
           throw new Error(errorMessage);
-        }
+    }
 
     const data = await response.json();
     const parsed = parseSheetData(data.values || []);
@@ -74,8 +74,8 @@ export const fetchGoogleSheetData = async (
           data: parsed,
           timestamp: Date.now()
         });
-        
-        return parsed;
+    
+    return parsed;
       } finally {
         // Remove from pending requests
         pendingRequests.delete(cacheKey);

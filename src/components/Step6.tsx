@@ -130,11 +130,11 @@ export const Page6: React.FC<Page6Props> = ({
                   <div 
                     className="relative" 
                     style={{ 
-                      maxWidth: '270px',
-                      maxHeight: '350px',
+                      maxWidth: '297px',
+                      maxHeight: '385px',
                       marginTop: isPDF ? '70px' : '0',
-                      width: '270px',
-                      height: '350px'
+                      width: '297px',
+                      height: '385px'
                     }}
                   >
                     <img
@@ -142,10 +142,10 @@ export const Page6: React.FC<Page6Props> = ({
                       alt={localSelectedImages[0].alt || 'Project image 1'}
                       className="w-full h-full object-cover shadow-md rounded-lg"
                       style={{
-                        width: '270px',
-                        height: '350px',
-                        maxWidth: '270px',
-                        maxHeight: '350px',
+                        width: '297px',
+                        height: '385px',
+                        maxWidth: '297px',
+                        maxHeight: '385px',
                         objectFit: 'cover'
                       }}
                       onError={(e) => {
@@ -172,8 +172,8 @@ export const Page6: React.FC<Page6Props> = ({
                           alt={image.alt || `Project image ${index + 1}`}
                           className="shadow-md rounded-lg object-cover"
                           style={{
-                            width: isPDF ? '220px' : '240px',
-                            height: isPDF ? '250px' : '250px'
+                            width: isPDF ? '242px' : '264px',
+                            height: isPDF ? '275px' : '275px'
                           }}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -201,7 +201,7 @@ export const Page6: React.FC<Page6Props> = ({
                           alt={image.alt || `Project image ${index + 1}`}
                           className="w-full h-full object-cover shadow-md rounded-lg"
                           style={{
-                            minHeight: isPDF ? '150px' : '150px'
+                            minHeight: isPDF ? '165px' : '165px'
                           }}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -231,7 +231,7 @@ export const Page6: React.FC<Page6Props> = ({
                           alt={image.alt || `Project image ${index + 1}`}
                           className="w-full h-full object-cover shadow-md rounded-lg"
                           style={{
-                            minHeight: isPDF ? '200px' : '200px',
+                            minHeight: isPDF ? '240px' : '240px',
                             width: '100%',
                             height: '100%'
                           }}
