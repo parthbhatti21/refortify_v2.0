@@ -5,6 +5,10 @@ interface ImageItem {
   id: string;
   url: string;
   alt?: string;
+  positionX?: number;
+  positionY?: number;
+  width?: number;
+  height?: number;
 }
 
 interface Page6Props {
@@ -12,19 +16,184 @@ interface Page6Props {
   selectedImages?: ImageItem[];
   onImageSelection?: (images: ImageItem[]) => void;
   isPDF?: boolean;
+  onImagePositionChange?: (imageId: string, x: number, y: number, width: number, height: number) => void;
+  textPositionX?: number;
+  textPositionY?: number;
+  onTextPositionChange?: (x: number, y: number) => void;
 }
 
 export const Page6: React.FC<Page6Props> = ({
   scrapedImages = [],
   selectedImages = [],
   onImageSelection,
-  isPDF = false
+  isPDF = false,
+  onImagePositionChange,
+  textPositionX,
+  textPositionY,
+  onTextPositionChange
 }) => {
   const [localSelectedImages, setLocalSelectedImages] = useState<ImageItem[]>(selectedImages);
+  const pageContainerRef = React.useRef<HTMLDivElement>(null);
+  
+  // State for dragging/resizing each image
+  const [draggingImageId, setDraggingImageId] = useState<string | null>(null);
+  const [resizingImageId, setResizingImageId] = useState<string | null>(null);
+  const [resizeType, setResizeType] = useState<'width' | 'height' | 'both' | null>(null);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  
+  // State for dragging text
+  const [isDraggingText, setIsDraggingText] = useState(false);
+  const [textDragStart, setTextDragStart] = useState({ x: 0, y: 0 });
+  
+  // Get default text position - X is always centered, only Y varies
+  const getDefaultTextPosition = React.useMemo(() => {
+    const centerX = 273; // Always center (546/2 = 273)
+    if (textPositionY !== undefined) {
+      return { x: centerX, y: textPositionY };
+    }
+    // Default Y position based on image count
+    const imageCount = localSelectedImages.length;
+    if (imageCount === 1) {
+      return { x: centerX, y: isPDF ? 580 : 620 };
+    } else if (imageCount === 2) {
+      return { x: centerX, y: isPDF ? 670 : 690 };
+    } else {
+      return { x: centerX, y: isPDF ? 690 : 690 };
+    }
+  }, [textPositionY, localSelectedImages.length, isPDF]);
+  
+  const centerX = 273; // Always center
+  const [localTextX, setLocalTextX] = useState(centerX);
+  const [localTextY, setLocalTextY] = useState(textPositionY ?? getDefaultTextPosition.y);
+  
+  // Update local text position when props change - X always stays centered
+  useEffect(() => {
+    setLocalTextX(centerX); // Always keep X at center
+    if (textPositionY !== undefined) setLocalTextY(textPositionY);
+  }, [textPositionY]);
+  
+  // Text drag handler - only vertical movement
+  const handleTextMouseDown = (e: React.MouseEvent) => {
+    if (isPDF) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingText(true);
+    const rect = pageContainerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setTextDragStart({
+        x: 0, // Not used for horizontal movement
+        y: e.clientY - rect.top - localTextY
+      });
+    }
+  };
+  
+  // Global mouse move handler for text dragging - vertical only
+  useEffect(() => {
+    if (!isDraggingText) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!pageContainerRef.current) return;
+      const rect = pageContainerRef.current.getBoundingClientRect();
+      
+      // Only calculate new Y position (X stays centered)
+      const newY = e.clientY - rect.top - textDragStart.y;
+      
+      // Constrain Y to page bounds, X always stays at center (273px = 546/2)
+      const minY = 0;
+      const maxY = 790 - 30; // Approximate text height
+      const centerX = 273; // Center of page (546 / 2)
+      
+      setLocalTextY(Math.max(minY, Math.min(maxY, newY)));
+      setLocalTextX(centerX); // Always keep X at center
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingText) {
+        setIsDraggingText(false);
+        // Save position (X is always center, Y is the dragged position)
+        if (onTextPositionChange) {
+          const centerX = 273; // Center of page
+          onTextPositionChange(centerX, localTextY);
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingText, textDragStart, localTextY, onTextPositionChange]);
 
   useEffect(() => {
     setLocalSelectedImages(selectedImages);
   }, [selectedImages]);
+
+  // Get default dimensions and position for an image based on count
+  const getDefaultImageDimensions = (imageCount: number, index: number) => {
+    if (imageCount === 1) {
+      return { width: 297, height: 385 };
+    } else if (imageCount === 2) {
+      return { width: 264, height: 275 };
+    } else if (imageCount === 3 || imageCount === 4) {
+      return { width: 240, height: 240 };
+    }
+    return { width: 200, height: 200 };
+  };
+
+  const getDefaultImagePosition = (imageCount: number, index: number, imageWidth: number, imageHeight: number) => {
+    const pageWidth = 546;
+    const pageHeight = 790;
+    const containerTop = 200;
+    const containerLeft = 60;
+    const containerWidth = pageWidth - 120;
+    const containerHeight = pageHeight - containerTop - 120;
+    
+    if (imageCount === 1) {
+      return {
+        x: containerLeft + (containerWidth - imageWidth) / 2,
+        y: containerTop + 70
+      };
+    } else if (imageCount === 2) {
+      const gap = 16;
+      const totalWidth = imageWidth * 2 + gap;
+      const startX = containerLeft + (containerWidth - totalWidth) / 2;
+      return {
+        x: startX + index * (imageWidth + gap),
+        y: containerTop + 40
+      };
+    } else if (imageCount === 3 || imageCount === 4) {
+      const gap = 16;
+      const cols = 2;
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      const totalWidth = imageWidth * cols + gap * (cols - 1);
+      const startX = containerLeft + (containerWidth - totalWidth) / 2;
+      return {
+        x: startX + col * (imageWidth + gap),
+        y: containerTop + row * (imageHeight + gap)
+      };
+    }
+    return { x: containerLeft, y: containerTop };
+  };
+
+  // Get image position and size
+  const getImagePosition = (image: ImageItem, index: number) => {
+    const defaultDims = getDefaultImageDimensions(localSelectedImages.length, index);
+    const width = image.width ?? defaultDims.width;
+    const height = image.height ?? defaultDims.height;
+    const defaultPos = getDefaultImagePosition(localSelectedImages.length, index, width, height);
+    
+    return {
+      x: image.positionX ?? defaultPos.x,
+      y: image.positionY ?? defaultPos.y,
+      width,
+      height
+    };
+  };
 
   const handleImageToggle = (image: ImageItem) => {
     if (isPDF) return; // Don't allow selection changes in PDF mode
@@ -52,6 +221,133 @@ export const Page6: React.FC<Page6Props> = ({
     return localSelectedImages.some(img => img.id === image.id);
   };
 
+  // Drag handlers
+  const handleImageMouseDown = (e: React.MouseEvent, imageId: string) => {
+    if (isPDF) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingImageId(imageId);
+    const rect = pageContainerRef.current?.getBoundingClientRect();
+    const image = localSelectedImages.find(img => img.id === imageId);
+    if (rect && image) {
+      const pos = getImagePosition(image, localSelectedImages.findIndex(img => img.id === imageId));
+      setDragStart({
+        x: e.clientX - rect.left - pos.x,
+        y: e.clientY - rect.top - pos.y
+      });
+    }
+  };
+
+  // Resize handlers
+  const handleResizeMouseDown = (e: React.MouseEvent, imageId: string, type: 'width' | 'height' | 'both') => {
+    if (isPDF) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingImageId(imageId);
+    setResizeType(type);
+    const image = localSelectedImages.find(img => img.id === imageId);
+    if (image) {
+      const pos = getImagePosition(image, localSelectedImages.findIndex(img => img.id === imageId));
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
+        width: pos.width,
+        height: pos.height
+      });
+    }
+  };
+
+  // Global mouse move handler for dragging and resizing
+  useEffect(() => {
+    if (!draggingImageId && !resizingImageId) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!pageContainerRef.current) return;
+      const rect = pageContainerRef.current.getBoundingClientRect();
+      
+      if (draggingImageId) {
+        const image = localSelectedImages.find(img => img.id === draggingImageId);
+        if (!image) return;
+        const index = localSelectedImages.findIndex(img => img.id === draggingImageId);
+        const currentPos = getImagePosition(image, index);
+        
+        const newX = e.clientX - rect.left - dragStart.x;
+        const newY = e.clientY - rect.top - dragStart.y;
+        
+        // Constrain to page bounds
+        const minX = 29;
+        const maxX = 546 - currentPos.width - 29;
+        const minY = 0;
+        const maxY = 790 - currentPos.height;
+        
+        const constrainedX = Math.max(minX, Math.min(maxX, newX));
+        const constrainedY = Math.max(minY, Math.min(maxY, newY));
+        
+        // Update image position
+        const updatedImages = localSelectedImages.map(img => 
+          img.id === draggingImageId 
+            ? { ...img, positionX: constrainedX, positionY: constrainedY }
+            : img
+        );
+        setLocalSelectedImages(updatedImages);
+      } else if (resizingImageId && resizeType) {
+        const image = localSelectedImages.find(img => img.id === resizingImageId);
+        if (!image) return;
+        const index = localSelectedImages.findIndex(img => img.id === resizingImageId);
+        const currentPos = getImagePosition(image, index);
+        
+        const deltaX = e.clientX - resizeStart.x;
+        const deltaY = e.clientY - resizeStart.y;
+        
+        let newWidth = currentPos.width;
+        let newHeight = currentPos.height;
+        
+        if (resizeType === 'width') {
+          newWidth = Math.max(100, Math.min(500, resizeStart.width + deltaX));
+        } else if (resizeType === 'height') {
+          newHeight = Math.max(100, Math.min(600, resizeStart.height + deltaY));
+        } else if (resizeType === 'both') {
+          newWidth = Math.max(100, Math.min(500, resizeStart.width + deltaX));
+          newHeight = Math.max(100, Math.min(600, resizeStart.height + deltaY));
+        }
+        
+        // Update image size
+        const updatedImages = localSelectedImages.map(img => 
+          img.id === resizingImageId 
+            ? { ...img, width: newWidth, height: newHeight }
+            : img
+        );
+        setLocalSelectedImages(updatedImages);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (draggingImageId || resizingImageId) {
+        const image = localSelectedImages.find(img => 
+          img.id === (draggingImageId || resizingImageId)
+        );
+        if (image && onImagePositionChange) {
+          const index = localSelectedImages.findIndex(img => 
+            img.id === (draggingImageId || resizingImageId)
+          );
+          const pos = getImagePosition(image, index);
+          onImagePositionChange(image.id, pos.x, pos.y, pos.width, pos.height);
+        }
+        setDraggingImageId(null);
+        setResizingImageId(null);
+        setResizeType(null);
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingImageId, resizingImageId, resizeType, dragStart, resizeStart, localSelectedImages, onImagePositionChange]);
+
   return (
     <div 
       className="bg-white"
@@ -68,10 +364,14 @@ export const Page6: React.FC<Page6Props> = ({
     >
       <div className="bg-white w-[595px] h-[842px]">
         <div 
+          ref={pageContainerRef}
           className="relative w-[546px] h-[790px] top-[26px]"
-          style={{
-            left: isPDF ? 'auto' : '25px',
-            margin: isPDF ? '0 auto' : 'initial'
+          style={isPDF ? {
+            left: '24.5px', // Center: (595 - 546) / 2 = 24.5px
+            margin: '0'
+          } : {
+            left: '25px',
+            margin: 'initial'
           }}
         >
           {/* Header Section */}
@@ -80,8 +380,7 @@ export const Page6: React.FC<Page6Props> = ({
             style={isPDF ? {
               position: 'absolute',
               top: '25px',
-              left: '55%',
-              transform: 'translateX(-50%)'
+              left: '76.5px', // Center: (546 - 393) / 2 = 76.5px
             } : {}}
           >
             <div className="absolute w-[391px] h-[54px] top-[52px] left-0 bg-black rounded-[36px] border-[6px] border-solid border-[#722420]">
@@ -102,152 +401,115 @@ export const Page6: React.FC<Page6Props> = ({
             />
           </div>
 
-            {/* Images Display Area - Always show selected images only for preview */}
-            <div 
-              className={isPDF ? "" : "absolute top-[200px] bottom-[120px] left-[60px] right-[60px]"}
-              style={isPDF ? {
-                position: 'absolute',
-                top: '100px',
-                bottom: '120px',
-                left: '70px',
-                right: '40px',
-                maxWidth: '466px'
-              } : {}}
-            >
-              {localSelectedImages.length > 0 ? (
-                // Show selected images with smart cropping to fit available space
-                <div 
-                  className="w-full h-full"
-                  style={{
-                    padding: isPDF ? '10px' : '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                {localSelectedImages.length === 1 ? (
-                  // Single image - centered with specific max dimensions
-                  <div 
-                    className="relative" 
-                    style={{ 
-                      maxWidth: '297px',
-                      maxHeight: '385px',
-                      marginTop: isPDF ? '70px' : '0',
-                      width: '297px',
-                      height: '385px'
+            {/* Images Display Area - Draggable and resizable images */}
+            {localSelectedImages.length > 0 ? (
+              localSelectedImages.map((image, index) => {
+                const pos = getImagePosition(image, index);
+                const isDragging = draggingImageId === image.id;
+                const isResizing = resizingImageId === image.id;
+                
+                return (
+                  <div
+                    key={image.id}
+                    style={{
+                      position: 'absolute',
+                      left: `${pos.x}px`,
+                      top: `${pos.y}px`,
+                      width: `${pos.width}px`,
+                      height: `${pos.height}px`,
+                      cursor: isDragging ? 'grabbing' : (isPDF ? 'default' : 'grab'),
+                      zIndex: isDragging || isResizing ? 10 : 1
                     }}
+                    onMouseDown={(e) => !isPDF && handleImageMouseDown(e, image.id)}
                   >
                     <img
-                      src={localSelectedImages[0].url}
-                      alt={localSelectedImages[0].alt || 'Project image 1'}
-                      className="w-full h-full object-cover shadow-md rounded-lg"
+                      src={image.url}
+                      alt={image.alt || `Project image ${index + 1}`}
                       style={{
-                        width: '297px',
-                        height: '385px',
-                        maxWidth: '297px',
-                        maxHeight: '385px',
-                        objectFit: 'cover'
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'fill',
+                        pointerEvents: 'none',
+                        userSelect: 'none'
                       }}
+                      draggable={false}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
                       }}
                     />
-                  </div>
-                ) : localSelectedImages.length === 2 ? (
-                  // Two images - aligned horizontally side-by-side
-                  <div 
-                    className="flex flex-row gap-4"
-                    style={{
-                      maxWidth: isPDF ? '480px' : '520px',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginTop: isPDF ? '40px' : '0'
-                    }}
-                  >
-                    {localSelectedImages.map((image, index) => (
-                      <div key={image.id} className="relative">
-                        <img
-                          src={image.url}
-                          alt={image.alt || `Project image ${index + 1}`}
-                          className="shadow-md rounded-lg object-cover"
+                    {!isPDF && (
+                      <>
+                        {/* Right edge resize handle (width only) */}
+                        <div
                           style={{
-                            width: isPDF ? '242px' : '264px',
-                            height: isPDF ? '275px' : '275px'
+                            position: 'absolute',
+                            right: '-8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: '16px',
+                            height: '40px',
+                            backgroundColor: '#722420',
+                            border: '2px solid white',
+                            borderRadius: '8px',
+                            cursor: 'ew-resize',
+                            zIndex: 11,
+                            pointerEvents: 'auto'
                           }}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
+                          onMouseDown={(e) => handleResizeMouseDown(e, image.id, 'width')}
                         />
-                      </div>
-                    ))}
-                  </div>
-                ) : localSelectedImages.length === 3 ? (
-                  // Three images - centered 2x2 grid
-                  <div 
-                    className="grid grid-cols-2 gap-4"
-                    style={{
-                      maxWidth: isPDF ? '90%' : '80%',
-                      maxHeight: isPDF ? '90%' : '80%',
-                      width: isPDF ? '450px' : 'auto',
-                      height: isPDF ? '350px' : 'auto'
-                    }}
-                  >
-                    {localSelectedImages.map((image, index) => (
-                      <div key={image.id} className="relative">
-                        <img
-                          src={image.url}
-                          alt={image.alt || `Project image ${index + 1}`}
-                          className="w-full h-full object-cover shadow-md rounded-lg"
+                        {/* Bottom edge resize handle (height only) */}
+                        <div
                           style={{
-                            minHeight: isPDF ? '165px' : '165px'
+                            position: 'absolute',
+                            bottom: '-8px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '40px',
+                            height: '16px',
+                            backgroundColor: '#722420',
+                            border: '2px solid white',
+                            borderRadius: '8px',
+                            cursor: 'ns-resize',
+                            zIndex: 11,
+                            pointerEvents: 'auto'
                           }}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
+                          onMouseDown={(e) => handleResizeMouseDown(e, image.id, 'height')}
                         />
-                      </div>
-                    ))}
-                    {/* Empty space for 4th position */}
-                    <div></div>
-                  </div>
-                ) : (
-                  // Four images - centered 2x2 grid
-                  <div 
-                    className="grid grid-cols-2 gap-4"
-                    style={{
-                      maxWidth: isPDF ? '90%' : '80%',
-                      maxHeight: isPDF ? '90%' : '80%',
-                      width: isPDF ? '500px' : 'auto',
-                      height: isPDF ? '400px' : 'auto'
-                    }}
-                  >
-                    {localSelectedImages.map((image, index) => (
-                      <div key={image.id} className="relative">
-                        <img
-                          src={image.url}
-                          alt={image.alt || `Project image ${index + 1}`}
-                          className="w-full h-full object-cover shadow-md rounded-lg"
+                        {/* Bottom-right corner resize handle (both width and height) */}
+                        <div
                           style={{
-                            minHeight: isPDF ? '240px' : '240px',
-                            width: '100%',
-                            height: '100%'
+                            position: 'absolute',
+                            bottom: '-8px',
+                            right: '-8px',
+                            width: '20px',
+                            height: '20px',
+                            backgroundColor: '#722420',
+                            border: '2px solid white',
+                            borderRadius: '50%',
+                            cursor: 'nwse-resize',
+                            zIndex: 11,
+                            pointerEvents: 'auto'
                           }}
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
+                          onMouseDown={(e) => handleResizeMouseDown(e, image.id, 'both')}
                         />
-                      </div>
-                    ))}
+                      </>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })
             ) : (
               // Show placeholder when no images selected
-              <div className="w-full h-full flex items-center justify-center">
+              <div 
+                className="absolute top-[200px] bottom-[120px] left-[60px] right-[60px] flex items-center justify-center"
+                style={isPDF ? {
+                  position: 'absolute',
+                  top: '100px',
+                  bottom: '120px',
+                  left: '70px',
+                  right: '40px'
+                } : {}}
+              >
                 <div className="text-center text-gray-500">
                   <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
@@ -257,27 +519,21 @@ export const Page6: React.FC<Page6Props> = ({
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Description paragraph below images */}
+          {/* Description paragraph below images - Draggable */}
           {localSelectedImages.length > 0 && (
             <div 
               className="absolute"
               style={{
-                top: localSelectedImages.length === 1 ? 
-                  (isPDF ? '580px' : '620px') : // Single image: 350px + 100px + 20px margin
-                  localSelectedImages.length === 2 ? 
-                  (isPDF ? '670px' : '690px') : // Two images: stacked height + margin
-                  localSelectedImages.length === 3 ? 
-                  (isPDF ? '690px' : '690px') : // Three images: grid height + margin
-                  (isPDF ? '690px' : '690px'), // Four images: grid height + margin
-                left: isPDF ? '53%' : '50%',
-
+                left: `${localTextX}px`,
+                top: `${localTextY}px`,
                 transform: 'translateX(-50%)',
                 width: '80%',
                 textAlign: 'center',
-                marginTop: '10px'
+                cursor: isDraggingText ? 'grabbing' : (isPDF ? 'default' : 'grab'),
+                zIndex: isDraggingText ? 10 : 1
               }}
+              onMouseDown={handleTextMouseDown}
             >
               <p 
                 style={{
@@ -285,7 +541,9 @@ export const Page6: React.FC<Page6Props> = ({
                   fontSize: isPDF ? '14px' : '16px',
                   color: '#000000',
                   margin: '0',
-                  lineHeight: '1.4'
+                  lineHeight: '1.4',
+                  userSelect: 'none',
+                  pointerEvents: 'none'
                 }}
               >
                 Written Invoice
@@ -302,7 +560,7 @@ export const Page6: React.FC<Page6Props> = ({
             style={isPDF ? {
               position: 'absolute',
               top: '0',
-              left: '22.5px'
+              left: '0' // Container is already positioned, so border should be at 0
             } : {}}
           >
             <div className="relative w-[536px] h-[780px] top-[3px] left-[3px] border-2 border-solid border-[#722420]" />

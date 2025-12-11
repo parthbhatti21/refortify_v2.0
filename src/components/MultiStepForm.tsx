@@ -27,6 +27,10 @@ export interface ImageItem {
   id: string;
   url: string;
   alt?: string;
+  positionX?: number;
+  positionY?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface FormData {
@@ -38,6 +42,8 @@ export interface FormData {
   timelineCoverImage?: string; // Timeline cover image from scraped data
   scrapedImages?: ImageItem[]; // All images from DataScraper
   selectedImages?: ImageItem[]; // Selected images for Page6
+  step6TextPositionX?: number; // Text position X for Step 6
+  step6TextPositionY?: number; // Text position Y for Step 6
   dataSourceUrl?: string; // Data source URL from DataScraper
   invoiceData?: {
     invoiceNumber: string;
@@ -414,6 +420,16 @@ const dropdownOptions = [
   }
 ];
 
+// Helper function to sanitize filename
+const sanitizeFileName = (text: string): string => {
+  if (!text) return '';
+  // Replace spaces with underscores, remove invalid filename characters
+  return text
+    .replace(/\s+/g, '_')
+    .replace(/[<>:"/\\|?*]/g, '')
+    .trim();
+};
+
 const MultiStepForm: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'scrape' | 'form'>('scrape');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -685,10 +701,26 @@ const MultiStepForm: React.FC = () => {
               price: r.price || ''
             }))
           } : undefined,
-          selectedImages: (step6j['Selected Images'] || []).map((img: any) => ({ id: img.id, url: img.url })),
+          selectedImages: (step6j['Selected Images'] || []).map((img: any) => ({ 
+            id: img.id, 
+            url: img.url,
+            positionX: img.positionX,
+            positionY: img.positionY,
+            width: img.width,
+            height: img.height
+          })),
+          step6TextPositionX: step6j['Text Position']?.x,
+          step6TextPositionY: step6j['Text Position']?.y,
           // Build scrapedImages from selected (step6) + inspection (step8)
           scrapedImages: (() => {
-            const selected = (step6j['Selected Images'] || []).map((img: any) => ({ id: img.id || `sel-${Math.random()}`, url: img.url }));
+            const selected = (step6j['Selected Images'] || []).map((img: any) => ({ 
+              id: img.id || `sel-${Math.random()}`, 
+              url: img.url,
+              positionX: img.positionX,
+              positionY: img.positionY,
+              width: img.width,
+              height: img.height
+            }));
             const inspection = (step8j['Inspection Images'] || step8j['inspectionImages'] || []).map((img: any) => ({ id: img.id || `ins-${Math.random()}`, url: img.url }));
             const seen = new Set<string>();
             const merged: any[] = [];
@@ -1082,7 +1114,9 @@ const MultiStepForm: React.FC = () => {
       await generateMultiPagePDF(pdf, isMobileDevice);
       
       // Save PDF directly (no Google Docs viewer)
-        const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
+        const clientName = sanitizeFileName(formData.clientName || 'client');
+        const clientAddress = sanitizeFileName(formData.clientAddress || '');
+        const fileName = `A_Step_In_Time_${clientName}${clientAddress ? '_' + clientAddress : ''}.pdf`;
         pdf.save(fileName);
         
         
@@ -1199,7 +1233,9 @@ const MultiStepForm: React.FC = () => {
       await generateMultiPagePDF(pdf, isMobileDevice);
       
       // Save PDF directly (download only, no upload)
-      const fileName = `chimney_report_${formData.clientName || 'client'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const clientName = sanitizeFileName(formData.clientName || 'client');
+      const clientAddress = sanitizeFileName(formData.clientAddress || '');
+      const fileName = `A_Step_In_Time_${clientName}${clientAddress ? '_' + clientAddress : ''}.pdf`;
       pdf.save(fileName);
       
     } catch (error) {
@@ -1373,9 +1409,20 @@ const MultiStepForm: React.FC = () => {
     const { error: s5p2JsonErr } = await supabase.from('step5_part2_json').upsert({ report_id: reportId, data: step5Part2Json }, { onConflict: 'report_id' });
     if (s5p2JsonErr) throw s5p2JsonErr;
 
-    // Step 6 JSON (selected images)
+    // Step 6 JSON (selected images with positions and text position)
     const step6Json = {
-      'Selected Images': (formData.selectedImages || []).map(img => ({ id: img.id, url: img.url }))
+      'Selected Images': (formData.selectedImages || []).map(img => ({ 
+        id: img.id, 
+        url: img.url,
+        positionX: img.positionX,
+        positionY: img.positionY,
+        width: img.width,
+        height: img.height
+      })),
+      'Text Position': {
+        x: formData.step6TextPositionX,
+        y: formData.step6TextPositionY
+      }
     };
     const { error: s6JsonErr } = await supabase.from('step6_json').upsert({ report_id: reportId, data: step6Json }, { onConflict: 'report_id' });
     if (s6JsonErr) throw s6JsonErr;
@@ -2106,7 +2153,9 @@ const MultiStepForm: React.FC = () => {
       React.createElement(Step6, { 
         isPDF: true, 
         scrapedImages: formData.scrapedImages || [], 
-        selectedImages: formData.selectedImages || [] 
+        selectedImages: formData.selectedImages || [],
+        textPositionX: formData.step6TextPositionX,
+        textPositionY: formData.step6TextPositionY
       }) :
       isRecommendationPage(pageNumber) ?
       React.createElement(Step7, { 
@@ -3443,6 +3492,14 @@ const MultiStepForm: React.FC = () => {
                   </div>
                 )}
 
+                {(formData.selectedImages?.length || 0) > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-800">
+                      💡 <strong>Tip:</strong> Drag images to move them, or drag the resize handles (right edge, bottom edge, or corner) to resize them. The "Written Invoice" text can also be dragged to reposition it.
+                    </p>
+                  </div>
+                )}
+
               </div>
             ) : currentLogicalStep === 7 ? (
               // Step 7 - Repair Estimate Interface
@@ -4098,6 +4155,19 @@ const MultiStepForm: React.FC = () => {
                   selectedImages={formData.selectedImages || []}
                   onImageSelection={handleImageSelection}
                   isPDF={false}
+                  onImagePositionChange={(imageId, x, y, width, height) => {
+                    const updatedImages = (formData.selectedImages || []).map(img =>
+                      img.id === imageId
+                        ? { ...img, positionX: x, positionY: y, width, height }
+                        : img
+                    );
+                    updateFormData({ selectedImages: updatedImages });
+                  }}
+                  textPositionX={formData.step6TextPositionX}
+                  textPositionY={formData.step6TextPositionY}
+                  onTextPositionChange={(x, y) => {
+                    updateFormData({ step6TextPositionX: x, step6TextPositionY: y });
+                  }}
                 />
               ) : isRecommendationPage(currentPage) ? (
                 getCurrentRecommendationPage() ? (
