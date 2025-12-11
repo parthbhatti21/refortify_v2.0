@@ -2888,12 +2888,11 @@ const MultiStepForm: React.FC = () => {
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {(formData.invoiceData?.rows || []).map((row, index) => (
                       <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
-                        <textarea
-                          placeholder="Description (Press Enter for new line)"
+                        <AutocompleteInput
                           value={row.description}
-                          onChange={(e) => {
+                          onChange={(value) => {
                             const updatedRows = (formData.invoiceData?.rows || []).map(r => 
-                              r.id === row.id ? { ...r, description: e.target.value } : r
+                              r.id === row.id ? { ...r, description: value } : r
                             );
                             updateFormData({ 
                               invoiceData: { 
@@ -2903,25 +2902,35 @@ const MultiStepForm: React.FC = () => {
                                 rows: updatedRows
                               } 
                             });
-                            // Auto-resize textarea
-                            const textarea = e.target as HTMLTextAreaElement;
-                            textarea.style.height = 'auto';
-                            const newHeight = Math.max(parseFloat(getComputedStyle(textarea).lineHeight) || 20, textarea.scrollHeight);
-                            textarea.style.height = `${newHeight}px`;
                           }}
-                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420] resize-y"
-                          rows={1}
-                          style={{ 
-                            minHeight: '2rem',
-                            lineHeight: '1.25rem',
-                            whiteSpace: 'pre-wrap',
-                            wordWrap: 'break-word',
-                            overflow: 'hidden'
+                          onSelectRow={(selectedRow: SheetRow) => {
+                            // When a row is selected from description field, populate all three fields
+                            const priceValue = selectedRow.price || '';
+                            // Remove $ sign and store as plain number string (e.g., "400" not "$400")
+                            const priceWithoutDollar = priceValue.replace(/^\$/, '').trim();
+                            
+                            const updatedRows = (formData.invoiceData?.rows || []).map(r => 
+                              r.id === row.id ? { 
+                                ...r, 
+                                description: selectedRow.description,
+                                unit: selectedRow.unit || '1', // Default to "1" if not provided
+                                price: priceWithoutDollar // Store without $ sign
+                              } : r
+                            );
+                            updateFormData({ 
+                              invoiceData: { 
+                                invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                                paymentMethod: formData.invoiceData?.paymentMethod || '',
+                                paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                rows: updatedRows
+                              } 
+                            });
                           }}
-                          onKeyDown={(e) => {
-                            // Allow Enter to create new lines (default behavior)
-                            // Don't prevent default - let textarea handle it naturally
-                          }}
+                          placeholder="Description (Press Enter for new line)"
+                          field="description"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                          sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                          sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
                         />
                         <input
                           type="text"
@@ -2940,7 +2949,7 @@ const MultiStepForm: React.FC = () => {
                               } 
                             });
                           }}
-                          className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                          className="w-10 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                         />
                         <input
                           type="text"
@@ -2959,7 +2968,7 @@ const MultiStepForm: React.FC = () => {
                               } 
                             });
                           }}
-                          className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                          className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                         />
                         <button
                           type="button"
@@ -2974,12 +2983,12 @@ const MultiStepForm: React.FC = () => {
                               }
                             });
                           }}
-                          className="px-2 py-1 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-sm flex items-center justify-center"
+                          className="px-2 py-1  text-red-600 hover:text-red-800 text-m flex items-center justify-center"
                           title="Delete item"
                         >
                           <svg 
-                            width="14" 
-                            height="14" 
+                            width="17" 
+                            height="17" 
                             viewBox="0 0 24 24" 
                             fill="none" 
                             stroke="currentColor" 
@@ -3089,7 +3098,7 @@ const MultiStepForm: React.FC = () => {
                           field="description"
                           className=" w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                           sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
-                          sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                          sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
                         />
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <AutocompleteInput
@@ -3111,7 +3120,7 @@ const MultiStepForm: React.FC = () => {
                             field="unit"
                             className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                             sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
-                            sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                            sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
                           />
                           <input
                             type="text"
@@ -3132,7 +3141,7 @@ const MultiStepForm: React.FC = () => {
                               });
                             }}
                             placeholder="Price"
-                            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                            className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                           />
                         </div>
                         <button
@@ -3151,7 +3160,7 @@ const MultiStepForm: React.FC = () => {
                           className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
                           title="Delete row"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -3237,7 +3246,7 @@ const MultiStepForm: React.FC = () => {
                               field="description"
                               className="w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                               sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
-                              sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                              sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
                             />
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <AutocompleteInput
@@ -3250,9 +3259,9 @@ const MultiStepForm: React.FC = () => {
                               }}
                                 placeholder="Unit"
                                 field="unit"
-                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                                 sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
-                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Repairs!A:E'}
                             />
                               <AutocompleteInput
                               value={row.price}
@@ -3264,9 +3273,9 @@ const MultiStepForm: React.FC = () => {
                               }}
                                 placeholder="Price"
                                 field="price"
-                              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
-                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:B'}
+                              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                              sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                              sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
                             />
                             </div>
                             <button
@@ -3509,7 +3518,7 @@ const MultiStepForm: React.FC = () => {
                         <col style={{ width: '65%' }} />
                         <col style={{ width: '10%' }} />
                         <col style={{ width: '12%' }} />
-                        <col style={{ width: '15%' }} />
+                        <col style={{ width: '13%' }} />
                       </colgroup>
                       <thead className="bg-[#722420]">
                         <tr>
@@ -3523,44 +3532,56 @@ const MultiStepForm: React.FC = () => {
                         {(getCurrentRecommendationPage()?.repairEstimateData.rows || []).map((row: any, index: number) => (
                           <tr key={row.id}>
                             <td className="px-2 py-2" style={{ width: '65%' }}>
-                              <textarea
-                                value={row.description || ''}
-                                onChange={(e) => {
-                                  const currentPage = getCurrentRecommendationPage();
-                                  if (currentPage) {
-                                    const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
-                                      r.id === row.id ? { ...r, description: e.target.value } : r
-                                    );
-                                    updateCurrentRecommendationPage({
-                                      repairEstimateData: {
-                                        ...currentPage.repairEstimateData,
-                                        rows: updatedRows
-                                      }
-                                    });
-                                  }
-                                  // Auto-resize textarea
-                                  const textarea = e.target as HTMLTextAreaElement;
-                                  textarea.style.height = 'auto';
-                                  const newHeight = Math.max(parseFloat(getComputedStyle(textarea).lineHeight) || 20, textarea.scrollHeight);
-                                  textarea.style.height = `${newHeight}px`;
-                                }}
-                                placeholder="Enter description (Press Enter for new line)"
-                                className="w-full min-w-0 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420] resize-y"
-                                rows={1}
-                                style={{ 
-                                  minHeight: '2rem',
-                                  lineHeight: '1.25rem',
-                                  whiteSpace: 'pre-wrap',
-                                  wordWrap: 'break-word',
-                                  overflow: 'hidden'
-                                }}
-                                onKeyDown={(e) => {
-                                  // Allow Enter to create new lines (default behavior)
-                                  // Don't prevent default - let textarea handle it naturally
-                                }}
-                              />
+                              <div className="w-full">
+                                <AutocompleteInput 
+                                  value={row.description || ''}
+                                  onChange={(value) => {
+                                    const currentPage = getCurrentRecommendationPage();
+                                    if (currentPage) {
+                                      const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                        r.id === row.id ? { ...r, description: value } : r
+                                      );
+                                      updateCurrentRecommendationPage({
+                                        repairEstimateData: {
+                                          ...currentPage.repairEstimateData,
+                                          rows: updatedRows
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  onSelectRow={(selectedRow: SheetRow) => {
+                                    const currentPage = getCurrentRecommendationPage();
+                                    if (currentPage) {
+                                      // When a row is selected from description field, populate all three fields
+                                      const priceValue = selectedRow.price || '';
+                                      // Remove $ sign and store as plain number string (e.g., "400" not "$400")
+                                      const priceWithoutDollar = priceValue.replace(/^\$/, '').trim();
+                                      
+                                      const updatedRows = currentPage.repairEstimateData.rows.map((r: any) => 
+                                        r.id === row.id ? { 
+                                          ...r, 
+                                          description: selectedRow.description,
+                                          unit: selectedRow.unit || '1', // Default to "1" if not provided
+                                          price: priceWithoutDollar // Store without $ sign
+                                        } : r
+                                      );
+                                      updateCurrentRecommendationPage({
+                                        repairEstimateData: {
+                                          ...currentPage.repairEstimateData,
+                                          rows: updatedRows
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  placeholder="Enter description (Press Enter for new line)"
+                                  field="description"
+                                  className="w-full min-w-0 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                  sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                                  sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
+                                />
+                              </div>
                             </td>
-                            <td className="px-1 py-2" style={{ width: '8%' }}>
+                            <td className="px-1 py-2" style={{ width: '10%' }}>
                               <input
                                 type="text"
                                 value={String(row.unit || '')}
@@ -3606,23 +3627,26 @@ const MultiStepForm: React.FC = () => {
                                 className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                               />
                             </td>
-                            <td className="px-1 py-2" style={{ width: '15%' }}>
+                            <td className="px-1 py-2" style={{ width: '13%' }}>
                               <button
-                            onClick={() => {
-                              const currentPage = getCurrentRecommendationPage();
-                              if (currentPage) {
-                                const updatedRows = currentPage.repairEstimateData.rows.filter((r: any) => r.id !== row.id);
-                                updateCurrentRecommendationPage({
-                                  repairEstimateData: {
-                                    ...currentPage.repairEstimateData,
-                                    rows: updatedRows
-                                  }
-                                });
-                              }
-                            }}
-                                className="w-full  py-0.5 bg-[#722420] text-white rounded hover:bg-[#5a1d1a] text-xs whitespace-nowrap"
+                              onClick={() => {
+                                const currentPage = getCurrentRecommendationPage();
+                                if (currentPage) {
+                                  const updatedRows = currentPage.repairEstimateData.rows.filter((r: any) => r.id !== row.id);
+                                  updateCurrentRecommendationPage({
+                                    repairEstimateData: {
+                                      ...currentPage.repairEstimateData,
+                                      rows: updatedRows
+                                    }
+                                  });
+                                }
+                              }}
+                                className="w-full py-0.5  text-red-600 hover:text-red-800 text-m whitespace-nowrap flex items-center justify-center"
+                                title="Remove"
                               >
-                                Remove
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
                               </button>
                             </td>
                           </tr>

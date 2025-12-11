@@ -21,7 +21,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   field,
   onSelectRow,
   sheetId,
-  sheetRange = 'Sheet1!A:B' // Default to 2 columns (Description, Price)
+  sheetRange = 'Repairs!A:E' // Default to 5 columns (Sr. No., Estimate Description, Unit, estimate, recommendation)
 }) => {
   const [suggestions, setSuggestions] = useState<SheetRow[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -287,6 +287,11 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           }`}>
             {field === 'description' ? (
               <>
+                {suggestion.srNo && (
+                  <span className="mr-2 font-normal text-gray-600">
+                    [{suggestion.srNo}]
+                  </span>
+                )}
                 {suggestion.description}
                 {suggestion.price && (
                   <span className="ml-2 font-normal">
@@ -311,7 +316,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   ) : null;
 
   return (
-    <div ref={containerRef} className="relative w-full" style={{ position: 'relative', zIndex: 1 }}>
+    <div ref={containerRef} className={`relative w-full ${className.includes('w-full') ? '' : ''}`} style={{ position: 'relative', zIndex: 1, width: '100%' }}>
       {isTextarea ? (
         <textarea
           ref={inputRef as React.RefObject<HTMLTextAreaElement>}
@@ -329,7 +334,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
             wordWrap: 'break-word',
             minHeight: '1.5rem',
             lineHeight: '1.25rem',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            width: '100%'
           }}
         />
       ) : (

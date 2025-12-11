@@ -5,9 +5,11 @@
  */
 
 export interface SheetRow {
+  srNo: string;
   description: string;
   unit: string;
   price: string;
+  recommendation?: string;
 }
 
 // Cache to prevent duplicate API calls
@@ -20,12 +22,12 @@ const pendingRequests = new Map<string, Promise<SheetRow[]>>(); // Track pending
  * Requires REACT_APP_GOOGLE_SHEETS_API_KEY environment variable
  * 
  * @param sheetId - The Google Sheet ID (from the sheet URL)
- * @param range - The range to fetch (e.g., 'Sheet1!A:B' for Description, Price)
+ * @param range - The range to fetch (e.g., 'Sheet1!A:E' for 5 columns)
  * @returns Array of rows with description, unit, and price
  */
 export const fetchGoogleSheetData = async (
   sheetId: string,
-  range: string = 'Sheet1!A:B' // Default to 2 columns (Description, Price)
+  range: string = 'Sheet1!A:E' // Default to 5 columns (Sr. No., Estimate Description, Unit, estimate, recommendation)
 ): Promise<SheetRow[]> => {
   try {
     const apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY || 'AIzaSyBixMaBdYAqO8_I9qlBlwU6nQkjiDCt-uc';
@@ -54,16 +56,37 @@ export const fetchGoogleSheetData = async (
     // Create new request
     const requestPromise = (async () => {
       try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+    // URL-encode the range to handle special characters in sheet names
+    const encodedRange = encodeURIComponent(range);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodedRange}?key=${apiKey}`;
     const response = await fetch(url);
     
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
-          const errorMessage = `Failed to fetch Google Sheet data: ${response.status} ${errorText}`;
+      let errorMessage = `Failed to fetch Google Sheet data: ${response.status}`;
+      
+      // Parse error response for better error messages
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error) {
+          const errorCode = errorJson.error.code;
+          const errorMsg = errorJson.error.message;
           
-          // Log a single concise error
-          console.error('✗ Google Sheets API error:', errorMessage);
-          throw new Error(errorMessage);
+          if (errorCode === 400 && errorMsg.includes('not supported')) {
+            errorMessage = `Sheet access error (400): The sheet "${sheetId}" is not publicly accessible. Steps to fix: 1) Open the sheet and click "Share" → "Change" → Select "Anyone with the link" → Set to "Viewer" → "Done", 2) Verify the sheet name "${range.split('!')[0]}" matches exactly (case-sensitive), 3) If in Google Workspace, ensure public sharing is allowed by your admin. Test URL: https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?key=${apiKey.substring(0, 20)}...`;
+          } else if (errorCode === 403) {
+            errorMessage = `API access denied (403): Check that: 1) Google Sheets API is enabled in Google Cloud Console, 2) Your API key has proper permissions, 3) The sheet is publicly shared.`;
+          } else {
+            errorMessage = `Google Sheets API error (${errorCode}): ${errorMsg}`;
+          }
+        }
+      } catch (e) {
+        errorMessage = `Failed to fetch Google Sheet data: ${response.status} ${errorText}`;
+      }
+      
+      // Log a single concise error
+      console.error('✗ Google Sheets API error:', errorMessage);
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -95,7 +118,10 @@ export const fetchGoogleSheetData = async (
 
 /**
  * Parses raw sheet data into SheetRow format
- * Supports both 2-column (Description, Price) and 3-column (Description, Unit, Price) formats
+ * Supports multiple formats:
+ * - 5-column format: Sr. No., Estimate Description, Unit, estimate, recommendation
+ * - 3-column format: Description, Unit, Price
+ * - 2-column format: Description, Price
  * @param rows - Raw array of rows from Google Sheets API
  * @returns Array of parsed SheetRow objects
  */
@@ -106,21 +132,36 @@ const parseSheetData = (rows: string[][]): SheetRow[] => {
   const headerRow = rows[0] || [];
   const headerLower = headerRow.map((cell: string) => cell?.toLowerCase()?.trim() || '');
   const isHeaderRow = headerLower.some((cell: string) => 
-    ['description', 'unit', 'price'].includes(cell)
+    ['description', 'unit', 'price', 'sr', 'no', 'estimate', 'recommendation'].some(keyword => cell.includes(keyword))
   );
   
   const dataRows = isHeaderRow ? rows.slice(1) : rows;
   
-  // Detect format: check if header has "unit" or if rows have 3 columns
+  // Detect format based on header or column count
+  const hasSrNo = headerLower.some(cell => cell.includes('sr') && cell.includes('no'));
+  const hasEstimateDescription = headerLower.some(cell => cell.includes('estimate') && cell.includes('description'));
+  const hasRecommendation = headerLower.some(cell => cell.includes('recommendation'));
+  const is5ColumnFormat = hasSrNo && hasEstimateDescription && dataRows.length > 0 && dataRows[0]?.length >= 5;
+  
   const hasUnitColumn = headerLower.includes('unit') || 
-    (dataRows.length > 0 && dataRows[0]?.length >= 3);
+    (dataRows.length > 0 && dataRows[0]?.length >= 3 && !is5ColumnFormat);
   
   return dataRows
-    .filter((row: string[]) => row && row.length > 0 && row[0]?.trim()) // Filter out empty rows
+    .filter((row: string[]) => row && row.length > 0 && (row[0]?.trim() || row[1]?.trim())) // Filter out empty rows
     .map((row: string[]) => {
-      if (hasUnitColumn) {
+      if (is5ColumnFormat) {
+        // 5-column format: Sr. No., Estimate Description, Unit, estimate, recommendation
+        return {
+          srNo: row[0]?.trim() || '',
+          description: row[1]?.trim() || '', // Estimate Description
+          unit: row[2]?.trim() || '',
+          price: row[3]?.trim() || '', // estimate
+          recommendation: row[4]?.trim() || ''
+        };
+      } else if (hasUnitColumn) {
         // 3-column format: Description, Unit, Price
         return {
+          srNo: '',
           description: row[0]?.trim() || '',
           unit: row[1]?.trim() || '',
           price: row[2]?.trim() || ''
@@ -128,17 +169,20 @@ const parseSheetData = (rows: string[][]): SheetRow[] => {
       } else {
         // 2-column format: Description, Price (no Unit column)
         return {
+          srNo: '',
           description: row[0]?.trim() || '',
           unit: '', // Default to empty for 2-column format
           price: row[1]?.trim() || ''
         };
       }
     })
-    .filter((row: SheetRow) => row.description); // Only include rows with description
+    .filter((row: SheetRow) => row.description || row.srNo); // Only include rows with description or srNo
 };
 
 /**
  * Searches Google Sheet data for matching rows
+ * For description field: searches by Sr. No. and Description
+ * For other fields: searches by the specific field
  * @param query - The search query
  * @param sheetData - The sheet data to search
  * @param field - The field to search in ('description', 'unit', or 'price')
@@ -156,8 +200,16 @@ export const searchSheetData = (
   const lowerQuery = query.toLowerCase().trim();
   
   const results = sheetData.filter((row) => {
-    const fieldValue = row[field]?.toLowerCase() || '';
-    return fieldValue.includes(lowerQuery);
+    if (field === 'description') {
+      // For description field, search by both Sr. No. and Description
+      const srNoMatch = row.srNo?.toLowerCase().includes(lowerQuery) || false;
+      const descriptionMatch = row.description?.toLowerCase().includes(lowerQuery) || false;
+      return srNoMatch || descriptionMatch;
+    } else {
+      // For other fields, search by the specific field
+      const fieldValue = row[field]?.toLowerCase() || '';
+      return fieldValue.includes(lowerQuery);
+    }
   }).slice(0, 10); // Limit to 10 results
   
   return results;
