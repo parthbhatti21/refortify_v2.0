@@ -423,11 +423,22 @@ const dropdownOptions = [
 // Helper function to sanitize filename
 const sanitizeFileName = (text: string): string => {
   if (!text) return '';
-  // Replace spaces with underscores, remove invalid filename characters
-  return text
-    .replace(/\s+/g, '_')
-    .replace(/[<>:"/\\|?*]/g, '')
+  // First, normalize Unicode characters and convert to ASCII-safe equivalents
+  // Replace common Unicode characters with ASCII equivalents
+  let sanitized = text
+    .normalize('NFD') // Decompose characters into base + combining marks
+    .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+    .replace(/[•·]/g, '-') // Replace bullet points with dash
+    .replace(/[—–]/g, '-') // Replace em/en dashes with regular dash
+    .replace(/[""]/g, '"') // Replace smart quotes with regular quotes
+    .replace(/['']/g, "'") // Replace smart apostrophes with regular apostrophe
+    .replace(/[^\x00-\x7F]/g, '') // Remove any remaining non-ASCII characters
+    .replace(/\s+/g, '_') // Replace spaces with underscores
+    .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
     .trim();
+  
+  // Ensure we don't have empty result
+  return sanitized || 'file';
 };
 
 const MultiStepForm: React.FC = () => {
