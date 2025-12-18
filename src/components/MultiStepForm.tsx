@@ -49,6 +49,7 @@ export interface FormData {
     invoiceNumber: string;
     paymentMethod: string;
     paymentNumber: string;
+    notes?: string;
     rows: Array<{
       id: string;
       description: string;
@@ -103,6 +104,8 @@ export interface FormData {
   }>;
   usedReviewImages?: string[]; // Track used images to remove from available list
   excludedStep8Images?: string[]; // Track images excluded from Step 8
+  inspectionImagesOrder?: string[]; // Track custom order of inspection images
+  uploadedInspectionImages?: ImageItem[]; // Images uploaded by user for Step 8
 }
 
 const dropdownOptions = [
@@ -459,6 +462,7 @@ const MultiStepForm: React.FC = () => {
       invoiceNumber: '',
       paymentMethod: '',
       paymentNumber: '',
+      notes: '',
       rows: []
     },
     repairEstimateData: {
@@ -469,6 +473,9 @@ const MultiStepForm: React.FC = () => {
     },
     repairEstimatePages: [],
     usedReviewImages: [],
+    excludedStep8Images: [],
+    inspectionImagesOrder: [],
+    uploadedInspectionImages: [],
     notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
   });
   const [isGenerating, setIsGenerating] = useState(false);
@@ -480,6 +487,9 @@ const MultiStepForm: React.FC = () => {
   const [includeRepairEstimate, setIncludeRepairEstimate] = useState(true); // Step 7 is always included
   const [includedPages, setIncludedPages] = useState<Set<number>>(new Set()); // Will be initialized in useEffect
   const hasInitializedPages = useRef(false); // Track if pages have been initialized
+  const newRowDescriptionRef = useRef<string | null>(null); // Track new row ID to focus after adding
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null); // Track dragged image for drag-and-drop
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
   const [cropData, setCropData] = useState<{
     x: number;
     y: number;
@@ -682,6 +692,7 @@ const MultiStepForm: React.FC = () => {
             invoiceNumber: step5Inv['Invoice Number'] || '',
             paymentMethod: step5Inv['Method of Payment'] || '',
             paymentNumber: step5Inv['Payment No'] || '',
+            notes: step5Inv['Notes'] || '',
             rows: (step5Inv['Invoice Table'] || []).map((r: any) => ({
               id: r.id || String(Math.random()),
               description: r.description || '',
@@ -733,14 +744,21 @@ const MultiStepForm: React.FC = () => {
               height: img.height
             }));
             const inspection = (step8j['Inspection Images'] || step8j['inspectionImages'] || []).map((img: any) => ({ id: img.id || `ins-${Math.random()}`, url: img.url }));
+            const uploaded = (step8j['Uploaded Images'] || []).map((img: any) => ({ id: img.id || `uploaded-${Math.random()}`, url: img.url }));
             const seen = new Set<string>();
             const merged: any[] = [];
-            [...selected, ...inspection].forEach((img) => {
+            [...selected, ...inspection, ...uploaded].forEach((img) => {
               const key = img.url;
               if (!seen.has(key)) { seen.add(key); merged.push(img); }
             });
             return merged;
           })(),
+          excludedStep8Images: [],
+          inspectionImagesOrder: step8j['Inspection Images Order'] || [],
+          uploadedInspectionImages: (step8j['Uploaded Images'] || []).map((img: any) => ({ 
+            id: img.id || `uploaded-${Math.random()}`, 
+            url: img.url 
+          })),
           repairEstimatePages: (step7j['Recommendations'] || []).map((p: any) => ({
             id: String(Math.random()),
             reviewImage: p.reviewImage,
@@ -804,6 +822,7 @@ const MultiStepForm: React.FC = () => {
           'Invoice Number': formData.invoiceData?.invoiceNumber || '',
           'Method of Payment': formData.invoiceData?.paymentMethod || '',
           'Payment No': formData.invoiceData?.paymentNumber || '',
+          'Notes': formData.invoiceData?.notes || '',
           'Invoice Table': formData.invoiceData?.rows || []
         };
       }
@@ -999,7 +1018,9 @@ const MultiStepForm: React.FC = () => {
       scrapedImages: data.scrapedImages,
       dataSourceUrl: data.dataSourceUrl,
       selectedImages: [], // Initialize empty selection
-      excludedStep8Images: [] // Reset excluded images when new data is loaded
+      excludedStep8Images: [], // Reset excluded images when new data is loaded
+      inspectionImagesOrder: [], // Reset image order
+      uploadedInspectionImages: [] // Reset uploaded images
     });
     setCurrentStep('form');
   };
@@ -1017,11 +1038,14 @@ const MultiStepForm: React.FC = () => {
         invoiceNumber: '',
         paymentMethod: '',
         paymentNumber: '',
+        notes: '',
         rows: []
       },
       repairEstimatePages: [],
       usedReviewImages: [],
       excludedStep8Images: [],
+      inspectionImagesOrder: [],
+      uploadedInspectionImages: [],
       notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
     });
     setCurrentStep('form');
@@ -1399,6 +1423,7 @@ const MultiStepForm: React.FC = () => {
       'Invoice Number': invoice.invoiceNumber || '',
       'Method of Payment': invoice.paymentMethod || '',
       'Payment No': invoice.paymentNumber || '',
+      'Notes': invoice.notes || '',
       'Invoice Table': invoice.rows || []
     };
     const { error: s5InvJsonErr } = await supabase.from('step5_invoice_json').upsert({ report_id: reportId, data: step5InvoiceJson }, { onConflict: 'report_id' });
@@ -1450,16 +1475,12 @@ const MultiStepForm: React.FC = () => {
     if (s7JsonErr) throw s7JsonErr;
 
     // Step 8 JSON (inspection images)
-    const allImages = formData.scrapedImages || [];
-    const selectedIds = new Set((formData.selectedImages || []).map(img => img.id));
-    const usedRecommendationImages = new Set<string>();
-    (formData.repairEstimatePages || []).forEach((page: any) => {
-      if (page.reviewImage) usedRecommendationImages.add(page.reviewImage);
-    });
-    const inspectionImages = allImages
-      .filter((img: any) => !selectedIds.has(img.id) && !usedRecommendationImages.has(img.url))
-      .map((img: any) => ({ id: img.id, url: img.url }));
-    const step8Json = { 'Inspection Images': inspectionImages };
+    const inspectionImages = getUnusedImages().map((img: any) => ({ id: img.id, url: img.url }));
+    const step8Json = { 
+      'Inspection Images': inspectionImages,
+      'Inspection Images Order': formData.inspectionImagesOrder || [],
+      'Uploaded Images': formData.uploadedInspectionImages || []
+    };
     const { error: s8JsonErr } = await supabase.from('step8_json').upsert({ report_id: reportId, data: step8Json }, { onConflict: 'report_id' });
     if (s8JsonErr) throw s8JsonErr;
 
@@ -1567,6 +1588,7 @@ const MultiStepForm: React.FC = () => {
     // Get unused images for Page8
     const getUnusedImages = () => {
       const allImages = formData.scrapedImages || [];
+      const uploadedImages = formData.uploadedInspectionImages || [];
       const usedImages = new Set<string>();
       
       // Collect all images used in recommendation pages
@@ -1582,12 +1604,38 @@ const MultiStepForm: React.FC = () => {
       // Collect all images excluded from Step 8
       const excludedImageIds = new Set(formData.excludedStep8Images || []);
       
-      // Return images that are not used in recommendations, not selected for invoice, and not excluded
-      return allImages.filter(img => 
+      // Get filtered scraped images
+      const filteredScrapedImages = allImages.filter(img => 
         !usedImages.has(img.url) && 
         !selectedImageIds.has(img.id) &&
         !excludedImageIds.has(img.id)
       );
+      
+      // Combine scraped and uploaded images
+      const allInspectionImages = [...filteredScrapedImages, ...uploadedImages];
+      
+      // If custom order exists, use it; otherwise return natural order
+      if (formData.inspectionImagesOrder && formData.inspectionImagesOrder.length > 0) {
+        const orderMap = new Map(allInspectionImages.map(img => [img.id, img]));
+        const ordered: ImageItem[] = [];
+        const unordered: ImageItem[] = [];
+        
+        // Add images in specified order
+        formData.inspectionImagesOrder.forEach(id => {
+          const img = orderMap.get(id);
+          if (img) {
+            ordered.push(img);
+            orderMap.delete(id);
+          }
+        });
+        
+        // Add any remaining images that weren't in the order
+        orderMap.forEach(img => unordered.push(img));
+        
+        return [...ordered, ...unordered];
+      }
+      
+      return allInspectionImages;
     };
 
     // Get excluded images for Step 8 (for display in restore section)
@@ -2629,6 +2677,7 @@ const MultiStepForm: React.FC = () => {
                       <option value="">Select chimney type</option>
                       <option value="masonry">Masonry</option>
                       <option value="prefabricated">Prefabricated</option>
+                      <option value="none">None</option>
                     </select>
                   </div>
 
@@ -2794,6 +2843,7 @@ const MultiStepForm: React.FC = () => {
                         invoiceNumber: e.target.value,
                         paymentMethod: formData.invoiceData?.paymentMethod || '',
                         paymentNumber: formData.invoiceData?.paymentNumber || '',
+                        notes: formData.invoiceData?.notes || '',
                         rows: formData.invoiceData?.rows || []
                       } 
                     })}
@@ -2815,6 +2865,7 @@ const MultiStepForm: React.FC = () => {
                         invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                         paymentMethod: e.target.value,
                         paymentNumber: formData.invoiceData?.paymentNumber || '',
+                        notes: formData.invoiceData?.notes || '',
                         rows: formData.invoiceData?.rows || []
                       } 
                     })}
@@ -2825,7 +2876,8 @@ const MultiStepForm: React.FC = () => {
                     <option value="Check">Check</option>
                     <option value="Credit Card">Credit Card</option>
                     <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Billing"> Billing</option>
+                    <option value="Billing">Billing</option>
+                    <option value="Waived Off">Waived Off</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
@@ -2844,6 +2896,7 @@ const MultiStepForm: React.FC = () => {
                         invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                         paymentMethod: formData.invoiceData?.paymentMethod || '',
                         paymentNumber: e.target.value,
+                        notes: formData.invoiceData?.notes || '',
                         rows: formData.invoiceData?.rows || []
                       } 
                     })}
@@ -2883,6 +2936,7 @@ const MultiStepForm: React.FC = () => {
                                     invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                     paymentMethod: formData.invoiceData?.paymentMethod || '',
                                     paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                    notes: formData.invoiceData?.notes || '',
                                     rows: [...(formData.invoiceData?.rows || []), newRow]
                                   } 
                                 });
@@ -2906,6 +2960,7 @@ const MultiStepForm: React.FC = () => {
                                     invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                     paymentMethod: formData.invoiceData?.paymentMethod || '',
                                     paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                    notes: formData.invoiceData?.notes || '',
                                     rows: [...(formData.invoiceData?.rows || []), newRow]
                                   } 
                                 });
@@ -2930,6 +2985,7 @@ const MultiStepForm: React.FC = () => {
                                     invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                     paymentMethod: formData.invoiceData?.paymentMethod || '',
                                     paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                    notes: formData.invoiceData?.notes || '',
                                     rows: [...(formData.invoiceData?.rows || []), newRow]
                                   } 
                                 });
@@ -2946,8 +3002,48 @@ const MultiStepForm: React.FC = () => {
                   </div>
                   
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {(formData.invoiceData?.rows || []).map((row, index) => (
-                      <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
+                    {(formData.invoiceData?.rows || []).map((row, index) => {
+                      // Function to add a new row after the current row
+                      const handleAddNewRow = () => {
+                        const newRow = {
+                          id: Date.now().toString(),
+                          description: '',
+                          unit: '',
+                          price: ''
+                        };
+                        const currentRows = formData.invoiceData?.rows || [];
+                        const currentIndex = currentRows.findIndex(r => r.id === row.id);
+                        const updatedRows = [
+                          ...currentRows.slice(0, currentIndex + 1),
+                          newRow,
+                          ...currentRows.slice(currentIndex + 1)
+                        ];
+                        
+                        updateFormData({ 
+                          invoiceData: { 
+                            invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                            paymentMethod: formData.invoiceData?.paymentMethod || '',
+                            paymentNumber: formData.invoiceData?.paymentNumber || '',
+                            notes: formData.invoiceData?.notes || '',
+                            rows: updatedRows
+                          } 
+                        });
+                        
+                        // Store the new row ID to focus it after render
+                        newRowDescriptionRef.current = newRow.id;
+                        
+                        // Focus the new row's description field after a short delay
+                        setTimeout(() => {
+                          const newRowInput = document.querySelector(`[data-row-id="${newRow.id}"]`) as HTMLInputElement | HTMLTextAreaElement;
+                          if (newRowInput) {
+                            newRowInput.focus();
+                            newRowDescriptionRef.current = null;
+                          }
+                        }, 50);
+                      };
+                      
+                      return (
+                        <div key={row.id} className="flex space-x-2 p-2 border border-gray-200 rounded-md">
                         <AutocompleteInput
                           value={row.description}
                           onChange={(value) => {
@@ -2959,6 +3055,7 @@ const MultiStepForm: React.FC = () => {
                                 invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                 paymentMethod: formData.invoiceData?.paymentMethod || '',
                                 paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                notes: formData.invoiceData?.notes || '',
                                 rows: updatedRows
                               } 
                             });
@@ -2982,11 +3079,13 @@ const MultiStepForm: React.FC = () => {
                                 invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                 paymentMethod: formData.invoiceData?.paymentMethod || '',
                                 paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                notes: formData.invoiceData?.notes || '',
                                 rows: updatedRows
                               } 
                             });
                           }}
-                          placeholder="Description (Press Enter for new line)"
+                          dataRowId={row.id}
+                          placeholder="Description"
                           field="description"
                           className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                           sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
@@ -2996,6 +3095,7 @@ const MultiStepForm: React.FC = () => {
                           type="text"
                           placeholder="Unit"
                           value={row.unit}
+                          data-row-id={row.id}
                           onChange={(e) => {
                             const updatedRows = (formData.invoiceData?.rows || []).map(r => 
                               r.id === row.id ? { ...r, unit: e.target.value } : r
@@ -3005,9 +3105,16 @@ const MultiStepForm: React.FC = () => {
                                 invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                 paymentMethod: formData.invoiceData?.paymentMethod || '',
                                 paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                notes: formData.invoiceData?.notes || '',
                                 rows: updatedRows
                               } 
                             });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddNewRow();
+                            }
                           }}
                           className="w-10 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                         />
@@ -3015,6 +3122,7 @@ const MultiStepForm: React.FC = () => {
                           type="text"
                           placeholder="Price"
                           value={row.price}
+                          data-row-id={row.id}
                           onChange={(e) => {
                             const updatedRows = (formData.invoiceData?.rows || []).map(r => 
                               r.id === row.id ? { ...r, price: e.target.value } : r
@@ -3024,9 +3132,16 @@ const MultiStepForm: React.FC = () => {
                                 invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                 paymentMethod: formData.invoiceData?.paymentMethod || '',
                                 paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                notes: formData.invoiceData?.notes || '',
                                 rows: updatedRows
                               } 
                             });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddNewRow();
+                            }
                           }}
                           className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                         />
@@ -3039,6 +3154,7 @@ const MultiStepForm: React.FC = () => {
                                 invoiceNumber: formData.invoiceData?.invoiceNumber || '',
                                 paymentMethod: formData.invoiceData?.paymentMethod || '',
                                 paymentNumber: formData.invoiceData?.paymentNumber || '',
+                                notes: formData.invoiceData?.notes || '',
                                 rows: updatedRows
                               }
                             });
@@ -3063,13 +3179,37 @@ const MultiStepForm: React.FC = () => {
                           </svg>
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                     {(!formData.invoiceData?.rows || formData.invoiceData.rows.length === 0) && (
                       <p className="text-sm text-gray-500 text-center py-4">
                         No items added yet. Click "Add Item" to add invoice items.
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* Notes Section */}
+                <div className="pt-4 border-t border-gray-200">
+                  <label htmlFor="invoiceNotes" className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    id="invoiceNotes"
+                    value={formData.invoiceData?.notes || ''}
+                    onChange={(e) => updateFormData({ 
+                      invoiceData: { 
+                        invoiceNumber: formData.invoiceData?.invoiceNumber || '',
+                        paymentMethod: formData.invoiceData?.paymentMethod || '',
+                        paymentNumber: formData.invoiceData?.paymentNumber || '',
+                        notes: e.target.value,
+                        rows: formData.invoiceData?.rows || []
+                      } 
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                    rows={3}
+                    placeholder="Enter notes for the invoice..."
+                  />
                 </div>
               </div>
             ) : isRepairEstimatePage(currentPage) ? (
@@ -3114,7 +3254,46 @@ const MultiStepForm: React.FC = () => {
                   </div>
                   
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {(formData.repairEstimateData?.rows || []).map((row, index) => (
+                    {(formData.repairEstimateData?.rows || []).map((row, index) => {
+                      // Function to add a new row after the current row
+                      const handleAddNewRow = () => {
+                        const newRow = {
+                          id: Date.now().toString(),
+                          description: '',
+                          unit: '',
+                          price: ''
+                        };
+                        const currentRows = formData.repairEstimateData?.rows || [];
+                        const currentIndex = currentRows.findIndex(r => r.id === row.id);
+                        const updatedRows = [
+                          ...currentRows.slice(0, currentIndex + 1),
+                          newRow,
+                          ...currentRows.slice(currentIndex + 1)
+                        ];
+                        
+                        updateFormData({ 
+                          repairEstimateData: { 
+                            estimateNumber: formData.repairEstimateData?.estimateNumber || '',
+                            paymentMethod: formData.repairEstimateData?.paymentMethod || '',
+                            paymentNumber: formData.repairEstimateData?.paymentNumber || '',
+                            rows: updatedRows
+                          } 
+                        });
+                        
+                        // Store the new row ID to focus it after render
+                        newRowDescriptionRef.current = newRow.id;
+                        
+                        // Focus the new row's description field after a short delay
+                        setTimeout(() => {
+                          const newRowInput = document.querySelector(`[data-row-id="${newRow.id}"]`) as HTMLInputElement | HTMLTextAreaElement;
+                          if (newRowInput) {
+                            newRowInput.focus();
+                            newRowDescriptionRef.current = null;
+                          }
+                        }, 50);
+                      };
+                      
+                      return (
                       <div key={row.id} className="flex items-center gap-1 p-2 border border-gray-200 rounded-md w-full">
                         <AutocompleteInput
                           value={row.description}
@@ -3154,6 +3333,7 @@ const MultiStepForm: React.FC = () => {
                               } 
                             });
                           }}
+                          dataRowId={row.id}
                           placeholder="Description"
                           field="description"
                           className=" w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
@@ -3176,6 +3356,8 @@ const MultiStepForm: React.FC = () => {
                                 } 
                               });
                             }}
+                            onEnterKey={handleAddNewRow}
+                            dataRowId={row.id}
                             placeholder="Unit"
                             field="unit"
                             className="w-12 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
@@ -3185,6 +3367,7 @@ const MultiStepForm: React.FC = () => {
                           <input
                             type="text"
                             value={row.price}
+                            data-row-id={row.id}
                             onChange={(e) => {
                               // Remove $ sign if user types it
                               const priceWithoutDollar = e.target.value.replace(/^\$/, '').trim();
@@ -3199,6 +3382,12 @@ const MultiStepForm: React.FC = () => {
                                   rows: updatedRows
                                 } 
                               });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddNewRow();
+                              }
                             }}
                             placeholder="Price"
                             className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
@@ -3225,7 +3414,8 @@ const MultiStepForm: React.FC = () => {
                           </svg>
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -3276,7 +3466,39 @@ const MultiStepForm: React.FC = () => {
                         </button>
                       </div>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {(formData.recommendationSection2?.rows || []).map((row) => (
+                        {(formData.recommendationSection2?.rows || []).map((row) => {
+                          // Function to add a new row after the current row for Section 2
+                          const handleAddNewRowSection2 = () => {
+                            const newRow = {
+                              id: Date.now().toString(),
+                              description: '',
+                              unit: '',
+                              price: ''
+                            };
+                            const currentRows = formData.recommendationSection2?.rows || [];
+                            const currentIndex = currentRows.findIndex(r => r.id === row.id);
+                            const updatedRows = [
+                              ...currentRows.slice(0, currentIndex + 1),
+                              newRow,
+                              ...currentRows.slice(currentIndex + 1)
+                            ];
+                            
+                            updateFormData({ recommendationSection2: { rows: updatedRows } });
+                            
+                            // Store the new row ID to focus it after render
+                            newRowDescriptionRef.current = newRow.id;
+                            
+                            // Focus the new row's description field after a short delay
+                            setTimeout(() => {
+                              const newRowInput = document.querySelector(`[data-row-id="${newRow.id}"]`) as HTMLInputElement | HTMLTextAreaElement;
+                              if (newRowInput) {
+                                newRowInput.focus();
+                                newRowDescriptionRef.current = null;
+                              }
+                            }, 50);
+                          };
+                          
+                          return (
                           <div key={row.id} className="flex items-center gap-1 p-2 border border-gray-200 rounded-md w-full">
                             <AutocompleteInput
                               value={row.description}
@@ -3302,6 +3524,7 @@ const MultiStepForm: React.FC = () => {
                                 );
                                 updateFormData({ recommendationSection2: { rows: updatedRows } });
                               }}
+                              dataRowId={row.id}
                               placeholder="Description"
                               field="description"
                               className="w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
@@ -3317,26 +3540,33 @@ const MultiStepForm: React.FC = () => {
                                 );
                                 updateFormData({ recommendationSection2: { rows: updatedRows } });
                               }}
+                              onEnterKey={handleAddNewRowSection2}
+                              dataRowId={row.id}
                                 placeholder="Unit"
                                 field="unit"
                               className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
                                 sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
                                 sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Repairs!A:E'}
                             />
-                              <AutocompleteInput
-                              value={row.price}
-                                onChange={(value) => {
-                                const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
-                                    r.id === row.id ? { ...r, price: value } : r
-                                );
-                                updateFormData({ recommendationSection2: { rows: updatedRows } });
-                              }}
+                              <input
+                                type="text"
+                                value={row.price}
+                                data-row-id={row.id}
+                                onChange={(e) => {
+                                  const updatedRows = (formData.recommendationSection2?.rows || []).map(r => 
+                                    r.id === row.id ? { ...r, price: e.target.value } : r
+                                  );
+                                  updateFormData({ recommendationSection2: { rows: updatedRows } });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddNewRowSection2();
+                                  }
+                                }}
                                 placeholder="Price"
-                                field="price"
-                              className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
-                              sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
-                              sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
-                            />
+                                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                              />
                             </div>
                             <button
                               type="button"
@@ -3352,7 +3582,8 @@ const MultiStepForm: React.FC = () => {
                               </svg>
                             </button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -3797,36 +4028,171 @@ const MultiStepForm: React.FC = () => {
                   </p>
                 </div>
                 
-                {/* All Unused Images List */}
+                {/* Upload Images Section */}
                 <div className="mb-4">
-                  <h5 className="text-sm font-semibold text-gray-700 mb-2">All Available Images</h5>
+                  <h5 className="text-sm font-semibold text-gray-700 mb-2">Upload Images</h5>
+                  <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length === 0) return;
+                        
+                        // Process all files and convert to base64
+                        const filePromises = files.map((file) => {
+                          return new Promise<ImageItem>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const imageUrl = event.target?.result as string;
+                              const newImage: ImageItem = {
+                                id: `uploaded-${Date.now()}-${Math.random()}`,
+                                url: imageUrl
+                              };
+                              resolve(newImage);
+                            };
+                            reader.onerror = () => resolve({ id: '', url: '' });
+                            reader.readAsDataURL(file);
+                          });
+                        });
+                        
+                        const newImages = await Promise.all(filePromises);
+                        const validImages = newImages.filter(img => img.url);
+                        
+                        if (validImages.length > 0) {
+                          const currentUploaded = formData.uploadedInspectionImages || [];
+                          const currentImages = getUnusedImages();
+                          const allImages = [...currentImages, ...validImages];
+                          
+                          updateFormData({
+                            uploadedInspectionImages: [...currentUploaded, ...validImages],
+                            inspectionImagesOrder: allImages.map(img => img.id)
+                          });
+                        }
+                        
+                        // Reset file input
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-md text-sm font-medium transition-colors"
+                    >
+                      📤 Upload Images from PC
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Click to upload images from your computer. Images will be added to the inspection images section.
+                    </p>
+                  </div>
+                </div>
+
+                {/* All Unused Images List with Drag-and-Drop */}
+                <div className="mb-4">
+                  <h5 className="text-sm font-semibold text-gray-700 mb-2">
+                    All Available Images (Drag to reorder)
+                  </h5>
                   <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white">
                     {getUnusedImages().length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4">
-                        No images available. All images have been used in other steps or removed.
+                        No images available. Upload images or restore removed images.
                       </p>
                     ) : (
                       <div className="grid grid-cols-3 gap-2">
-                        {getUnusedImages().map((image) => (
+                        {getUnusedImages().map((image, index) => (
                           <div
                             key={image.id}
-                            className="relative aspect-square border border-gray-300 rounded overflow-hidden hover:border-red-500 transition-colors"
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggedImageId(image.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              if (draggedImageId && draggedImageId !== image.id) {
+                                e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+                              }
+                            }}
+                            onDragLeave={(e) => {
+                              e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                              if (!draggedImageId || draggedImageId === image.id) return;
+                              
+                              const currentImages = getUnusedImages();
+                              const draggedIndex = currentImages.findIndex(img => img.id === draggedImageId);
+                              const targetIndex = currentImages.findIndex(img => img.id === image.id);
+                              
+                              if (draggedIndex === -1 || targetIndex === -1) return;
+                              
+                              // Reorder images
+                              const reordered = [...currentImages];
+                              const [removed] = reordered.splice(draggedIndex, 1);
+                              reordered.splice(targetIndex, 0, removed);
+                              
+                              // Update order
+                              updateFormData({
+                                inspectionImagesOrder: reordered.map(img => img.id)
+                              });
+                              
+                              setDraggedImageId(null);
+                            }}
+                            onDragEnd={() => {
+                              setDraggedImageId(null);
+                              // Remove any drag-over classes
+                              document.querySelectorAll('.border-blue-500.bg-blue-50').forEach(el => {
+                                el.classList.remove('border-blue-500', 'bg-blue-50');
+                              });
+                            }}
+                            className={`relative aspect-square border-2 rounded overflow-hidden transition-all cursor-move ${
+                              draggedImageId === image.id 
+                                ? 'border-blue-500 opacity-50' 
+                                : 'border-gray-300 hover:border-[#722420]'
+                            }`}
                           >
                             <img
                               src={image.url}
                               alt="Inspection"
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover pointer-events-none"
                             />
+                            <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                              {index + 1}
+                            </div>
                             <button
-                              onClick={() => {
-                                const excluded = formData.excludedStep8Images || [];
-                                if (!excluded.includes(image.id)) {
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Check if this is an uploaded image
+                                const isUploaded = formData.uploadedInspectionImages?.some(img => img.id === image.id);
+                                
+                                if (isUploaded) {
+                                  // Remove uploaded image completely
+                                  const updatedUploaded = (formData.uploadedInspectionImages || []).filter(img => img.id !== image.id);
+                                  const currentOrder = formData.inspectionImagesOrder || [];
                                   updateFormData({
-                                    excludedStep8Images: [...excluded, image.id]
+                                    uploadedInspectionImages: updatedUploaded,
+                                    inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
                                   });
+                                } else {
+                                  // Exclude scraped image
+                                  const excluded = formData.excludedStep8Images || [];
+                                  if (!excluded.includes(image.id)) {
+                                    const currentOrder = formData.inspectionImagesOrder || [];
+                                    updateFormData({
+                                      excludedStep8Images: [...excluded, image.id],
+                                      inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
+                                    });
+                                  }
                                 }
                               }}
-                              className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg"
+                              className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10"
                               title="Remove from Step 8"
                             >
                               ×

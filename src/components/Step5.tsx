@@ -12,6 +12,7 @@ interface InvoiceData {
   invoiceNumber: string;
   paymentMethod: string;
   paymentNumber: string;
+  notes?: string;
   rows: InvoiceRow[];
 }
 
@@ -29,6 +30,7 @@ const Page5: FunctionComponent<Page5Props> = ({
     invoiceNumber: '',
     paymentMethod: '',
     paymentNumber: '',
+    notes: '',
     rows: []
   },
   updateInvoiceData
@@ -90,6 +92,56 @@ const Page5: FunctionComponent<Page5Props> = ({
   
   const totalColumnWidth = calculateTotalColumnWidth();
   const priceColumnWidth = Math.max(60, Math.ceil(totalColumnWidth / 2)); // Price column is half of total column width
+
+  // Calculate table height dynamically
+  const calculateTableHeight = () => {
+    const HEADER_HEIGHT = 20; // Header row height
+    const TOTAL_ROW_HEIGHT = 20; // Total row height (if shown)
+    
+    // Calculate height for each row based on content
+    const calculateRowHeight = (row: InvoiceRow) => {
+      const baseHeight = isPDF ? 14 : 14;
+      const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+        const lines = text.split('\n').length;
+        const wordCount = text.split(' ').length;
+        const charCount = text.length;
+        
+        let rowsNeeded = 1;
+        if (lines > 1) {
+          rowsNeeded = Math.max(rowsNeeded, lines);
+        }
+        const charRows = Math.ceil(charCount / baseLength);
+        rowsNeeded = Math.max(rowsNeeded, charRows);
+        const wordRows = Math.ceil(wordCount / 8);
+        rowsNeeded = Math.max(rowsNeeded, wordRows);
+        return Math.min(rowsNeeded, 4);
+      };
+      
+      const descriptionRows = calculateRowsNeeded(row.description);
+      const maxRows = descriptionRows;
+      return isPDF ? (20 * maxRows) : (20 * maxRows);
+    };
+    
+    // Sum up all row heights
+    let totalRowHeight = 0;
+    currentPageRows.forEach(row => {
+      totalRowHeight += calculateRowHeight(row);
+    });
+    
+    // Add total row height if on last page
+    const totalRowHeightToAdd = (currentInvoicePage === totalPages && currentPageRows.length > 0) ? TOTAL_ROW_HEIGHT : 0;
+    
+    return HEADER_HEIGHT + totalRowHeight + totalRowHeightToAdd;
+  };
+
+  const tableHeight = calculateTableHeight();
+  const TABLE_TOP = 180; // Table starts at 180px
+  const tableBottom = TABLE_TOP + tableHeight;
+  
+  // Position notes directly below the table with a gap
+  // Notes will move dynamically as rows are added/removed
+  const GAP_AFTER_TABLE = 20; // 20px gap after table
+  const notesTop = tableBottom + GAP_AFTER_TABLE;
 
   return (
     <div className={styles.page}>
@@ -535,6 +587,27 @@ const Page5: FunctionComponent<Page5Props> = ({
             Payment Method: {localData.paymentMethod || ''}
             {localData.paymentNumber && ` - ${localData.paymentNumber}`}
           </div>
+
+          {/* Notes Section - Positioned dynamically below table */}
+          {localData.notes && (
+            <div style={{
+              position: 'absolute',
+              top: `${notesTop}px`,
+              left: '29px',
+              right: '29px',
+              fontSize: '12px',
+              fontFamily: 'Inter, Arial, sans-serif',
+              color: '#000000',
+              lineHeight: '1.4'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
+                Notes:
+              </div>
+              <div style={{ paddingLeft: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {localData.notes}
+              </div>
+            </div>
+          )}
 
           {/* Frame */}
           <div className={styles.frame}>

@@ -107,7 +107,7 @@ It was a pleasure to provide service for your home. Attached is your detailed se
 
 </p>
 {isPDF && <><p className="itWasA">&nbsp;</p></>}
-<p>We truly appreciate the opportunity to serve you and strive to provide the best service, warranties, quality control, and training in our industry. Your complete satisfaction is very important to all of us at A Step in Time Chimney Sweeps.
+<p className="itWasA">We truly appreciate the opportunity to serve you and strive to provide the best service, warranties, quality control, and training in our industry. Your complete satisfaction is very important to all of us at A Step in Time Chimney Sweeps.
 </p>
 <p>&nbsp;</p>
 {isPDF && <><p className="itWasA">&nbsp;</p></>}
@@ -117,11 +117,11 @@ Thank you again for choosing us. Please don’t hesitate to reach out if you hav
 
 {isPDF && <><p className="itWasA">&nbsp;</p></>}
 
-<p className="itWasA">Sincerely, </p>
-<p className="itWasA">Ray Gessner, P.E. </p>
-<p className="itWasA">C.E.O. - A STEP IN TIME CHIMNEY SWEEPS Ray@ChimneySweep.com </p>
-<p className="itWasA">833-CHIMNEY </p>
-<p className="itWasA">833-244-6639</p>
+<p className="itWasA signature">Sincerely, </p>
+<p className="itWasA signature">Ray Gessner, P.E. </p>
+<p className="itWasA signature">C.E.O. - A STEP IN TIME CHIMNEY SWEEPS Ray@ChimneySweep.com </p>
+<p className="itWasA signature">833-CHIMNEY </p>
+<p className="itWasA signature">833-244-6639</p>
 </div>
           </div>
         </div>

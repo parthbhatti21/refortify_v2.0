@@ -122,17 +122,19 @@ const Page1: React.FC<Page1Props> = ({ formData, updateFormData, isPDF = false, 
                   }}
                 />
               </div>
-            ) : (
+            ) : formData.chimneyType === "prefabricated" ? (
               <img 
                 className={`absolute w-[284px] h-[318px] top-[0]  ${timelineCoverImage ? 'left-[0]' : 'left-[155px]'}`}
                 src="/prefabricated.webp" 
                 alt="Prefabricated Chimney"
               />
-            )}
+            ) : null}
 
             {timelineCoverImage && (
               <img
-                className="absolute w-[284px] h-[220px] top-[49px] left-[311px] object-contain rounded-lg"
+                className={`absolute w-[284px] h-[220px] top-[49px] object-contain rounded-lg ${
+                  formData.chimneyType === "none" ? 'left-[155px]' : 'left-[311px]'
+                }`}
                 src={timelineCoverImage}
                 alt="Timeline Cover Image"
                 onLoad={handleImageLoad}

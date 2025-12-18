@@ -9,6 +9,8 @@ interface AutocompleteInputProps {
   className?: string;
   field: 'description' | 'unit' | 'price';
   onSelectRow?: (row: SheetRow) => void; // Callback when a full row is selected
+  onEnterKey?: () => void; // Callback when Enter is pressed and dropdown is not open
+  dataRowId?: string; // Data attribute for row identification
   sheetId?: string;
   sheetRange?: string;
 }
@@ -20,6 +22,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   className = '',
   field,
   onSelectRow,
+  onEnterKey,
+  dataRowId,
   sheetId,
   sheetRange = 'Repairs!A:E' // Default to 5 columns (Sr. No., Estimate Description, Unit, estimate, recommendation)
 }) => {
@@ -169,34 +173,42 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       if (showDropdown && selectedIndex >= 0 && selectedIndex < suggestions.length) {
         e.preventDefault();
         handleSelectSuggestion(suggestions[selectedIndex]);
+      } else if (!showDropdown && onEnterKey) {
+        // If dropdown is not open and onEnterKey is provided, call it
+        e.preventDefault();
+        onEnterKey();
       }
       // Otherwise, let Enter create a new line (default behavior)
       return;
     }
 
-    if (!showDropdown || suggestions.length === 0) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex((prev) => 
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-          handleSelectSuggestion(suggestions[selectedIndex]);
-        }
-        break;
-      case 'Escape':
-        setShowDropdown(false);
-        setSelectedIndex(-1);
-        break;
+    if (showDropdown && suggestions.length > 0) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex((prev) => 
+            prev < suggestions.length - 1 ? prev + 1 : prev
+          );
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+            handleSelectSuggestion(suggestions[selectedIndex]);
+          }
+          break;
+        case 'Escape':
+          setShowDropdown(false);
+          setSelectedIndex(-1);
+          break;
+      }
+    } else if (e.key === 'Enter' && onEnterKey) {
+      // If dropdown is not open and Enter is pressed, call onEnterKey
+      e.preventDefault();
+      onEnterKey();
     }
   };
 
@@ -327,6 +339,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           onBlur={handleBlur}
           placeholder={placeholder}
           className={className}
+          data-row-id={dataRowId}
           rows={1}
           style={{ 
             resize: 'vertical',
@@ -349,6 +362,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           onBlur={handleBlur}
           placeholder={placeholder}
           className={className}
+          data-row-id={dataRowId}
         />
       )}
       
