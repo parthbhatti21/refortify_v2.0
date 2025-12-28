@@ -481,6 +481,7 @@ const MultiStepForm: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState<'editing' | 'saving' | 'generating' | 'uploading' | null>(null);
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [currentReportId, setCurrentReportId] = useState<string | null>(null); // Track current report ID when editing
   const [isMobile, setIsMobile] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
   const [preferGoogleDocs, setPreferGoogleDocs] = useState(true); // User preference for PDF viewing
@@ -662,6 +663,7 @@ const MultiStepForm: React.FC = () => {
         const report = (reportsData || [])[0];
         if (!report) return;
         const reportId = report.id as string;
+        setCurrentReportId(reportId); // Store report ID for later updates
 
         // Fetch step JSONs in parallel
         const [s1, s3, s5i, s5p2, s6, s7, s8] = await Promise.all([
@@ -1022,6 +1024,7 @@ const MultiStepForm: React.FC = () => {
       inspectionImagesOrder: [], // Reset image order
       uploadedInspectionImages: [] // Reset uploaded images
     });
+    setCurrentReportId(null); // Reset report ID for new report
     setCurrentStep('form');
   };
 
@@ -1048,6 +1051,7 @@ const MultiStepForm: React.FC = () => {
       uploadedInspectionImages: [],
       notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.'
     });
+    setCurrentReportId(null); // Reset report ID for new report
     setCurrentStep('form');
   };
 
@@ -1393,16 +1397,30 @@ const MultiStepForm: React.FC = () => {
       }
     }
 
-    // 2) Create a new report (one client -> many reports)
-    // Generate UUID for the report ID
-    const newReportId = crypto.randomUUID();
-    const { data: reportRow, error: reportErr } = await supabase
-      .from('reports')
-      .insert({ id: newReportId, client_name: clientName || null, client_id: clientId, created_by: userId })
-      .select('id')
-      .single();
-    if (reportErr) throw reportErr;
-    const reportId: string = reportRow?.id || newReportId;
+    // 2) Create or update report (one client -> many reports)
+    let reportId: string;
+    if (currentReportId) {
+      // Update existing report
+      const { data: reportRow, error: reportErr } = await supabase
+        .from('reports')
+        .update({ client_name: clientName || null, client_id: clientId })
+        .eq('id', currentReportId)
+        .select('id')
+        .single();
+      if (reportErr) throw reportErr;
+      reportId = reportRow?.id || currentReportId;
+    } else {
+      // Create new report
+      const newReportId = crypto.randomUUID();
+      const { data: reportRow, error: reportErr } = await supabase
+        .from('reports')
+        .insert({ id: newReportId, client_name: clientName || null, client_id: clientId, created_by: userId })
+        .select('id')
+        .single();
+      if (reportErr) throw reportErr;
+      reportId = reportRow?.id || newReportId;
+      setCurrentReportId(reportId); // Store for future updates
+    }
 
     // 3) JSON step tables upserts
     // Step 1 JSON
