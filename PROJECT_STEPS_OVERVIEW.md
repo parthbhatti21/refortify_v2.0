@@ -528,8 +528,8 @@ totalPages = 4                          // Steps 1-4
 ```env
 REACT_APP_API_BASE=https://admin-backend-stepintime.onrender.com
 REACT_APP_API_KEY=bestcompanyever23325
-REACT_APP_SUPABASE_URL=https://pqxzjegpbavcxzyqxhbr.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+REACT_APP_SUPABASE_URL=https://mzgkjbvtwzruatguchhv.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=sb_publishable_UI8G1412_jnV2SrbN8wSfg_fOdjdK-a
 ```
 
 ---

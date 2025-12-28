@@ -1371,34 +1371,38 @@ const MultiStepForm: React.FC = () => {
     const clientName = (formData.clientName || '').trim();
     let clientId: string | null = null;
     if (clientName) {
+      // First, try to find by name only (to reuse imported clients, regardless of created_by)
       const { data: existingClients, error: findClientError } = await supabase
         .from('clients')
         .select('id')
         .eq('full_name', clientName)
-        .eq('created_by', userId)
         .limit(1);
       if (findClientError) throw findClientError;
       if (existingClients && existingClients.length > 0) {
         clientId = existingClients[0].id;
       } else {
+        // Generate UUID for the client ID
+        const newClientId = crypto.randomUUID();
         const { data: insertedClient, error: insertClientError } = await supabase
           .from('clients')
-          .insert({ full_name: clientName, created_by: userId })
+          .insert({ id: newClientId, full_name: clientName, created_by: userId })
           .select('id')
           .single();
         if (insertClientError) throw insertClientError;
-        clientId = insertedClient?.id || null;
+        clientId = insertedClient?.id || newClientId;
       }
     }
 
     // 2) Create a new report (one client -> many reports)
+    // Generate UUID for the report ID
+    const newReportId = crypto.randomUUID();
     const { data: reportRow, error: reportErr } = await supabase
       .from('reports')
-      .insert({ client_name: clientName || null, client_id: clientId, created_by: userId })
+      .insert({ id: newReportId, client_name: clientName || null, client_id: clientId, created_by: userId })
       .select('id')
       .single();
     if (reportErr) throw reportErr;
-    const reportId: string = reportRow.id;
+    const reportId: string = reportRow?.id || newReportId;
 
     // 3) JSON step tables upserts
     // Step 1 JSON
