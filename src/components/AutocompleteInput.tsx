@@ -148,6 +148,12 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
   // Handle suggestion selection
   const handleSelectSuggestion = (suggestion: SheetRow) => {
+    // Validate that we have a valid suggestion with required fields
+    if (!suggestion || !suggestion.description) {
+      console.warn('Invalid suggestion selected:', suggestion);
+      return;
+    }
+    
     if (isTextarea) {
       // For textarea, replace only the current line with the selected suggestion
       const lines = value.split('\n');
@@ -161,8 +167,16 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     setSelectedIndex(-1);
     
     // If onSelectRow callback is provided, call it with the full row
+    // Create a fresh copy to avoid any reference issues
     if (onSelectRow) {
-      onSelectRow(suggestion);
+      const rowToPass: SheetRow = {
+        srNo: suggestion.srNo || '',
+        description: suggestion.description || '',
+        unit: suggestion.unit || '',
+        price: suggestion.price || '',
+        recommendation: suggestion.recommendation || ''
+      };
+      onSelectRow(rowToPass);
     }
   };
 
@@ -172,7 +186,11 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     if (isTextarea && e.key === 'Enter') {
       if (showDropdown && selectedIndex >= 0 && selectedIndex < suggestions.length) {
         e.preventDefault();
-        handleSelectSuggestion(suggestions[selectedIndex]);
+        // Ensure we're using the exact suggestion from the array at the selected index
+        const selectedSuggestion = suggestions[selectedIndex];
+        if (selectedSuggestion) {
+          handleSelectSuggestion(selectedSuggestion);
+        }
       } else if (!showDropdown && onEnterKey) {
         // If dropdown is not open and onEnterKey is provided, call it
         e.preventDefault();
@@ -197,7 +215,11 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         case 'Enter':
           e.preventDefault();
           if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-            handleSelectSuggestion(suggestions[selectedIndex]);
+            // Ensure we're using the exact suggestion from the array at the selected index
+            const selectedSuggestion = suggestions[selectedIndex];
+            if (selectedSuggestion) {
+              handleSelectSuggestion(selectedSuggestion);
+            }
           }
           break;
         case 'Escape':
@@ -280,10 +302,21 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
         transition: 'opacity 0.15s ease-in-out'
       }}
     >
-      {suggestions.map((suggestion, index) => (
+      {suggestions.map((suggestion, index) => {
+        // Create a unique key based on the suggestion content to avoid React key issues
+        const suggestionKey = `${suggestion.srNo || ''}-${suggestion.description || ''}-${suggestion.price || ''}-${index}`;
+        return (
         <div
-          key={index}
-          onClick={() => handleSelectSuggestion(suggestion)}
+          key={suggestionKey}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Ensure we're using the exact suggestion from the array at this index
+            const selectedSuggestion = suggestions[index];
+            if (selectedSuggestion) {
+              handleSelectSuggestion(selectedSuggestion);
+            }
+          }}
           className={`px-4 py-3 cursor-pointer transition-all duration-150 ease-in-out border-b border-gray-100 last:border-b-0 ${
             index === selectedIndex 
               ? 'bg-[#722420] text-white' 
@@ -323,7 +356,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
     </div>
   ) : null;
 

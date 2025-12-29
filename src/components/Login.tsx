@@ -165,11 +165,11 @@ const Login: React.FC = () => {
               inputMode="numeric"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
-              placeholder="Enter the 6-digit code"
+              placeholder="Enter the 8-digit code"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent tracking-widest"
               required
             />
-            <p className="mt-1 text-xs text-gray-500">Check your email for a 6-digit code.</p>
+            <p className="mt-1 text-xs text-gray-500">Check your email for a 8-digit code.</p>
           </div>
           <div className="flex gap-2">
             <button

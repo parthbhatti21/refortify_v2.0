@@ -497,6 +497,7 @@ const MultiStepForm: React.FC = () => {
     width: number;
     height: number;
   } | null>(null);
+  const [croppingImageId, setCroppingImageId] = useState<string | null>(null); // Track which invoice image is being cropped
   const [showReviewImageSelector, setShowReviewImageSelector] = useState(false);
   const [showAddRowModal, setShowAddRowModal] = useState(false);
   const [showPredefinedModal, setShowPredefinedModal] = useState(false);
@@ -1344,7 +1345,17 @@ const MultiStepForm: React.FC = () => {
   };
 
   const handleCropComplete = (croppedImageUrl: string) => {
-    updateFormData({ timelineCoverImage: croppedImageUrl });
+    if (croppingImageId) {
+      // Cropping an invoice image
+      const updatedImages = (formData.selectedImages || []).map(img => 
+        img.id === croppingImageId ? { ...img, url: croppedImageUrl } : img
+      );
+      updateFormData({ selectedImages: updatedImages });
+      setCroppingImageId(null);
+    } else {
+      // Cropping timeline cover image
+      updateFormData({ timelineCoverImage: croppedImageUrl });
+    }
     setIsCropping(false);
     setCropData(null);
   };
@@ -1352,6 +1363,15 @@ const MultiStepForm: React.FC = () => {
   const handleCropCancel = () => {
     setIsCropping(false);
     setCropData(null);
+    setCroppingImageId(null);
+  };
+
+  const handleCropInvoiceImage = (imageId: string) => {
+    const image = formData.selectedImages?.find(img => img.id === imageId);
+    if (image) {
+      setCroppingImageId(imageId);
+      setIsCropping(true);
+    }
   };
 
   // Calculate total pages including invoice pages
@@ -3712,9 +3732,21 @@ const MultiStepForm: React.FC = () => {
                           </div>
                           
                           {isSelected && (
-                            <div className="absolute top-2 right-2 bg-[#722420] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                              ✓
-                            </div>
+                            <>
+                              <div className="absolute top-2 right-2 bg-[#722420] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                                ✓
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCropInvoiceImage(image.id);
+                                }}
+                                className="absolute top-2 left-2 bg-red-900 hover:bg-red-950 text-white rounded px-2 py-1 text-xs font-medium transition-colors"
+                                title="Crop this image"
+                              >
+                                ✂️ Crop
+                              </button>
+                            </>
                           )}
                           
                           {isSelected && (
@@ -3739,18 +3771,61 @@ const MultiStepForm: React.FC = () => {
                 )}
 
                 {(formData.selectedImages?.length || 0) > 0 && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-green-600">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                  <div className="mt-4 space-y-4">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-green-600">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-800">
+                            {formData.selectedImages?.length} image{(formData.selectedImages?.length || 0) !== 1 ? 's' : ''} selected for PDF
+                          </p>
+                          <p className="text-xs text-green-600">Selected images will appear in the final report</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-green-800">
-                          {formData.selectedImages?.length} image{(formData.selectedImages?.length || 0) !== 1 ? 's' : ''} selected for PDF
-                        </p>
-                        <p className="text-xs text-green-600">Selected images will appear in the final report</p>
+                    </div>
+                    
+                    {/* Selected Images with Crop Options */}
+                    <div>
+                      <h5 className="text-sm font-semibold text-gray-700 mb-2">Selected Images (Click to crop)</h5>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {formData.selectedImages?.map((image, index) => (
+                          <div
+                            key={image.id}
+                            className="relative border-2 border-[#722420] rounded-lg overflow-hidden"
+                          >
+                            <div className="aspect-square bg-gray-100">
+                              <img
+                                src={image.url}
+                                alt={`Selected image ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="absolute top-1 left-1 bg-[#722420] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                              {index + 1}
+                            </div>
+                            <button
+                              onClick={() => handleCropInvoiceImage(image.id)}
+                              className="absolute top-1 right-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 text-xs font-medium transition-colors"
+                              title="Crop this image"
+                            >
+                              ✂️ Crop
+                            </button>
+                            <button
+                              onClick={() => {
+                                const updated = (formData.selectedImages || []).filter(img => img.id !== image.id);
+                                handleImageSelection(updated);
+                              }}
+                              className="absolute bottom-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition-colors"
+                              title="Remove from selection"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -4684,40 +4759,50 @@ const MultiStepForm: React.FC = () => {
       )}
 
       {/* Image Cropping Modal */}
-      {isCropping && formData.timelineCoverImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] flex flex-col">
-            <div className="p-4 border-b border-gray-200 flex-shrink-0">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Crop Image</h3>
-                  <p className="text-sm text-gray-600">
-                    {window.innerWidth <= 768 
-                      ? "Touch and drag to crop. Use corners to resize."
-                      : "Drag to move, use corners to resize. Maintains aspect ratio for optimal display."
-                    }
-                  </p>
+      {isCropping && (formData.timelineCoverImage || croppingImageId) && (() => {
+        const imageUrl = croppingImageId 
+          ? formData.selectedImages?.find(img => img.id === croppingImageId)?.url 
+          : formData.timelineCoverImage;
+        
+        if (!imageUrl) return null;
+        
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] flex flex-col">
+              <div className="p-4 border-b border-gray-200 flex-shrink-0">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {croppingImageId ? 'Crop Invoice Image' : 'Crop Timeline Cover Image'}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {window.innerWidth <= 768 
+                        ? "Touch and drag to crop. Use corners to resize."
+                        : "Drag to move, use corners to resize. Free-form cropping available."
+                      }
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCropCancel}
+                    className="text-gray-400 hover:text-gray-600 text-xl font-bold p-2"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  onClick={handleCropCancel}
-                  className="text-gray-400 hover:text-gray-600 text-xl font-bold p-2"
-                >
-                  ×
-                </button>
+              </div>
+              
+              <div className="flex-1 overflow-hidden p-2 sm:p-4">
+                <ImageCropper
+                  imageUrl={imageUrl}
+                  onCropComplete={handleCropComplete}
+                  onCancel={handleCropCancel}
+                  aspectRatio={croppingImageId ? 1 : 284/220} // Free-form for invoice images, fixed for timeline
+                />
               </div>
             </div>
-            
-            <div className="flex-1 overflow-hidden p-2 sm:p-4">
-              <ImageCropper
-                imageUrl={formData.timelineCoverImage}
-                onCropComplete={handleCropComplete}
-                onCancel={handleCropCancel}
-                aspectRatio={284/220} // Match the display dimensions in Page1
-              />
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Review Image Selection Modal */}
       {showReviewImageSelector && (

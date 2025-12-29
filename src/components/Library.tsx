@@ -115,11 +115,14 @@ const Library: React.FC = () => {
       setLoadingSupabase(true);
       setError(null);
       try {
-        const { data: userData } = await supabase.auth.getUser();
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr) throw userErr;
         const userId = userData?.user?.id;
+        if (!userId) throw new Error('Not signed in');
+        
         const { data, error } = await supabase
           .from('reports')
-          .select('created_at')
+          .select('created_at, id, client_name')
           .eq('client_id', selectedClientId)
           .order('created_at', { ascending: false });
         if (error) {
@@ -127,7 +130,37 @@ const Library: React.FC = () => {
           throw error;
         }
         console.log('Report dates data:', data);
-        const uniqueDates = Array.from(new Set((data || []).map(r => (r as any).created_at?.slice(0,10)))).filter(Boolean) as string[];
+        console.log('Number of reports found:', data?.length || 0);
+        
+        if (!data || data.length === 0) {
+          console.log('No reports found for client:', selectedClientId);
+          setReportDates([]);
+          return;
+        }
+        
+        // Extract dates more robustly - handle both timestamp and date string formats
+        const uniqueDates = Array.from(new Set(
+          (data || [])
+            .map(r => {
+              const createdAt = (r as any).created_at;
+              if (!createdAt) {
+                console.warn('Report with null created_at:', r);
+                return null;
+              }
+              // Handle ISO string format
+              if (typeof createdAt === 'string') {
+                return createdAt.slice(0, 10);
+              }
+              // Handle Date object
+              if (createdAt instanceof Date) {
+                return createdAt.toISOString().slice(0, 10);
+              }
+              console.warn('Unexpected created_at format:', typeof createdAt, createdAt);
+              return null;
+            })
+            .filter(Boolean)
+        )) as string[];
+        
         console.log('Unique dates extracted:', uniqueDates);
         setReportDates(uniqueDates);
       } catch (e: any) {
