@@ -3809,21 +3809,12 @@ const MultiStepForm: React.FC = () => {
                             </div>
                             <button
                               onClick={() => handleCropInvoiceImage(image.id)}
-                              className="absolute top-1 right-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 text-xs font-medium transition-colors"
+                              className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded px-2 py-1 text-xs font-medium transition-colors"
                               title="Crop this image"
                             >
                               ✂️ Crop
                             </button>
-                            <button
-                              onClick={() => {
-                                const updated = (formData.selectedImages || []).filter(img => img.id !== image.id);
-                                handleImageSelection(updated);
-                              }}
-                              className="absolute bottom-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition-colors"
-                              title="Remove from selection"
-                            >
-                              ×
-                            </button>
+                            
                           </div>
                         ))}
                       </div>
