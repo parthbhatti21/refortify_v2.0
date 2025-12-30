@@ -372,7 +372,7 @@ totalImagePages = Math.ceil(unusedImages.length / 9)
    - **Loading State:** Shows "Uploading report..." overlay
    - **API Call:**
      ```typescript
-     POST https://admin-backend-stepintime.onrender.com/upload
+     POST http://localhost:8000/upload
      Headers: { 'X-API-Key': API_KEY }
      Body: FormData {
        file: PDF Blob,
@@ -433,8 +433,8 @@ totalImagePages = Math.ceil(unusedImages.length / 9)
 
 6. **API Integration:**
    ```typescript
-   GET https://admin-backend-stepintime.onrender.com/directories
-   GET https://admin-backend-stepintime.onrender.com/directories?bucket=...&prefix=...
+   GET http://localhost:8000/directories
+   GET http://localhost:8000/directories?bucket=...&prefix=...
    Headers: { 'X-API-Key': API_KEY }
    ```
 
@@ -526,7 +526,7 @@ totalPages = 4                          // Steps 1-4
 
 ### Environment Variables Required
 ```env
-REACT_APP_API_BASE=https://admin-backend-stepintime.onrender.com
+REACT_APP_API_BASE=http://localhost:8000
 REACT_APP_API_KEY=bestcompanyever23325
 REACT_APP_SUPABASE_URL=https://mzgkjbvtwzruatguchhv.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=sb_publishable_UI8G1412_jnV2SrbN8wSfg_fOdjdK-a
