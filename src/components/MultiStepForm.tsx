@@ -488,6 +488,7 @@ const MultiStepForm: React.FC = () => {
   const [includeRepairEstimate, setIncludeRepairEstimate] = useState(true); // Step 7 is always included
   const [includedPages, setIncludedPages] = useState<Set<number>>(new Set()); // Will be initialized in useEffect
   const hasInitializedPages = useRef(false); // Track if pages have been initialized
+  const maxInitializedPage = useRef<number>(0); // Track the maximum page number that was initialized
   const newRowDescriptionRef = useRef<string | null>(null); // Track new row ID to focus after adding
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null); // Track dragged image for drag-and-drop
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
@@ -504,6 +505,179 @@ const MultiStepForm: React.FC = () => {
   const [showChangeImageModal, setShowChangeImageModal] = useState(false);
   const [showInvoiceQuickAdd, setShowInvoiceQuickAdd] = useState(false);
   const [predefinedSearchTerm, setPredefinedSearchTerm] = useState('');
+  
+  // Date selection state for Step 8
+  const [showDateSelector, setShowDateSelector] = useState(false);
+  const [showPreviousJobImages, setShowPreviousJobImages] = useState(false);
+  const [allJobs, setAllJobs] = useState<Array<{
+    id: string;
+    date: string;
+    imageUrls: string[];
+    scrapedImages: ImageItem[];
+  }>>([]);
+  const [selectedDateJob, setSelectedDateJob] = useState<{
+    id: string;
+    date: string;
+    imageUrls: string[];
+    scrapedImages: ImageItem[];
+  } | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [showPositionModal, setShowPositionModal] = useState(false);
+  const [imageForPositionMove, setImageForPositionMove] = useState<string | null>(null);
+  const [targetPosition, setTargetPosition] = useState<string>('');
+
+  // Function to parse all jobs from HTML and extract their dates
+  const parseAllJobsFromHtml = (htmlContent: string): Array<{
+    id: string;
+    date: string;
+    imageUrls: string[];
+    scrapedImages: ImageItem[];
+  }> => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    
+    const jobs: Array<{
+      id: string;
+      date: string;
+      imageUrls: string[];
+      scrapedImages: ImageItem[];
+    }> = [];
+    
+    // Look for timeline-block elements (each represents a job/date)
+    const timelineBlocks = doc.querySelectorAll('div.timeline-block');
+    
+    timelineBlocks.forEach((timelineBlock, index) => {
+      // Extract date from span.date element
+      let jobDate = '';
+      const dateElement = timelineBlock.querySelector('span.date');
+      if (dateElement) {
+        jobDate = dateElement.textContent?.trim() || '';
+      }
+      
+      // Extract images from photo-grid
+      const imageUrls: string[] = [];
+      const photoItems = timelineBlock.querySelectorAll('a.photo-item[data-full]');
+      
+      photoItems.forEach(photoItem => {
+        const dataFull = photoItem.getAttribute('data-full');
+        if (dataFull) {
+          imageUrls.push(dataFull);
+        }
+      });
+      
+      // Create job data
+      const jobData = {
+        id: `job-${index}-${Date.now()}`,
+        date: jobDate || new Date().toISOString().split('T')[0],
+        imageUrls: imageUrls,
+        scrapedImages: imageUrls.map((url, imgIndex) => ({
+          id: `job-${index}-img-${imgIndex}-${Date.now()}`,
+          url: url,
+          alt: `Job ${index + 1} image ${imgIndex + 1}`
+        }))
+      };
+      
+      jobs.push(jobData);
+    });
+    
+    // Sort jobs by date (newest first)
+    jobs.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    return jobs;
+  };
+
+  // Function to load jobs from data source URL
+  const loadJobsFromUrl = async () => {
+    if (!formData.dataSourceUrl) return;
+    
+    setIsLoadingJobs(true);
+    try {
+      const response = await fetch(formData.dataSourceUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const htmlContent = await response.text();
+      const jobsData = parseAllJobsFromHtml(htmlContent);
+      setAllJobs(jobsData);
+      setShowDateSelector(true);
+    } catch (error) {
+      console.error('Failed to load jobs:', error);
+      alert('Failed to load jobs from data source. Please verify the URL and try again.');
+    } finally {
+      setIsLoadingJobs(false);
+    }
+  };
+
+  // Function to handle date selection
+  const handleDateSelection = (job: {
+    id: string;
+    date: string;
+    imageUrls: string[];
+    scrapedImages: ImageItem[];
+  }) => {
+    setSelectedDateJob(job);
+    setSelectedImages([]); // Reset selected images when selecting a new date
+    setShowDateSelector(false);
+    setShowPreviousJobImages(true);
+  };
+
+  // Function to handle date image selection
+  const handleDateImageSelection = (imageUrl: string) => {
+    setSelectedImages(prev => {
+      if (prev.includes(imageUrl)) {
+        // Remove image if already selected
+        return prev.filter(url => url !== imageUrl);
+      } else {
+        // Add image if not selected
+        return [...prev, imageUrl];
+      }
+    });
+  };
+
+  // Function to handle select all images
+  const handleSelectAllImages = () => {
+    if (!selectedDateJob) return;
+    
+    if (selectedImages.length === selectedDateJob.imageUrls.length) {
+      // If all images are selected, deselect all
+      setSelectedImages([]);
+    } else {
+      // Select all images
+      setSelectedImages([...selectedDateJob.imageUrls]);
+    }
+  };
+
+  // Function to merge selected date images
+  const handleMergeSelectedDateImages = () => {
+    if (!selectedDateJob || selectedImages.length === 0) return;
+    
+    // Convert selected image URLs to ImageItem format
+    const selectedImageItems: ImageItem[] = selectedImages.map((url, index) => ({
+      id: `selected-${index}-${Date.now()}`,
+      url: url,
+      alt: `Selected image from ${selectedDateJob.date}`
+    }));
+    
+    // Merge selected images with current inspection images
+    const currentUploaded = formData.uploadedInspectionImages || [];
+    const currentImages = getUnusedImages();
+    const allImages = [...currentImages, ...selectedImageItems];
+    
+    updateFormData({
+      uploadedInspectionImages: [...currentUploaded, ...selectedImageItems],
+      inspectionImagesOrder: allImages.map(img => img.id)
+    });
+    
+    setShowPreviousJobImages(false);
+    setSelectedDateJob(null);
+    setSelectedImages([]);
+  };
 
   // On refresh/load, clear previous saved snapshots for a clean session
   useEffect(() => {
@@ -521,43 +695,103 @@ const MultiStepForm: React.FC = () => {
     }
   }, []);
 
-  // Toggle page inclusion in PDF
-  const togglePageInclusion = (logicalStep: number) => {
+  // Toggle current page inclusion in PDF (simplified - always toggles current page)
+  const togglePageInclusion = async () => {
+    const newIncluded = !isCurrentPageIncluded();
     setIncludedPages(prev => {
       const newSet = new Set(prev);
-      
-      // For Steps 5, 8, 9 and 10, toggle only the current page, not the whole step
-      // Step 5 contains multiple sub-pages (Invoice and Repair Estimate)
-      // Step 8 contains multiple inspection image pages
-      if (logicalStep === 5 || logicalStep === 8 || logicalStep === 9 || logicalStep === 10) {
-        // Toggle only the current page
-        if (newSet.has(currentPage)) {
-          newSet.delete(currentPage);
-        } else {
-          newSet.add(currentPage);
-        }
+      if (newIncluded) {
+        newSet.add(currentPage);
       } else {
-        // For other steps, toggle the page for this logical step
-        const stepPage = getPageForLogicalStep(logicalStep);
-        if (newSet.has(stepPage)) {
-          newSet.delete(stepPage);
-        } else {
-          newSet.add(stepPage);
-        }
+        newSet.delete(currentPage);
       }
-      
       return newSet;
     });
+    
+    // Save to database if we have a report ID
+    if (currentReportId) {
+      try {
+        if (newIncluded) {
+          // Insert or update page inclusion
+          await supabase.from('page_inclusions').upsert(
+            { report_id: currentReportId, page_number: currentPage },
+            { onConflict: 'report_id,page_number' }
+          );
+        } else {
+          // Delete page inclusion
+          await supabase.from('page_inclusions')
+            .delete()
+            .eq('report_id', currentReportId)
+            .eq('page_number', currentPage);
+        }
+      } catch (error) {
+        console.error('Failed to save page inclusion:', error);
+        // Revert on error
+        setIncludedPages(prev => {
+          const newSet = new Set(prev);
+          if (newIncluded) {
+            newSet.delete(currentPage);
+          } else {
+            newSet.add(currentPage);
+          }
+          return newSet;
+        });
+      }
+    }
   };
 
-  // Deactivate all pages for PDF generation
-  const deactivateAllPages = () => {
+  // Include all pages in PDF
+  const includeAllPages = async () => {
+    const allPages = new Set<number>();
+    for (let page = 1; page <= totalPages; page++) {
+      allPages.add(page);
+    }
+    setIncludedPages(allPages);
+    
+    // Save to database if we have a report ID
+    if (currentReportId) {
+      try {
+        const inclusions = Array.from(allPages).map(pageNumber => ({
+          report_id: currentReportId,
+          page_number: pageNumber
+        }));
+        // Delete all existing and insert new ones
+        await supabase.from('page_inclusions')
+          .delete()
+          .eq('report_id', currentReportId);
+        if (inclusions.length > 0) {
+          await supabase.from('page_inclusions').insert(inclusions);
+        }
+      } catch (error) {
+        console.error('Failed to save page inclusions:', error);
+      }
+    }
+  };
+
+  // Exclude all pages from PDF
+  const excludeAllPages = async () => {
     setIncludedPages(new Set());
+    
+    // Save to database if we have a report ID
+    if (currentReportId) {
+      try {
+        await supabase.from('page_inclusions')
+          .delete()
+          .eq('report_id', currentReportId);
+      } catch (error) {
+        console.error('Failed to delete page inclusions:', error);
+      }
+    }
   };
 
-  // Check if a page is included in PDF
+  // Check if a specific page number is included in PDF
   const isPageIncluded = (pageNumber: number) => {
     return includedPages.has(pageNumber);
+  };
+
+  // Check if the current page is included in PDF
+  const isCurrentPageIncluded = () => {
+    return includedPages.has(currentPage);
   };
 
   // Get the page number for a logical step
@@ -592,16 +826,74 @@ const MultiStepForm: React.FC = () => {
     }
   };
 
-  // Check if a logical step is included in PDF
-  const isLogicalStepIncluded = (logicalStep: number) => {
-    if (logicalStep === 5 || logicalStep === 8 || logicalStep === 9 || logicalStep === 10) {
-      // For Steps 5, 8, 9 and 10, check if the current page is included
-      return includedPages.has(currentPage);
-    } else {
-      // For other steps, check the page for this logical step
-      const stepPage = getPageForLogicalStep(logicalStep);
-      return includedPages.has(stepPage);
+  // Get all page numbers for a logical step (for display purposes)
+  const getPagesForLogicalStep = (logicalStep: number): number[] => {
+    switch (logicalStep) {
+      case 1:
+        return [1];
+      case 2:
+        return [2];
+      case 3:
+        return [3];
+      case 4:
+        return [4];
+      case 5: {
+        // Invoice and Repair Estimate pages
+        const invoiceStart = 5;
+        const pages: number[] = [];
+        for (let i = 0; i < totalInvoicePages + totalRepairEstimatePages; i++) {
+          pages.push(invoiceStart + i);
+        }
+        return pages;
+      }
+      case 6: {
+        // Image selection page
+        const page = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+        return [page];
+      }
+      case 7: {
+        // Recommendation pages
+        const imageSelectionPage = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+        const recommendationStart = imageSelectionPage + 1;
+        const totalRecommendationPages = formData.repairEstimatePages?.length || 0;
+        const pages: number[] = [];
+        for (let i = 0; i < Math.max(1, totalRecommendationPages); i++) {
+          pages.push(recommendationStart + i);
+        }
+        return pages;
+      }
+      case 8: {
+        // Inspection image pages
+        const imageSelectionPage = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+        const recommendationStart = imageSelectionPage + 1;
+        const totalRecommendationPages = formData.repairEstimatePages?.length || 0;
+        const imagePagesStart = recommendationStart + Math.max(1, totalRecommendationPages);
+        const totalImagePages = getTotalImagePages();
+        const pages: number[] = [];
+        for (let i = 0; i < totalImagePages; i++) {
+          pages.push(imagePagesStart + i);
+        }
+        return pages;
+      }
+      case 9: {
+        // Step 9 pages
+        const step9Start = totalPages - 3;
+        return [step9Start, step9Start + 1, step9Start + 2];
+      }
+      case 10: {
+        // Step 10 pages
+        const step10Start = totalPages - 4;
+        return [step10Start];
+      }
+      default:
+        return [];
     }
+  };
+
+  // Check if any page in a logical step is included (for display purposes)
+  const hasAnyPageIncludedForStep = (logicalStep: number): boolean => {
+    const pages = getPagesForLogicalStep(logicalStep);
+    return pages.some(page => includedPages.has(page));
   };
 
   // Block mobile devices until they switch to desktop view
@@ -666,8 +958,8 @@ const MultiStepForm: React.FC = () => {
         const reportId = report.id as string;
         setCurrentReportId(reportId); // Store report ID for later updates
 
-        // Fetch step JSONs in parallel
-        const [s1, s3, s5i, s5p2, s6, s7, s8] = await Promise.all([
+        // Fetch step JSONs and page inclusions in parallel
+        const [s1, s3, s5i, s5p2, s6, s7, s8, pageInclusions] = await Promise.all([
           supabase.from('step1_json').select('data').eq('report_id', reportId).single(),
           supabase.from('step3_json').select('data').eq('report_id', reportId).single(),
           supabase.from('step5_invoice_json').select('data').eq('report_id', reportId).single(),
@@ -675,6 +967,7 @@ const MultiStepForm: React.FC = () => {
           supabase.from('step6_json').select('data').eq('report_id', reportId).single(),
           supabase.from('step7_json').select('data').eq('report_id', reportId).single(),
           supabase.from('step8_json').select('data').eq('report_id', reportId).single(),
+          supabase.from('page_inclusions').select('page_number').eq('report_id', reportId),
         ]);
 
         const step1 = (s1 as any)?.data?.data || {};
@@ -780,6 +1073,22 @@ const MultiStepForm: React.FC = () => {
         } as any;
 
         setFormData(prev => ({ ...prev, ...mapped }));
+        
+        // Load page inclusions from database
+        const inclusionsData = (pageInclusions as any)?.data || [];
+        const loadedIncludedPages = new Set<number>(
+          inclusionsData.map((item: any) => item.page_number)
+        );
+        
+        // Set page inclusions (will be updated when totalPages is calculated)
+        if (loadedIncludedPages.size > 0) {
+          setIncludedPages(loadedIncludedPages);
+          // Set maxInitializedPage to the maximum page number found
+          const maxPage = Math.max(...Array.from(loadedIncludedPages), 0);
+          maxInitializedPage.current = maxPage;
+          hasInitializedPages.current = true;
+        }
+        // If no inclusions found, the useEffect will handle default initialization
       } catch (e) {
         // ignore
       } finally {
@@ -1526,6 +1835,33 @@ const MultiStepForm: React.FC = () => {
     const { error: s8JsonErr } = await supabase.from('step8_json').upsert({ report_id: reportId, data: step8Json }, { onConflict: 'report_id' });
     if (s8JsonErr) throw s8JsonErr;
 
+    // Save page inclusions to database
+    try {
+      // Get current included pages
+      const currentIncludedPages = Array.from(includedPages);
+      
+      // Delete all existing inclusions for this report
+      await supabase.from('page_inclusions')
+        .delete()
+        .eq('report_id', reportId);
+      
+      // Insert current inclusions
+      if (currentIncludedPages.length > 0) {
+        const inclusions = currentIncludedPages.map(pageNumber => ({
+          report_id: reportId,
+          page_number: pageNumber
+        }));
+        const { error: inclusionsErr } = await supabase.from('page_inclusions').insert(inclusions);
+        if (inclusionsErr) {
+          console.error('Failed to save page inclusions:', inclusionsErr);
+          // Don't throw - page inclusions are not critical for report generation
+        }
+      }
+    } catch (error) {
+      console.error('Error saving page inclusions:', error);
+      // Don't throw - page inclusions are not critical for report generation
+    }
+
     return reportId;
   };
 
@@ -1680,6 +2016,85 @@ const MultiStepForm: React.FC = () => {
       return allInspectionImages;
     };
 
+    // Helper functions to move images up/down for easier reordering
+    const moveImageUp = (imageId: string) => {
+      const currentImages = getUnusedImages();
+      const currentIndex = currentImages.findIndex(img => img.id === imageId);
+      
+      if (currentIndex <= 0) return; // Already at the top
+      
+      const reordered = [...currentImages];
+      [reordered[currentIndex - 1], reordered[currentIndex]] = [reordered[currentIndex], reordered[currentIndex - 1]];
+      
+      updateFormData({
+        inspectionImagesOrder: reordered.map(img => img.id)
+      });
+    };
+
+    const moveImageDown = (imageId: string) => {
+      const currentImages = getUnusedImages();
+      const currentIndex = currentImages.findIndex(img => img.id === imageId);
+      
+      if (currentIndex < 0 || currentIndex >= currentImages.length - 1) return; // Already at the bottom
+      
+      const reordered = [...currentImages];
+      [reordered[currentIndex], reordered[currentIndex + 1]] = [reordered[currentIndex + 1], reordered[currentIndex]];
+      
+      updateFormData({
+        inspectionImagesOrder: reordered.map(img => img.id)
+      });
+    };
+
+    const moveImageToTop = (imageId: string) => {
+      const currentImages = getUnusedImages();
+      const currentIndex = currentImages.findIndex(img => img.id === imageId);
+      
+      if (currentIndex <= 0) return; // Already at the top
+      
+      const reordered = [...currentImages];
+      const [removed] = reordered.splice(currentIndex, 1);
+      reordered.unshift(removed);
+      
+      updateFormData({
+        inspectionImagesOrder: reordered.map(img => img.id)
+      });
+    };
+
+    const moveImageToBottom = (imageId: string) => {
+      const currentImages = getUnusedImages();
+      const currentIndex = currentImages.findIndex(img => img.id === imageId);
+      
+      if (currentIndex < 0 || currentIndex >= currentImages.length - 1) return; // Already at the bottom
+      
+      const reordered = [...currentImages];
+      const [removed] = reordered.splice(currentIndex, 1);
+      reordered.push(removed);
+      
+      updateFormData({
+        inspectionImagesOrder: reordered.map(img => img.id)
+      });
+    };
+
+    const moveImageToPosition = (imageId: string, targetPosition: number) => {
+      const currentImages = getUnusedImages();
+      const currentIndex = currentImages.findIndex(img => img.id === imageId);
+      
+      if (currentIndex < 0) return;
+      
+      // Validate target position (1-based to 0-based)
+      const targetIndex = Math.max(0, Math.min(targetPosition - 1, currentImages.length - 1));
+      
+      if (currentIndex === targetIndex) return; // Already at target position
+      
+      const reordered = [...currentImages];
+      const [removed] = reordered.splice(currentIndex, 1);
+      reordered.splice(targetIndex, 0, removed);
+      
+      updateFormData({
+        inspectionImagesOrder: reordered.map(img => img.id)
+      });
+    };
+
     // Get excluded images for Step 8 (for display in restore section)
     const getExcludedStep8Images = () => {
       const allImages = formData.scrapedImages || [];
@@ -1707,14 +2122,15 @@ const MultiStepForm: React.FC = () => {
   useEffect(() => {
     if (!hasInitializedPages.current) {
       // First initialization: include all pages
-    const allPages = new Set<number>();
-    for (let page = 1; page <= totalPages; page++) {
-      allPages.add(page);
-    }
-    setIncludedPages(allPages);
+      const allPages = new Set<number>();
+      for (let page = 1; page <= totalPages; page++) {
+        allPages.add(page);
+      }
+      setIncludedPages(allPages);
+      maxInitializedPage.current = totalPages;
       hasInitializedPages.current = true;
     } else {
-      // Subsequent changes: preserve existing exclusions, only add new pages
+      // Subsequent changes: preserve existing exclusions, only add NEW pages (beyond previous max)
       setIncludedPages(prev => {
         const updated = new Set(prev);
         // Remove pages that no longer exist
@@ -1723,12 +2139,14 @@ const MultiStepForm: React.FC = () => {
             updated.delete(page);
           }
         });
-        // Add new pages (they should be included by default)
-        for (let page = 1; page <= totalPages; page++) {
-          if (!updated.has(page)) {
-            updated.add(page);
+        // Only add NEW pages (pages beyond the previously initialized max)
+        // This preserves user exclusions for existing pages
+        if (totalPages > maxInitializedPage.current) {
+          for (let page = maxInitializedPage.current + 1; page <= totalPages; page++) {
+            updated.add(page); // New pages are included by default
           }
         }
+        maxInitializedPage.current = Math.max(maxInitializedPage.current, totalPages);
         return updated;
       });
     }
@@ -2601,7 +3019,7 @@ const MultiStepForm: React.FC = () => {
                  }`}>
                    {isStepCompleted(7) ? '✓' : '7'}
                  </div>
-                 <span className="ml-2 text-sm font-medium">Repair Recc.</span>
+                 <span className="ml-2 text-sm font-medium">Repair Rec.</span>
                </div>
                <div className="w-12 h-1 bg-gray-200"></div>
                <div 
@@ -4167,15 +4585,26 @@ const MultiStepForm: React.FC = () => {
                         }
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-md text-sm font-medium transition-colors"
-                    >
-                      📤 Upload Images from PC
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-md text-sm font-medium transition-colors"
+                      >
+                        📤 Upload Images from PC
+                      </button>
+                      <button
+                        type="button"
+                        onClick={loadJobsFromUrl}
+                        disabled={!formData.dataSourceUrl || isLoadingJobs}
+                        className="px-4 py-2 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Select images from other dates"
+                      >
+                        {isLoadingJobs ? 'Loading...' : '📅 Select Date Images'}
+                      </button>
+                    </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      Click to upload images from your computer. Images will be added to the inspection images section.
+                      Click to upload images from your computer or select images from other dates. Images will be added to the inspection images section.
                     </p>
                   </div>
                 </div>
@@ -4183,7 +4612,7 @@ const MultiStepForm: React.FC = () => {
                 {/* All Unused Images List with Drag-and-Drop */}
                 <div className="mb-4">
                   <h5 className="text-sm font-semibold text-gray-700 mb-2">
-                    All Available Images (Drag to reorder)
+                    All Available Images (Use Up/Down for quick moves, # for specific position, or drag to reorder)
                   </h5>
                   <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white">
                     {getUnusedImages().length === 0 ? (
@@ -4191,100 +4620,151 @@ const MultiStepForm: React.FC = () => {
                         No images available. Upload images or restore removed images.
                       </p>
                     ) : (
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-3 gap-3">
                         {getUnusedImages().map((image, index) => (
                           <div
                             key={image.id}
-                            draggable
-                            onDragStart={(e) => {
-                              setDraggedImageId(image.id);
-                              e.dataTransfer.effectAllowed = 'move';
-                            }}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.dataTransfer.dropEffect = 'move';
-                              if (draggedImageId && draggedImageId !== image.id) {
-                                e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
-                              }
-                            }}
-                            onDragLeave={(e) => {
-                              e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
-                              if (!draggedImageId || draggedImageId === image.id) return;
-                              
-                              const currentImages = getUnusedImages();
-                              const draggedIndex = currentImages.findIndex(img => img.id === draggedImageId);
-                              const targetIndex = currentImages.findIndex(img => img.id === image.id);
-                              
-                              if (draggedIndex === -1 || targetIndex === -1) return;
-                              
-                              // Reorder images
-                              const reordered = [...currentImages];
-                              const [removed] = reordered.splice(draggedIndex, 1);
-                              reordered.splice(targetIndex, 0, removed);
-                              
-                              // Update order
-                              updateFormData({
-                                inspectionImagesOrder: reordered.map(img => img.id)
-                              });
-                              
-                              setDraggedImageId(null);
-                            }}
-                            onDragEnd={() => {
-                              setDraggedImageId(null);
-                              // Remove any drag-over classes
-                              document.querySelectorAll('.border-blue-500.bg-blue-50').forEach(el => {
-                                el.classList.remove('border-blue-500', 'bg-blue-50');
-                              });
-                            }}
-                            className={`relative aspect-square border-2 rounded overflow-hidden transition-all cursor-move ${
-                              draggedImageId === image.id 
-                                ? 'border-blue-500 opacity-50' 
-                                : 'border-gray-300 hover:border-[#722420]'
-                            }`}
+                            className="flex flex-col"
                           >
-                            <img
-                              src={image.url}
-                              alt="Inspection"
-                              className="w-full h-full object-cover pointer-events-none"
-                            />
-                            <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                              {index + 1}
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Check if this is an uploaded image
-                                const isUploaded = formData.uploadedInspectionImages?.some(img => img.id === image.id);
-                                
-                                if (isUploaded) {
-                                  // Remove uploaded image completely
-                                  const updatedUploaded = (formData.uploadedInspectionImages || []).filter(img => img.id !== image.id);
-                                  const currentOrder = formData.inspectionImagesOrder || [];
-                                  updateFormData({
-                                    uploadedInspectionImages: updatedUploaded,
-                                    inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
-                                  });
-                                } else {
-                                  // Exclude scraped image
-                                  const excluded = formData.excludedStep8Images || [];
-                                  if (!excluded.includes(image.id)) {
-                                    const currentOrder = formData.inspectionImagesOrder || [];
-                                    updateFormData({
-                                      excludedStep8Images: [...excluded, image.id],
-                                      inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
-                                    });
-                                  }
+                            {/* Image Container */}
+                            <div
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggedImageId(image.id);
+                                e.dataTransfer.effectAllowed = 'move';
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                                if (draggedImageId && draggedImageId !== image.id) {
+                                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
                                 }
                               }}
-                              className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10"
-                              title="Remove from Step 8"
+                              onDragLeave={(e) => {
+                                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                                if (!draggedImageId || draggedImageId === image.id) return;
+                                
+                                const currentImages = getUnusedImages();
+                                const draggedIndex = currentImages.findIndex(img => img.id === draggedImageId);
+                                const targetIndex = currentImages.findIndex(img => img.id === image.id);
+                                
+                                if (draggedIndex === -1 || targetIndex === -1) return;
+                                
+                                // Reorder images
+                                const reordered = [...currentImages];
+                                const [removed] = reordered.splice(draggedIndex, 1);
+                                reordered.splice(targetIndex, 0, removed);
+                                
+                                // Update order
+                                updateFormData({
+                                  inspectionImagesOrder: reordered.map(img => img.id)
+                                });
+                                
+                                setDraggedImageId(null);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedImageId(null);
+                                // Remove any drag-over classes
+                                document.querySelectorAll('.border-blue-500.bg-blue-50').forEach(el => {
+                                  el.classList.remove('border-blue-500', 'bg-blue-50');
+                                });
+                              }}
+                              className={`relative aspect-square border-2 rounded overflow-hidden transition-all cursor-move ${
+                                draggedImageId === image.id 
+                                  ? 'border-blue-500 opacity-50' 
+                                  : 'border-gray-300 hover:border-[#722420]'
+                              }`}
                             >
-                              ×
-                            </button>
+                              <img
+                                src={image.url}
+                                alt="Inspection"
+                                className="w-full h-full object-cover pointer-events-none"
+                                draggable={false}
+                              />
+                              <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                {index + 1}
+                              </div>
+                              
+                              {/* Remove button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Check if this is an uploaded image
+                                  const isUploaded = formData.uploadedInspectionImages?.some(img => img.id === image.id);
+                                  
+                                  if (isUploaded) {
+                                    // Remove uploaded image completely
+                                    const updatedUploaded = (formData.uploadedInspectionImages || []).filter(img => img.id !== image.id);
+                                    const currentOrder = formData.inspectionImagesOrder || [];
+                                    updateFormData({
+                                      uploadedInspectionImages: updatedUploaded,
+                                      inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
+                                    });
+                                  } else {
+                                    // Exclude scraped image
+                                    const excluded = formData.excludedStep8Images || [];
+                                    if (!excluded.includes(image.id)) {
+                                      const currentOrder = formData.inspectionImagesOrder || [];
+                                      updateFormData({
+                                        excludedStep8Images: [...excluded, image.id],
+                                        inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
+                                      });
+                                    }
+                                  }
+                                }}
+                                className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10"
+                                title="Remove from Step 8"
+                              >
+                                ×
+                              </button>
+                            </div>
+                            
+                            {/* Reorder buttons section below image */}
+                            <div className="mt-2 bg-gray-50 border border-gray-200 rounded p-2">
+                              <div className="flex items-center justify-center gap-1 flex-wrap">
+                                {/* Move to Top */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveImageToTop(image.id);
+                                  }}
+                                  disabled={index === 0}
+                                  className="bg-[#722420] hover:bg-[#5a1d1a] disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded px-2 py-1 text-xs font-bold shadow transition-colors"
+                                  title="Move to top"
+                                >
+                                  ↑↑
+                                </button>
+                                {/* Image Number - Click to move to position */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setImageForPositionMove(image.id);
+                                    setTargetPosition(String(index + 1));
+                                    setShowPositionModal(true);
+                                  }}
+                                  className="bg-gray-700 hover:bg-gray-800 text-white rounded px-3 py-1 text-sm font-bold shadow transition-colors"
+                                  title="Click to move to specific position"
+                                >
+                                  {index + 1}
+                                </button>
+                                {/* Move to Bottom */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveImageToBottom(image.id);
+                                  }}
+                                  disabled={index === getUnusedImages().length - 1}
+                                  className="bg-[#722420] hover:bg-[#5a1d1a] disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded px-2 py-1 text-xs font-bold shadow transition-colors"
+                                  title="Move to bottom"
+                                >
+                                  ↓↓
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -4393,16 +4873,23 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Deactivate All Pages Button */}
-                  {Array.from(includedPages).length > 0 && (
+                  {/* Page Control Buttons */}
+                  <div className="flex gap-2 mb-3">
                     <button 
                       type="button"
-                      onClick={deactivateAllPages}
-                      className="w-full mb-3 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
+                      onClick={includeAllPages}
+                      className="flex-1 px-4 py-2 text-sm font-medium text-white bg-[#722420] border border-[#722420] rounded-md hover:bg-[#5a1d1a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#722420] transition-colors duration-200"
                     >
-                      Deactivate All Pages
+                      Include All
                     </button>
-                  )}
+                    <button 
+                      type="button"
+                      onClick={excludeAllPages}
+                      className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
+                    >
+                      Exclude All
+                    </button>
+                  </div>
                   
                   <div className="space-y-2">
                     {/* <button 
@@ -4463,114 +4950,143 @@ const MultiStepForm: React.FC = () => {
           </div>
 
           {/* Preview Section */}
-          <div className="card p-0">
-            {/* Combined Header Section */}
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
-              {/* Left: Preview Label */}
-              <h3 className="text-lg font-semibold text-gray-900">Preview</h3>
-              
-              {/* Center: Toggle */}
-              <div className="flex items-center space-x-3">
-                <span className="text-sm font-medium text-gray-700">Include in PDF:</span>
-                <button
-                  onClick={() => togglePageInclusion(currentLogicalStep)}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#722420] focus:ring-offset-2 ${
-                    isLogicalStepIncluded(currentLogicalStep) 
-                      ? 'bg-[#722420] shadow-inner' 
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-                  role="switch"
-                  aria-checked={isLogicalStepIncluded(currentLogicalStep)}
-                  aria-label={`${isLogicalStepIncluded(currentLogicalStep) ? 'Include' : 'Exclude'} this page from PDF`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all duration-300 ease-in-out ${
-                      isLogicalStepIncluded(currentLogicalStep) 
-                        ? 'translate-x-6' 
-                        : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-                <span className={`text-xs font-semibold transition-colors duration-200 ${
-                  isLogicalStepIncluded(currentLogicalStep) 
-                    ? 'text-[#722420]' 
-                    : 'text-gray-500'
-                }`}>
-                  {isLogicalStepIncluded(currentLogicalStep) ? 'ON' : 'OFF'}
-                </span>
-              </div>
-              
-              {/* Right: Navigation */}
-              <div className="flex items-center space-x-2">
-                {(() => {
-                  // Calculate the actual page number being displayed
-                  let actualPageNumber = currentPage;
-                  if (currentLogicalStep === 7) {
-                    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
-                    actualPageNumber = imagePageNum + 1 + currentRecommendationPageIndex;
-                  } else if (currentLogicalStep === 8) {
-                    // For image pages, show the actual page number
-                    actualPageNumber = currentPage;
-                  }
+          <div className="card p-0 shadow-lg">
+            {/* Improved Header Section */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-300">
+              <div className="p-4 sm:p-5">
+                {/* Top Row: Title and Page Info */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  {/* Left: Preview Label with Icon */}
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 bg-[#722420] rounded-lg">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Preview</h3>
+                      <p className="text-xs text-gray-500">Live preview of your report</p>
+                    </div>
+                  </div>
                   
-                  return (
-                    <>
-                      {(actualPageNumber > 1) && (
-                        <button
-                          onClick={handlePrevPage}
-                          className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
-                        >
-                          ← Page {actualPageNumber - 1}
-                        </button>
-                      )}
-                      {/* Progress bar + label */}
-                      <div className="hidden sm:flex items-center space-x-2">
-                        {/* <div  className="w-24 h-1 bg-gray-200 rounded"> */}
-                          {/* <div
-                            className="h-1 bg-[#722420] rounded"
-                            style={{ width: `${Math.min(100, Math.max(0, (actualPageNumber / totalPages) * 100))}%` }}
-                          /> */}
-                        {/* </div> */}
-                        {/* <span className="text-sm text-gray-600 font-medium">
-                          Page {actualPageNumber} of {totalPages}
-                        </span> */}
-                      </div>
-                      {/* Compact label on mobile */}
-                      <span className="sm:hidden text-sm text-gray-600 font-medium">
-                        {actualPageNumber}/{totalPages}
+                  {/* Right: Page Navigation */}
+                  <div className="flex items-center space-x-2">
+                    {(() => {
+                      // Calculate the actual page number being displayed
+                      let actualPageNumber = currentPage;
+                      if (currentLogicalStep === 7) {
+                        const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+                        actualPageNumber = imagePageNum + 1 + currentRecommendationPageIndex;
+                      } else if (currentLogicalStep === 8) {
+                        actualPageNumber = currentPage;
+                      }
+                      
+                      return (
+                        <>
+                          {(actualPageNumber > 1) && (
+                            <button
+                              onClick={handlePrevPage}
+                              className="px-3 py-2 text-sm font-medium bg-white text-[#722420] border border-[#722420] rounded-lg hover:bg-[#722420] hover:text-white transition-all duration-200 shadow-sm"
+                            >
+                              <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              </svg>
+                              Prev
+                            </button>
+                          )}
+                          <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg border border-gray-300 shadow-sm">
+                            <span className="text-xs text-gray-500 hidden sm:inline">Page</span>
+                            <label className="sr-only" htmlFor="jumpToPage">Jump to page</label>
+                            <input
+                              id="jumpToPage"
+                              type="number"
+                              min={1}
+                              max={totalPages}
+                              value={actualPageNumber}
+                              onChange={(e) => {
+                                const next = Number(e.target.value || 1);
+                                if (!Number.isFinite(next)) return;
+                                const clamped = Math.max(1, Math.min(totalPages, Math.floor(next)));
+                                if (isRecommendationPage(clamped)) {
+                                  const idx = getRecommendationPageIndex(clamped);
+                                  setCurrentRecommendationPageIndex(idx);
+                                }
+                                setCurrentPage(clamped);
+                              }}
+                              className="w-12 text-center text-sm font-semibold text-gray-900 border-0 focus:outline-none focus:ring-0 p-0"
+                              aria-label="Jump to page"
+                            />
+                            <span className="text-xs text-gray-400">/</span>
+                            <span className="text-xs text-gray-600 font-medium">{totalPages}</span>
+                          </div>
+                          {(actualPageNumber < totalPages) && (
+                            <button
+                              onClick={handleNextPage}
+                              className="px-3 py-2 text-sm font-medium bg-white text-[#722420] border border-[#722420] rounded-lg hover:bg-[#722420] hover:text-white transition-all duration-200 shadow-sm"
+                            >
+                              Next
+                              <svg className="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+                
+                {/* Bottom Row: Include/Exclude Toggle */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-gray-300">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <svg className={`w-5 h-5 ${isCurrentPageIncluded() ? 'text-[#722420]' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700">Include Page {currentPage} in PDF</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={togglePageInclusion}
+                      className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#722420] focus:ring-offset-2 shadow-md ${
+                        isCurrentPageIncluded() 
+                          ? 'bg-[#722420] shadow-[#722420]/50' 
+                          : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      role="switch"
+                      aria-checked={isCurrentPageIncluded()}
+                      aria-label={`${isCurrentPageIncluded() ? 'Include' : 'Exclude'} page ${currentPage} from PDF`}
+                    >
+                      <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center ${
+                          isCurrentPageIncluded() 
+                            ? 'translate-x-7' 
+                            : 'translate-x-1'
+                        }`}
+                      >
+                        {isCurrentPageIncluded() ? (
+                          <svg className="w-4 h-4 text-[#722420]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        )}
                       </span>
-                      {/* Direct page jump */}
-                      <label className="sr-only" htmlFor="jumpToPage">Jump to page</label>
-                      <input
-                        id="jumpToPage"
-                        type="number"
-                        min={1}
-                        max={totalPages}
-                        value={actualPageNumber}
-                        onChange={(e) => {
-                          const next = Number(e.target.value || 1);
-                          if (!Number.isFinite(next)) return;
-                          const clamped = Math.max(1, Math.min(totalPages, Math.floor(next)));
-                          if (isRecommendationPage(clamped)) {
-                            const idx = getRecommendationPageIndex(clamped);
-                            setCurrentRecommendationPageIndex(idx);
-                          }
-                          setCurrentPage(clamped);
-                        }}
-                        className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
-                        aria-label="Jump to page"
-                      />
-                      {(actualPageNumber < totalPages) && (
-                        <button
-                          onClick={handleNextPage}
-                          className="px-3 py-1 text-sm bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] transition-colors"
-                        >
-                          Page {actualPageNumber + 1} →
-                        </button>
-                      )}
-                    </>
-                  );
-                })()}
+                    </button>
+                    <span className={`text-sm font-semibold transition-colors duration-200 min-w-[3rem] ${
+                      isCurrentPageIncluded() 
+                        ? 'text-[#722420]' 
+                        : 'text-gray-500'
+                    }`}>
+                      {isCurrentPageIncluded() ? 'Included' : 'Excluded'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -5092,6 +5608,299 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date Selector Modal for Step 8 */}
+      {showDateSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Select Date for Images</h3>
+                <button
+                  onClick={() => setShowDateSelector(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Choose a date to view and merge its images with your current job.
+              </p>
+            </div>
+            
+            <div className="p-4">
+              {allJobs.length > 0 ? (
+                <div className="space-y-3">
+                  {allJobs.map((job, index) => (
+                    <div 
+                      key={job.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer"
+                      onClick={() => handleDateSelection(job)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium text-gray-900">
+                            {job.date}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {job.imageUrls.length} image{job.imageUrls.length !== 1 ? 's' : ''} available
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500">
+                            {index === 0 ? 'Latest' : index === 1 ? 'Previous' : `${index + 1}${index === 2 ? 'rd' : index === 3 ? 'th' : 'th'}`}
+                          </span>
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                    <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Dates Found</h3>
+                  <p className="text-sm text-gray-600 mb-4">No jobs with dates were found in the HTML content.</p>
+                  <button
+                    onClick={() => setShowDateSelector(false)}
+                    className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Date Images Modal for Step 8 */}
+      {showPreviousJobImages && selectedDateJob && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Images from {selectedDateJob.date}</h3>
+                <button
+                  onClick={() => {
+                    setShowPreviousJobImages(false);
+                    setSelectedDateJob(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Found {selectedDateJob.imageUrls.length} image{selectedDateJob.imageUrls.length !== 1 ? 's' : ''} from {selectedDateJob.date}. 
+                Select the images you want to add to your current job.
+              </p>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleSelectAllImages}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {selectedImages.length === selectedDateJob.imageUrls.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    {selectedImages.length} of {selectedDateJob.imageUrls.length} selected
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4">
+              {selectedDateJob.imageUrls.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                    {selectedDateJob.imageUrls.map((imageUrl, index) => {
+                      const isSelected = selectedImages.includes(imageUrl);
+                      return (
+                        <div 
+                          key={index} 
+                          className={`relative group cursor-pointer ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+                          onClick={() => handleDateImageSelection(imageUrl)}
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`Image from ${selectedDateJob.date} ${index + 1}`}
+                            className={`w-full h-32 object-cover rounded-lg border-2 transition-all ${
+                              isSelected ? 'border-blue-500' : 'border-gray-200'
+                            }`}
+                          />
+                          
+                          {/* Selection checkbox */}
+                          <div className="absolute top-2 right-2">
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                              isSelected 
+                                ? 'bg-blue-500 border-blue-500' 
+                                : 'bg-white border-gray-300'
+                            }`}>
+                              {isSelected && (
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Date overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                            {selectedDateJob.date}
+                          </div>
+                          
+                          {/* Selection indicator */}
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-blue-500 bg-opacity-20 rounded-lg"></div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={handleMergeSelectedDateImages}
+                      disabled={selectedImages.length === 0}
+                      className={`px-6 py-2 rounded-lg transition-colors font-medium ${
+                        selectedImages.length === 0
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Merge Selected Images ({selectedImages.length})
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPreviousJobImages(false);
+                        setSelectedDateJob(null);
+                        setSelectedImages([]);
+                      }}
+                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                    <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Images Found</h3>
+                  <p className="text-sm text-gray-600 mb-4">No images were found for {selectedDateJob.date}.</p>
+                  <button
+                    onClick={() => {
+                      setShowPreviousJobImages(false);
+                      setSelectedDateJob(null);
+                    }}
+                    className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move to Position Modal */}
+      {showPositionModal && imageForPositionMove && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Move Image to Position</h3>
+                <button
+                  onClick={() => {
+                    setShowPositionModal(false);
+                    setImageForPositionMove(null);
+                    setTargetPosition('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Enter the position number (1 to {getUnusedImages().length}) where you want to move this image.
+              </p>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-4">
+                <label htmlFor="targetPosition" className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Position
+                </label>
+                <input
+                  type="number"
+                  id="targetPosition"
+                  min="1"
+                  max={getUnusedImages().length}
+                  value={targetPosition}
+                  onChange={(e) => setTargetPosition(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const pos = parseInt(targetPosition);
+                      if (pos >= 1 && pos <= getUnusedImages().length) {
+                        moveImageToPosition(imageForPositionMove, pos);
+                        setShowPositionModal(false);
+                        setImageForPositionMove(null);
+                        setTargetPosition('');
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
+                  placeholder={`1 - ${getUnusedImages().length}`}
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Current total images: {getUnusedImages().length}
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    const pos = parseInt(targetPosition);
+                    if (pos >= 1 && pos <= getUnusedImages().length) {
+                      moveImageToPosition(imageForPositionMove, pos);
+                      setShowPositionModal(false);
+                      setImageForPositionMove(null);
+                      setTargetPosition('');
+                    } else {
+                      alert(`Please enter a number between 1 and ${getUnusedImages().length}`);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-[#722420] text-white rounded-lg hover:bg-[#5a1d1a] transition-colors font-medium"
+                >
+                  Move to Position
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPositionModal(false);
+                    setImageForPositionMove(null);
+                    setTargetPosition('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

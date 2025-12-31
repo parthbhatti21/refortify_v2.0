@@ -29,7 +29,7 @@ const Library: React.FC = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   // Supabase-driven client -> reports by date selection
-  const [clients, setClients] = useState<Array<{ id: string; full_name: string }>>([]);
+  const [clients, setClients] = useState<Array<{ id: string; full_name: string; address?: string }>>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [reportDates, setReportDates] = useState<string[]>([]); // ISO date strings (YYYY-MM-DD)
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -82,7 +82,7 @@ const Library: React.FC = () => {
     // Backend directories listing disabled per requirements
   }, []);
 
-  // Load clients for current user
+  // Load clients for current user with addresses from reports
   useEffect(() => {
     const loadClients = async () => {
       setLoadingSupabase(true);
@@ -93,12 +93,74 @@ const Library: React.FC = () => {
         const userId = userData?.user?.id;
         if (!userId) throw new Error('Not signed in');
 
-        const { data, error } = await supabase
+        // Get all clients
+        const { data: clientsData, error: clientsError } = await supabase
           .from('clients')
           .select('id, full_name')
           .order('full_name', { ascending: true });
-        if (error) throw error;
-        setClients(data || []);
+        if (clientsError) throw clientsError;
+
+        if (!clientsData || clientsData.length === 0) {
+          setClients([]);
+          return;
+        }
+
+        // Get the most recent report for each client in a single query
+        const clientIds = clientsData.map(c => c.id);
+        const { data: reportsData, error: reportsError } = await supabase
+          .from('reports')
+          .select('id, client_id, created_at')
+          .in('client_id', clientIds)
+          .order('created_at', { ascending: false });
+
+        if (reportsError) {
+          console.warn('Error fetching reports:', reportsError);
+          // Continue without addresses if reports query fails
+          setClients(clientsData.map(c => ({ ...c, address: undefined })));
+          return;
+        }
+
+        // Group reports by client_id and get the most recent one for each
+        const latestReportsByClient = new Map<string, string>();
+        (reportsData || []).forEach((report: any) => {
+          const clientId = report.client_id;
+          if (!latestReportsByClient.has(clientId)) {
+            latestReportsByClient.set(clientId, report.id);
+          }
+        });
+
+        // Get step1_json data for all latest reports in one query
+        const reportIds = Array.from(latestReportsByClient.values());
+        const { data: step1Data, error: step1Error } = await supabase
+          .from('step1_json')
+          .select('report_id, data')
+          .in('report_id', reportIds);
+
+        if (step1Error) {
+          console.warn('Error fetching step1_json:', step1Error);
+          // Continue without addresses if step1_json query fails
+          setClients(clientsData.map(c => ({ ...c, address: undefined })));
+          return;
+        }
+
+        // Create a map of report_id -> address
+        const addressMap = new Map<string, string>();
+        (step1Data || []).forEach((step1: any) => {
+          const step1Json = step1.data as any;
+          const address = step1Json['Client Address'] || step1Json['clientAddress'];
+          if (address) {
+            addressMap.set(step1.report_id, address);
+          }
+        });
+
+        // Map clients with their addresses
+        const clientsWithAddresses = clientsData.map((client) => {
+          const latestReportId = latestReportsByClient.get(client.id);
+          const address = latestReportId ? addressMap.get(latestReportId) : undefined;
+          return { ...client, address };
+        });
+
+        setClients(clientsWithAddresses);
       } catch (e: any) {
         setError(e?.message || 'Unable to load clients');
       } finally {
@@ -293,9 +355,14 @@ const Library: React.FC = () => {
     }
   };
 
-  // Supabase-driven filters
+  // Supabase-driven filters - search by both name and address
   const filteredClients = clients
-    .filter(c => c.full_name.toLowerCase().includes(search.toLowerCase()))
+    .filter(c => {
+      const searchLower = search.toLowerCase();
+      const nameMatch = c.full_name.toLowerCase().includes(searchLower);
+      const addressMatch = c.address?.toLowerCase().includes(searchLower) || false;
+      return nameMatch || addressMatch;
+    })
     .sort((a, b) => clientSort === 'az'
       ? a.full_name.localeCompare(b.full_name)
       : b.full_name.localeCompare(a.full_name)
@@ -346,7 +413,7 @@ const Library: React.FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search folders or files..."
+            placeholder="Search clients by name or address..."
             className="w-full md:w-80 pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent"
           />
           <svg className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -391,6 +458,9 @@ const Library: React.FC = () => {
                       className="text-left p-3 rounded border border-gray-200 hover:border-[#722420] hover:bg-[#f6eae9] transition-colors"
                     >
                       <div className="font-medium text-gray-900">{c.full_name}</div>
+                      {c.address && (
+                        <div className="text-sm text-gray-500 mt-1 truncate">{c.address}</div>
+                      )}
                     </button>
                   ))}
                   {filteredClients.length === 0 && (
