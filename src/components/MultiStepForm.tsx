@@ -23,6 +23,122 @@ import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
 import { supabase } from '../lib/supabaseClient';
 
+// Email Modal Component
+interface EmailModalProps {
+  onSend: (email: string) => void;
+  onSkip: () => void;
+  isSending: boolean;
+  clientName: string;
+  pdfUrl: string | null;
+}
+
+const EmailModal: React.FC<EmailModalProps> = ({ onSend, onSkip, isSending, clientName, pdfUrl }) => {
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError('');
+    
+    if (!email.trim()) {
+      setEmailError('Please enter an email address');
+      return;
+    }
+    
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    onSend(email.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full">
+            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
+            Send Report to Client
+          </h3>
+          <p className="text-sm text-gray-600 text-center mb-6">
+            Would you like to send the report to {clientName} via email? This is optional.
+          </p>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label htmlFor="clientEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                Client Email Address
+              </label>
+              <input
+                type="email"
+                id="clientEmail"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailError('');
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent ${
+                  emailError ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="client@example.com"
+                autoFocus
+                disabled={isSending}
+              />
+              {emailError && (
+                <p className="text-xs text-red-500 mt-1">{emailError}</p>
+              )}
+            </div>
+            
+            {!pdfUrl && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-xs text-yellow-800">
+                  Note: PDF URL not available. Email sending may not work. You can still skip this step.
+                </p>
+              </div>
+            )}
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="submit"
+                disabled={isSending || !email.trim() || !pdfUrl}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  isSending || !email.trim() || !pdfUrl
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#722420] text-white hover:bg-[#5a1d1a]'
+                }`}
+              >
+                {isSending ? 'Sending...' : 'Send Email'}
+              </button>
+              <button
+                type="button"
+                onClick={onSkip}
+                disabled={isSending}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  isSending
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-500 text-white hover:bg-gray-600'
+                }`}
+              >
+                Do Not Send Email
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export interface ImageItem {
   id: string;
   url: string;
@@ -526,6 +642,13 @@ const MultiStepForm: React.FC = () => {
   const [showPositionModal, setShowPositionModal] = useState(false);
   const [imageForPositionMove, setImageForPositionMove] = useState<string | null>(null);
   const [targetPosition, setTargetPosition] = useState<string>('');
+  // Approval and email flow state
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [generatedPdfBlob, setGeneratedPdfBlob] = useState<Blob | null>(null);
+  const [generatedPdfFileName, setGeneratedPdfFileName] = useState<string>('');
+  const [uploadedPdfUrl, setUploadedPdfUrl] = useState<string | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Function to parse all jobs from HTML and extract their dates
   const parseAllJobsFromHtml = (htmlContent: string): Array<{
@@ -1462,23 +1585,23 @@ const MultiStepForm: React.FC = () => {
       // Generate PDF with both pages
       await generateMultiPagePDF(pdf, isMobileDevice);
       
-      // Save PDF directly (no Google Docs viewer)
+      // Generate PDF blob and show approval modal
         const clientName = sanitizeFileName(formData.clientName || 'client');
         const clientAddress = sanitizeFileName(formData.clientAddress || '');
         const fileName = `A_Step_In_Time_${clientName}${clientAddress ? '_' + clientAddress : ''}.pdf`;
+        
+        // Save PDF to blob for later use
+        const pdfBlob: Blob = pdf.output('blob');
+        
+        // Download PDF to user's device
         pdf.save(fileName);
         
+        // Store PDF blob and filename for approval flow
+        setGeneratedPdfBlob(pdfBlob);
+        setGeneratedPdfFileName(fileName);
         
-        // Also upload the generated PDF to the backend
-        try {
-          setGenerationStatus('uploading');
-          const pdfBlob: Blob = pdf.output('blob');
-          await uploadReportPdf(pdfBlob, fileName, formData.clientName || 'client');
-          alert('Report uploaded successfully.');
-        } catch (uploadError: any) {
-          const message = uploadError?.message || 'Unknown error';
-          alert(`Upload failed: ${message}`);
-        }
+        // Show approval modal instead of immediately uploading
+        setShowApprovalModal(true);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -1597,7 +1720,7 @@ const MultiStepForm: React.FC = () => {
   };
 
   // Upload the generated PDF to the backend using multipart/form-data
-  const uploadReportPdf = async (pdfBlob: Blob, fileName: string, clientName: string) => {
+  const uploadReportPdf = async (pdfBlob: Blob, fileName: string, clientName: string): Promise<string> => {
     const API_BASE = process.env.REACT_APP_API_BASE || 'https://adminbackend.chimneysweeps.com';
     const API_KEY = process.env.REACT_APP_API_KEY || 'bestcompanyever23325';
     const formData = new FormData();
@@ -1617,6 +1740,52 @@ const MultiStepForm: React.FC = () => {
       const text = await response.text().catch(() => '');
       throw new Error(`Upload failed: ${response.status} ${text}`);
     }
+    
+    // Try to parse response as JSON to get the URL
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      try {
+        const data = await response.json();
+        // Prioritize download_url, then try other URL fields
+        // If we have a regular URL but no download_url, we can use the regular URL as download link
+        const downloadUrl = data.download_url || data.downloadUrl;
+        const regularUrl = data.url || data.file_url || data.pdf_url || data.fileUrl;
+        
+        // Return download_url if available, otherwise use regular URL (which can serve as download link)
+        return downloadUrl || regularUrl || '';
+      } catch {
+        return '';
+      }
+    } else {
+      // If response is not JSON, try to get URL from response text
+      const text = await response.text().catch(() => '');
+      // Try to extract URL from text if it's a plain text response
+      const urlMatch = text.match(/https?:\/\/[^\s"']+/);
+      return urlMatch ? urlMatch[0] : '';
+    }
+  };
+
+  // Send email with PDF
+  const sendEmailPdf = async (email: string, pdfUrl: string, fileName: string): Promise<void> => {
+    const API_BASE = process.env.REACT_APP_API_BASE || 'https://adminbackend.chimneysweeps.com';
+    const API_KEY = process.env.REACT_APP_API_KEY || 'bestcompanyever23325';
+    
+    // Send as FormData
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('pdf_url', pdfUrl);
+    formData.append('filename', fileName);
+    
+    const response = await fetch(`${API_BASE}/send_email_pdf`, {
+      method: 'POST',
+      body: formData,
+      headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined
+    });
+    
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`Failed to send email: ${response.status} ${text}`);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1629,20 +1798,91 @@ const MultiStepForm: React.FC = () => {
       return;
     }
     
-    // Save report and step-wise data to Supabase first
-    try {
-      setIsGenerating(true);
-      setGenerationStatus('saving');
-      await saveReportToSupabase();
-    } catch (err: any) {
-      console.error('Failed saving to Supabase:', err);
-      alert(`Failed saving to database: ${err?.message || 'Unknown error'}`);
-      // Continue to generate PDF even if DB save fails
-    }
-
-    // Generate PDF
+    // Generate PDF first (will show approval modal)
+    setIsGenerating(true);
     setGenerationStatus('generating');
     await generatePDF();
+  };
+
+  // Handle approval - save data, upload PDF, then ask for email
+  const handleApproveReport = async () => {
+    if (!generatedPdfBlob || !generatedPdfFileName) {
+      alert('PDF not found. Please try generating again.');
+      return;
+    }
+
+    setShowApprovalModal(false);
+    setIsGenerating(true);
+
+    try {
+      // Step 1: Save report and step-wise data to Supabase
+      try {
+        setGenerationStatus('saving');
+        await saveReportToSupabase();
+      } catch (err: any) {
+        console.error('Failed saving to Supabase:', err);
+        alert(`Failed saving to database: ${err?.message || 'Unknown error'}`);
+        // Continue to upload even if DB save fails
+      }
+
+      // Step 2: Upload PDF to backend
+      try {
+        setGenerationStatus('uploading');
+        const pdfUrl = await uploadReportPdf(generatedPdfBlob, generatedPdfFileName, formData.clientName || 'client');
+        setUploadedPdfUrl(pdfUrl);
+        alert('Report saved and uploaded successfully.');
+      } catch (uploadError: any) {
+        const message = uploadError?.message || 'Unknown error';
+        alert(`Upload failed: ${message}`);
+        // Still show email modal even if upload fails (user might want to send later)
+      }
+
+      // Step 3: Show email modal
+      setShowEmailModal(true);
+    } catch (error: any) {
+      console.error('Error in approval process:', error);
+      alert(`Error: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsGenerating(false);
+      setGenerationStatus(null);
+    }
+  };
+
+  // Handle email sending
+  const handleSendEmail = async (email: string) => {
+    if (!uploadedPdfUrl) {
+      alert('PDF URL not available. Please try again.');
+      return;
+    }
+
+    if (!generatedPdfFileName) {
+      alert('PDF filename not available. Please try again.');
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      await sendEmailPdf(email, uploadedPdfUrl, generatedPdfFileName);
+      alert(`Email sent successfully to ${email}`);
+      setShowEmailModal(false);
+      // Reset state
+      setGeneratedPdfBlob(null);
+      setGeneratedPdfFileName('');
+      setUploadedPdfUrl(null);
+    } catch (error: any) {
+      alert(`Failed to send email: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  // Handle skip email
+  const handleSkipEmail = () => {
+    setShowEmailModal(false);
+    // Reset state
+    setGeneratedPdfBlob(null);
+    setGeneratedPdfFileName('');
+    setUploadedPdfUrl(null);
   };
 
   const handleBackToScrape = () => {
@@ -5905,6 +6145,56 @@ const MultiStepForm: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Approval Modal */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">
+                Report Generated Successfully!
+              </h3>
+              <p className="text-sm text-gray-600 text-center mb-6">
+                Your PDF report has been generated and downloaded. Please review it and approve to save the data and upload the report.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleApproveReport}
+                  className="flex-1 px-4 py-2 bg-[#722420] text-white rounded-lg hover:bg-[#5a1d1a] transition-colors font-medium"
+                >
+                  Approve & Continue
+                </button>
+                <button
+                  onClick={() => {
+                    setShowApprovalModal(false);
+                    setGeneratedPdfBlob(null);
+                    setGeneratedPdfFileName('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Modal */}
+      {showEmailModal && (
+        <EmailModal
+          onSend={handleSendEmail}
+          onSkip={handleSkipEmail}
+          isSending={isSendingEmail}
+          clientName={formData.clientName || 'Client'}
+          pdfUrl={uploadedPdfUrl}
+        />
       )}
     </div>
   );
