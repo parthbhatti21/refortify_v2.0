@@ -185,9 +185,9 @@ export interface FormData {
     }>;
   };
   // Recommendations (Step5-part2) multi-section support
-  recommendationSection1Title?: string;
-  showRecommendationSection2?: boolean;
-  recommendationSection2Title?: string;
+  recommendationSection1Title?: string; // Keep for backward compatibility
+  showRecommendationSection2?: boolean; // Keep for backward compatibility
+  recommendationSection2Title?: string; // Keep for backward compatibility
   recommendationSection2?: {
     rows: Array<{
       id: string;
@@ -195,7 +195,18 @@ export interface FormData {
       unit: string;
       price: string;
       }>;
-    };
+    }; // Keep for backward compatibility
+  // New: Array of sections for n-number support
+  recommendationSections?: Array<{
+    id: string;
+    title: string;
+    rows: Array<{
+      id: string;
+      description: string;
+      unit: string;
+      price: string;
+    }>;
+  }>;
     notes: string;
     repairEstimatePages?: Array<{
     id: string;
@@ -649,6 +660,8 @@ const MultiStepForm: React.FC = () => {
   const [generatedPdfFileName, setGeneratedPdfFileName] = useState<string>('');
   const [uploadedPdfUrl, setUploadedPdfUrl] = useState<string | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [editingSectionIndex, setEditingSectionIndex] = useState<number>(0); // Track which section is being edited
+  const prevRepairEstimatePages = useRef<number>(0); // Track previous repair estimate page count
 
   // Function to parse all jobs from HTML and extract their dates
   const parseAllJobsFromHtml = (htmlContent: string): Array<{
@@ -853,10 +866,10 @@ const MultiStepForm: React.FC = () => {
         setIncludedPages(prev => {
           const newSet = new Set(prev);
           if (newIncluded) {
-            newSet.delete(currentPage);
-          } else {
-            newSet.add(currentPage);
-          }
+          newSet.delete(currentPage);
+        } else {
+          newSet.add(currentPage);
+        }
           return newSet;
         });
       }
@@ -1799,7 +1812,7 @@ const MultiStepForm: React.FC = () => {
     }
     
     // Generate PDF first (will show approval modal)
-    setIsGenerating(true);
+      setIsGenerating(true);
     setGenerationStatus('generating');
     await generatePDF();
   };
@@ -1817,11 +1830,11 @@ const MultiStepForm: React.FC = () => {
     try {
       // Step 1: Save report and step-wise data to Supabase
       try {
-        setGenerationStatus('saving');
-        await saveReportToSupabase();
-      } catch (err: any) {
-        console.error('Failed saving to Supabase:', err);
-        alert(`Failed saving to database: ${err?.message || 'Unknown error'}`);
+      setGenerationStatus('saving');
+      await saveReportToSupabase();
+    } catch (err: any) {
+      console.error('Failed saving to Supabase:', err);
+      alert(`Failed saving to database: ${err?.message || 'Unknown error'}`);
         // Continue to upload even if DB save fails
       }
 
@@ -2116,85 +2129,37 @@ const MultiStepForm: React.FC = () => {
   };
 
    const calculateSmartRepairEstimatePages = () => {
-     // Check if summary table needs a separate page
-     const SUMMARY_PAGE_THRESHOLD = 690; // Match the threshold in Step5-part2.tsx
+     // Get all sections (new array format or legacy format)
+     const allSections = formData.recommendationSections && formData.recommendationSections.length > 0
+       ? formData.recommendationSections
+       : [
+           { id: '1', title: formData.recommendationSection1Title || 'Repair Estimate', rows: formData.repairEstimateData?.rows || [] },
+           ...(formData.showRecommendationSection2 && formData.recommendationSection2?.rows && formData.recommendationSection2.rows.length > 0
+             ? [{ id: '2', title: formData.recommendationSection2Title || 'Additional Repairs', rows: formData.recommendationSection2.rows }]
+             : [])
+         ];
      
-     // Calculate if summary would exceed threshold
-     const section1Rows = formData.repairEstimateData?.rows || [];
-     const section2Rows = formData.recommendationSection2?.rows || [];
+     // Pagination: Up to 3 sections per page
+     const SECTIONS_PER_PAGE = 3;
+     const totalSectionPages = Math.ceil(allSections.length / SECTIONS_PER_PAGE);
+     const totalSections = allSections.length;
+     const hasMultipleSections = totalSections > 1;
      
-     // Check pagination for both summary (if Section 2 exists) and notes (always)
-     const calculateTableHeight = (rows: any[]) => {
-       if (rows.length === 0) return 0;
-       const headerHeight = 20; // Header row height
-       let totalRowHeight = 0;
-       
-       // Calculate height for each row based on content
-       rows.forEach(row => {
-         const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
-           const lines = text.split('\n').length;
-           const wordCount = text.split(' ').length;
-           const charCount = text.length;
-           
-           let rowsNeeded = 1;
-           
-           if (lines > 1) {
-             rowsNeeded = Math.max(rowsNeeded, lines);
-           }
-           
-           const charRows = Math.ceil(charCount / baseLength);
-           rowsNeeded = Math.max(rowsNeeded, charRows);
-           
-           const wordRows = Math.ceil(wordCount / 8);
-           rowsNeeded = Math.max(rowsNeeded, wordRows);
-           
-           return Math.min(rowsNeeded, 4);
-         };
-         
-         const descriptionRows = calculateRowsNeeded(row.description);
-         const unitRows = calculateRowsNeeded(row.unit, 10);
-         const priceRows = calculateRowsNeeded(row.price, 10);
-         
-         const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
-         const rowHeight = 20 * maxRowsNeeded; // 20px per content row
-         totalRowHeight += rowHeight;
-       });
-       
-       return headerHeight + totalRowHeight;
-     };
+     // Match the exact logic from Step5-part2.tsx buildEstimatePages
+     // Rules:
+     // - 1-2 sections: summary+notes on same page as sections
+     // - 3 sections: summary+notes on separate page (page 2)
+     // - 4-5 sections: summary+notes on last section page (page 2)
+     // - 6+ sections: summary+notes on separate page after all sections
+     const summaryNotesOnSeparatePage = totalSections === 3 || totalSections >= 6;
      
-     const section1Top = 150;
-     const section1Height = calculateTableHeight(section1Rows);
-     const GAP_BETWEEN_TABLES = 80;
-     
-     // Calculate notes position based on what content exists
-     let notesTop = 0;
-     if (formData.showRecommendationSection2 && section2Rows.length > 0) {
-       // Both sections exist - calculate summary and notes position
-       const extraSpacing = Math.min(section1Rows.length * 2);
-       const section2Top = section1Top + section1Height + GAP_BETWEEN_TABLES + extraSpacing;
-       const section2Height = calculateTableHeight(section2Rows);
-       const summaryTop = section2Top + section2Height + GAP_BETWEEN_TABLES + extraSpacing;
-       
-       const SUMMARY_TABLE_HEIGHT = 80;
-       const NOTES_PAGE_THRESHOLD = 690; // Move notes to next page if it would exceed this
-       notesTop = summaryTop + SUMMARY_TABLE_HEIGHT + 30;
-       
-       // Check if summary needs new page
-       if (summaryTop > SUMMARY_PAGE_THRESHOLD || notesTop > NOTES_PAGE_THRESHOLD) {
-         return 2; // Main page + summary/notes page
-       }
-     } else {
-       // Only Section 1 exists - notes go below Section 1
-       notesTop = section1Top + section1Height + GAP_BETWEEN_TABLES + 30;
+     // If summary+notes are on separate page, add one more page
+     if (hasMultipleSections && summaryNotesOnSeparatePage) {
+       return totalSectionPages + 1;
      }
      
-     // Check if notes need new page
-     if (formData.notes && notesTop > SUMMARY_PAGE_THRESHOLD) {
-       return 2; // Main page + notes page
-     }
-     
-     return 1; // Single page
+     // Otherwise, summary+notes are on the last section page (or only page)
+     return totalSectionPages;
    };
   
   const totalInvoicePages = calculateSmartInvoicePages();
@@ -2362,11 +2327,11 @@ const MultiStepForm: React.FC = () => {
   useEffect(() => {
     if (!hasInitializedPages.current) {
       // First initialization: include all pages
-      const allPages = new Set<number>();
-      for (let page = 1; page <= totalPages; page++) {
-        allPages.add(page);
-      }
-      setIncludedPages(allPages);
+    const allPages = new Set<number>();
+    for (let page = 1; page <= totalPages; page++) {
+      allPages.add(page);
+    }
+    setIncludedPages(allPages);
       maxInitializedPage.current = totalPages;
       hasInitializedPages.current = true;
     } else {
@@ -2391,6 +2356,30 @@ const MultiStepForm: React.FC = () => {
       });
     }
   }, [totalPages]);
+
+  // Adjust currentPage when totalRepairEstimatePages changes (to prevent navigation to wrong page)
+  useEffect(() => {
+    const repairEstimateStart = 5 + totalInvoicePages;
+    const prevRepairEstimateEnd = repairEstimateStart + prevRepairEstimatePages.current - 1;
+    const currentRepairEstimateEnd = repairEstimateStart + totalRepairEstimatePages - 1;
+    
+    // If repair estimate pages decreased and we were on a page that no longer exists
+    if (totalRepairEstimatePages < prevRepairEstimatePages.current) {
+      // Check if current page is now beyond the repair estimate section
+      if (currentPage >= repairEstimateStart && currentPage > currentRepairEstimateEnd) {
+        // Move to the last valid repair estimate page
+        if (totalRepairEstimatePages > 0) {
+          setCurrentPage(currentRepairEstimateEnd);
+        } else {
+          // No repair estimate pages left, go to the page before repair estimate section
+          setCurrentPage(repairEstimateStart - 1);
+        }
+      }
+    }
+    
+    // Update the ref for next comparison
+    prevRepairEstimatePages.current = totalRepairEstimatePages;
+  }, [totalRepairEstimatePages, totalInvoicePages, currentPage]);
 
   // Helper function to determine the logical step (1-10) based on current page
   const getLogicalStep = (pageNum: number): number => {
@@ -3914,7 +3903,330 @@ const MultiStepForm: React.FC = () => {
               </div>
             ) : isRepairEstimatePage(currentPage) ? (
               <div className="space-y-4">
-                {/* Repair Estimate Items */}
+                {/* Initialize recommendationSections if not exists, using backward compatible data */}
+                {(() => {
+                  if (!formData.recommendationSections || formData.recommendationSections.length === 0) {
+                    // Initialize from existing section1/section2 data
+                    const sections = [{
+                      id: 'section-1',
+                      title: formData.recommendationSection1Title || 'Repair Estimate#1',
+                      rows: formData.repairEstimateData?.rows || []
+                    }];
+                    if (formData.showRecommendationSection2) {
+                      sections.push({
+                        id: 'section-2',
+                        title: formData.recommendationSection2Title || 'Repair Estimate#2',
+                        rows: formData.recommendationSection2?.rows || []
+                      });
+                    }
+                    // Update formData with sections (but don't trigger re-render here)
+                    setTimeout(() => {
+                      updateFormData({ recommendationSections: sections });
+                    }, 0);
+                  }
+                  return null;
+                })()}
+                
+                {/* Sections Manager */}
+                <div className="space-y-4">
+                  {/* Header with Add Section button */}
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-gray-900">Repair Estimate Sections</h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentSections = formData.recommendationSections || [];
+                        const newSection = {
+                          id: `section-${Date.now()}`,
+                          title: `Repair Estimate#${currentSections.length + 1}`,
+                          rows: []
+                        };
+                        updateFormData({ 
+                          recommendationSections: [...currentSections, newSection]
+                        });
+                        setEditingSectionIndex(currentSections.length); // Switch to the new section
+                      }}
+                      className="px-4 py-2 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm font-medium"
+                    >
+                      + Add New Section
+                    </button>
+                  </div>
+
+                  {/* Section Navigation and Current Section Display */}
+                  {(formData.recommendationSections && formData.recommendationSections.length > 0) && (() => {
+                    const sections = formData.recommendationSections;
+                    const totalSections = sections.length;
+                    
+                    // Ensure editingSectionIndex is valid
+                    const validIndex = Math.max(0, Math.min(editingSectionIndex, totalSections - 1));
+                    if (validIndex !== editingSectionIndex) {
+                      setEditingSectionIndex(validIndex);
+                    }
+                    
+                    const section = sections[validIndex];
+                    const sectionIndex = validIndex;
+
+                    return (
+                      <div className="space-y-4">
+                        {/* Section Navigation Bar */}
+                        {totalSections > 1 && (
+                          <div className="flex items-center justify-between bg-gray-50 border border-gray-300 rounded-lg p-3">
+                            <button
+                              type="button"
+                              onClick={() => setEditingSectionIndex(Math.max(0, editingSectionIndex - 1))}
+                              disabled={editingSectionIndex === 0}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+                                editingSectionIndex === 0
+                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                              }`}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              </svg>
+                              Previous
+                            </button>
+                            
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-700">
+                                Section {editingSectionIndex + 1} of {totalSections}
+                              </span>
+                              {/* Section quick navigation dots */}
+                              <div className="flex gap-1">
+                                {sections.map((_, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setEditingSectionIndex(idx)}
+                                    className={`w-2 h-2 rounded-full transition-colors ${
+                                      idx === editingSectionIndex ? 'bg-[#722420]' : 'bg-gray-300 hover:bg-gray-400'
+                                    }`}
+                                    title={`Go to section ${idx + 1}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <button
+                              type="button"
+                              onClick={() => setEditingSectionIndex(Math.min(totalSections - 1, editingSectionIndex + 1))}
+                              disabled={editingSectionIndex === totalSections - 1}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${
+                                editingSectionIndex === totalSections - 1
+                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                              }`}
+                            >
+                              Next
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Current Section Editor */}
+                        <div className="border border-gray-300 rounded-lg p-4 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <input
+                              type="text"
+                              placeholder={`Title for Section ${sectionIndex + 1}`}
+                              value={section.title}
+                              onChange={(e) => {
+                                const updatedSections = sections.map(s =>
+                                  s.id === section.id ? { ...s, title: e.target.value } : s
+                                );
+                                updateFormData({ recommendationSections: updatedSections });
+                              }}
+                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#722420] focus:border-transparent mr-2"
+                            />
+                            {totalSections > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedSections = sections.filter(s => s.id !== section.id);
+                                  updateFormData({ recommendationSections: updatedSections });
+                                  // Adjust editingSectionIndex after deletion
+                                  if (editingSectionIndex >= updatedSections.length) {
+                                    setEditingSectionIndex(Math.max(0, updatedSections.length - 1));
+                                  }
+                                }}
+                                className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm"
+                                title="Remove section"
+                              >
+                                Remove Section
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-700">Items</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newRow = {
+                                  id: Date.now().toString(),
+                                  description: '',
+                                  unit: '',
+                                  price: ''
+                                };
+                                const updatedSections = sections.map(s =>
+                                  s.id === section.id ? { ...s, rows: [...s.rows, newRow] } : s
+                                );
+                                updateFormData({ recommendationSections: updatedSections });
+                              }}
+                              className="px-3 py-1 bg-[#722420] text-white rounded-md hover:bg-[#5a1d1a] text-sm"
+                            >
+                              + Add Item
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {section.rows.map((row) => {
+                          const handleAddNewRow = () => {
+                            const newRow = {
+                              id: Date.now().toString(),
+                              description: '',
+                              unit: '',
+                              price: ''
+                            };
+                            const currentRows = section.rows;
+                            const currentIndex = currentRows.findIndex(r => r.id === row.id);
+                            const updatedRows = [
+                              ...currentRows.slice(0, currentIndex + 1),
+                              newRow,
+                              ...currentRows.slice(currentIndex + 1)
+                            ];
+                            const updatedSections = (formData.recommendationSections || []).map(s =>
+                              s.id === section.id ? { ...s, rows: updatedRows } : s
+                            );
+                            updateFormData({ recommendationSections: updatedSections });
+                            
+                            newRowDescriptionRef.current = newRow.id;
+                            setTimeout(() => {
+                              const newRowInput = document.querySelector(`[data-row-id="${newRow.id}"]`) as HTMLInputElement | HTMLTextAreaElement;
+                              if (newRowInput) {
+                                newRowInput.focus();
+                                newRowDescriptionRef.current = null;
+                              }
+                            }, 50);
+                          };
+                          
+                          return (
+                            <div key={row.id} className="flex items-center gap-1 p-2 border border-gray-200 rounded-md w-full">
+                              <AutocompleteInput
+                                value={row.description}
+                                onChange={(value) => {
+                                  const updatedSections = (formData.recommendationSections || []).map(s =>
+                                    s.id === section.id
+                                      ? { ...s, rows: s.rows.map(r => r.id === row.id ? { ...r, description: value } : r) }
+                                      : s
+                                  );
+                                  updateFormData({ recommendationSections: updatedSections });
+                                }}
+                                onSelectRow={(selectedRow: SheetRow) => {
+                                  const priceWithoutDollar = (selectedRow.price || '').replace(/^\$/, '').trim();
+                                  const updatedSections = (formData.recommendationSections || []).map(s =>
+                                    s.id === section.id
+                                      ? { ...s, rows: s.rows.map(r => r.id === row.id ? { 
+                                          ...r, 
+                                          description: selectedRow.description,
+                                          unit: selectedRow.unit || '1',
+                                          price: priceWithoutDollar
+                                        } : r) }
+                                      : s
+                                  );
+                                  updateFormData({ recommendationSections: updatedSections });
+                                }}
+                                dataRowId={row.id}
+                                placeholder="Description"
+                                field="description"
+                                className="w-full min-w-0 mr-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                                sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
+                              />
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <AutocompleteInput
+                                  value={row.unit}
+                                  onChange={(value) => {
+                                    const updatedSections = (formData.recommendationSections || []).map(s =>
+                                      s.id === section.id
+                                        ? { ...s, rows: s.rows.map(r => r.id === row.id ? { ...r, unit: value } : r) }
+                                        : s
+                                    );
+                                    updateFormData({ recommendationSections: updatedSections });
+                                  }}
+                                  onSelectRow={(selectedRow: SheetRow) => {
+                                    const priceWithoutDollar = (selectedRow.price || '').replace(/^\$/, '').trim();
+                                    const updatedSections = (formData.recommendationSections || []).map(s =>
+                                      s.id === section.id
+                                        ? { ...s, rows: s.rows.map(r => r.id === row.id ? { 
+                                            ...r, 
+                                            description: selectedRow.description,
+                                            unit: selectedRow.unit || '1',
+                                            price: priceWithoutDollar
+                                          } : r) }
+                                        : s
+                                    );
+                                    updateFormData({ recommendationSections: updatedSections });
+                                  }}
+                                  dataRowId={row.id}
+                                  placeholder="Unit"
+                                  field="unit"
+                                  className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                  sheetId={process.env.REACT_APP_GOOGLE_SHEET_ID || '1Bhz4JMVaR4tGbBKrhRHwR38MTtX8MVM_0v0JV8V6R9Q'}
+                                  sheetRange={process.env.REACT_APP_GOOGLE_SHEET_RANGE || 'Sheet1!A:E'}
+                                />
+                                <input
+                                  type="text"
+                                  value={row.price}
+                                  onChange={(e) => {
+                                    const updatedSections = (formData.recommendationSections || []).map(s =>
+                                      s.id === section.id
+                                        ? { ...s, rows: s.rows.map(r => r.id === row.id ? { ...r, price: e.target.value } : r) }
+                                        : s
+                                    );
+                                    updateFormData({ recommendationSections: updatedSections });
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddNewRow();
+                                    }
+                                  }}
+                                  placeholder="Price"
+                                  className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#722420]"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedSections = (formData.recommendationSections || []).map(s =>
+                                    s.id === section.id
+                                      ? { ...s, rows: s.rows.filter(r => r.id !== row.id) }
+                                      : s
+                                  );
+                                  updateFormData({ recommendationSections: updatedSections });
+                                }}
+                                className="px-2 py-1 text-red-600 hover:text-red-800 text-sm"
+                                title="Delete row"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Legacy Section 1 UI - Keep for backward compatibility but hide if using new sections */}
+                {(!formData.recommendationSections || formData.recommendationSections.length === 0) && (
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="block text-sm font-medium text-gray-700">
@@ -4118,8 +4430,10 @@ const MultiStepForm: React.FC = () => {
                     })}
                   </div>
                 </div>
+                )}
 
-                {/* Section 2 Controls */}
+                {/* Legacy Section 2 Controls - Keep for backward compatibility but hide if using new sections */}
+                {(!formData.recommendationSections || formData.recommendationSections.length === 0) && (
                 <div className="pt-2 border-t border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-medium text-gray-700">Repair Estimate Section 2</div>
@@ -4288,6 +4602,7 @@ const MultiStepForm: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Notes Section */}
                 <div className="pt-4 border-t border-gray-200">
@@ -4826,13 +5141,13 @@ const MultiStepForm: React.FC = () => {
                       }}
                     />
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-md text-sm font-medium transition-colors"
-                      >
-                        📤 Upload Images from PC
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-md text-sm font-medium transition-colors"
+                    >
+                      📤 Upload Images from PC
+                    </button>
                       <button
                         type="button"
                         onClick={loadJobsFromUrl}
@@ -4868,99 +5183,99 @@ const MultiStepForm: React.FC = () => {
                           >
                             {/* Image Container */}
                             <div
-                              draggable
-                              onDragStart={(e) => {
-                                setDraggedImageId(image.id);
-                                e.dataTransfer.effectAllowed = 'move';
-                              }}
-                              onDragOver={(e) => {
-                                e.preventDefault();
-                                e.dataTransfer.dropEffect = 'move';
-                                if (draggedImageId && draggedImageId !== image.id) {
-                                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
-                                }
-                              }}
-                              onDragLeave={(e) => {
-                                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
-                              }}
-                              onDrop={(e) => {
-                                e.preventDefault();
-                                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
-                                if (!draggedImageId || draggedImageId === image.id) return;
-                                
-                                const currentImages = getUnusedImages();
-                                const draggedIndex = currentImages.findIndex(img => img.id === draggedImageId);
-                                const targetIndex = currentImages.findIndex(img => img.id === image.id);
-                                
-                                if (draggedIndex === -1 || targetIndex === -1) return;
-                                
-                                // Reorder images
-                                const reordered = [...currentImages];
-                                const [removed] = reordered.splice(draggedIndex, 1);
-                                reordered.splice(targetIndex, 0, removed);
-                                
-                                // Update order
-                                updateFormData({
-                                  inspectionImagesOrder: reordered.map(img => img.id)
-                                });
-                                
-                                setDraggedImageId(null);
-                              }}
-                              onDragEnd={() => {
-                                setDraggedImageId(null);
-                                // Remove any drag-over classes
-                                document.querySelectorAll('.border-blue-500.bg-blue-50').forEach(el => {
-                                  el.classList.remove('border-blue-500', 'bg-blue-50');
-                                });
-                              }}
-                              className={`relative aspect-square border-2 rounded overflow-hidden transition-all cursor-move ${
-                                draggedImageId === image.id 
-                                  ? 'border-blue-500 opacity-50' 
-                                  : 'border-gray-300 hover:border-[#722420]'
-                              }`}
-                            >
-                              <img
-                                src={image.url}
-                                alt="Inspection"
-                                className="w-full h-full object-cover pointer-events-none"
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggedImageId(image.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              if (draggedImageId && draggedImageId !== image.id) {
+                                e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+                              }
+                            }}
+                            onDragLeave={(e) => {
+                              e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                              if (!draggedImageId || draggedImageId === image.id) return;
+                              
+                              const currentImages = getUnusedImages();
+                              const draggedIndex = currentImages.findIndex(img => img.id === draggedImageId);
+                              const targetIndex = currentImages.findIndex(img => img.id === image.id);
+                              
+                              if (draggedIndex === -1 || targetIndex === -1) return;
+                              
+                              // Reorder images
+                              const reordered = [...currentImages];
+                              const [removed] = reordered.splice(draggedIndex, 1);
+                              reordered.splice(targetIndex, 0, removed);
+                              
+                              // Update order
+                              updateFormData({
+                                inspectionImagesOrder: reordered.map(img => img.id)
+                              });
+                              
+                              setDraggedImageId(null);
+                            }}
+                            onDragEnd={() => {
+                              setDraggedImageId(null);
+                              // Remove any drag-over classes
+                              document.querySelectorAll('.border-blue-500.bg-blue-50').forEach(el => {
+                                el.classList.remove('border-blue-500', 'bg-blue-50');
+                              });
+                            }}
+                            className={`relative aspect-square border-2 rounded overflow-hidden transition-all cursor-move ${
+                              draggedImageId === image.id 
+                                ? 'border-blue-500 opacity-50' 
+                                : 'border-gray-300 hover:border-[#722420]'
+                            }`}
+                          >
+                            <img
+                              src={image.url}
+                              alt="Inspection"
+                              className="w-full h-full object-cover pointer-events-none"
                                 draggable={false}
-                              />
-                              <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                                {index + 1}
-                              </div>
+                            />
+                            <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                              {index + 1}
+                            </div>
                               
                               {/* Remove button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Check if this is an uploaded image
-                                  const isUploaded = formData.uploadedInspectionImages?.some(img => img.id === image.id);
-                                  
-                                  if (isUploaded) {
-                                    // Remove uploaded image completely
-                                    const updatedUploaded = (formData.uploadedInspectionImages || []).filter(img => img.id !== image.id);
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Check if this is an uploaded image
+                                const isUploaded = formData.uploadedInspectionImages?.some(img => img.id === image.id);
+                                
+                                if (isUploaded) {
+                                  // Remove uploaded image completely
+                                  const updatedUploaded = (formData.uploadedInspectionImages || []).filter(img => img.id !== image.id);
+                                  const currentOrder = formData.inspectionImagesOrder || [];
+                                  updateFormData({
+                                    uploadedInspectionImages: updatedUploaded,
+                                    inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
+                                  });
+                                } else {
+                                  // Exclude scraped image
+                                  const excluded = formData.excludedStep8Images || [];
+                                  if (!excluded.includes(image.id)) {
                                     const currentOrder = formData.inspectionImagesOrder || [];
                                     updateFormData({
-                                      uploadedInspectionImages: updatedUploaded,
+                                      excludedStep8Images: [...excluded, image.id],
                                       inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
                                     });
-                                  } else {
-                                    // Exclude scraped image
-                                    const excluded = formData.excludedStep8Images || [];
-                                    if (!excluded.includes(image.id)) {
-                                      const currentOrder = formData.inspectionImagesOrder || [];
-                                      updateFormData({
-                                        excludedStep8Images: [...excluded, image.id],
-                                        inspectionImagesOrder: currentOrder.filter(id => id !== image.id)
-                                      });
-                                    }
                                   }
-                                }}
-                                className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10"
-                                title="Remove from Step 8"
-                              >
-                                ×
-                              </button>
+                                }
+                              }}
+                              className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10"
+                              title="Remove from Step 8"
+                            >
+                              ×
+                            </button>
                             </div>
                             
                             {/* Reorder buttons section below image */}
@@ -5208,72 +5523,72 @@ const MultiStepForm: React.FC = () => {
                       <h3 className="text-xl font-bold text-gray-900">Preview</h3>
                       <p className="text-xs text-gray-500">Live preview of your report</p>
                     </div>
-                  </div>
-                  
+              </div>
+              
                   {/* Right: Page Navigation */}
-                  <div className="flex items-center space-x-2">
-                    {(() => {
-                      // Calculate the actual page number being displayed
-                      let actualPageNumber = currentPage;
-                      if (currentLogicalStep === 7) {
-                        const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
-                        actualPageNumber = imagePageNum + 1 + currentRecommendationPageIndex;
-                      } else if (currentLogicalStep === 8) {
-                        actualPageNumber = currentPage;
-                      }
-                      
-                      return (
-                        <>
-                          {(actualPageNumber > 1) && (
-                            <button
-                              onClick={handlePrevPage}
+              <div className="flex items-center space-x-2">
+                {(() => {
+                  // Calculate the actual page number being displayed
+                  let actualPageNumber = currentPage;
+                  if (currentLogicalStep === 7) {
+                    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+                    actualPageNumber = imagePageNum + 1 + currentRecommendationPageIndex;
+                  } else if (currentLogicalStep === 8) {
+                    actualPageNumber = currentPage;
+                  }
+                  
+                  return (
+                    <>
+                      {(actualPageNumber > 1) && (
+                        <button
+                          onClick={handlePrevPage}
                               className="px-3 py-2 text-sm font-medium bg-white text-[#722420] border border-[#722420] rounded-lg hover:bg-[#722420] hover:text-white transition-all duration-200 shadow-sm"
-                            >
+                        >
                               <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                               </svg>
                               Prev
-                            </button>
-                          )}
+                        </button>
+                      )}
                           <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg border border-gray-300 shadow-sm">
                             <span className="text-xs text-gray-500 hidden sm:inline">Page</span>
-                            <label className="sr-only" htmlFor="jumpToPage">Jump to page</label>
-                            <input
-                              id="jumpToPage"
-                              type="number"
-                              min={1}
-                              max={totalPages}
-                              value={actualPageNumber}
-                              onChange={(e) => {
-                                const next = Number(e.target.value || 1);
-                                if (!Number.isFinite(next)) return;
-                                const clamped = Math.max(1, Math.min(totalPages, Math.floor(next)));
-                                if (isRecommendationPage(clamped)) {
-                                  const idx = getRecommendationPageIndex(clamped);
-                                  setCurrentRecommendationPageIndex(idx);
-                                }
-                                setCurrentPage(clamped);
-                              }}
+                      <label className="sr-only" htmlFor="jumpToPage">Jump to page</label>
+                      <input
+                        id="jumpToPage"
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        value={actualPageNumber}
+                        onChange={(e) => {
+                          const next = Number(e.target.value || 1);
+                          if (!Number.isFinite(next)) return;
+                          const clamped = Math.max(1, Math.min(totalPages, Math.floor(next)));
+                          if (isRecommendationPage(clamped)) {
+                            const idx = getRecommendationPageIndex(clamped);
+                            setCurrentRecommendationPageIndex(idx);
+                          }
+                          setCurrentPage(clamped);
+                        }}
                               className="w-12 text-center text-sm font-semibold text-gray-900 border-0 focus:outline-none focus:ring-0 p-0"
-                              aria-label="Jump to page"
-                            />
+                        aria-label="Jump to page"
+                      />
                             <span className="text-xs text-gray-400">/</span>
                             <span className="text-xs text-gray-600 font-medium">{totalPages}</span>
                           </div>
-                          {(actualPageNumber < totalPages) && (
-                            <button
-                              onClick={handleNextPage}
+                      {(actualPageNumber < totalPages) && (
+                        <button
+                          onClick={handleNextPage}
                               className="px-3 py-2 text-sm font-medium bg-white text-[#722420] border border-[#722420] rounded-lg hover:bg-[#722420] hover:text-white transition-all duration-200 shadow-sm"
-                            >
+                        >
                               Next
                               <svg className="w-4 h-4 inline ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                               </svg>
-                            </button>
-                          )}
-                        </>
-                      );
-                    })()}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
                   </div>
                 </div>
                 
@@ -5356,6 +5671,9 @@ const MultiStepForm: React.FC = () => {
               ) : isRepairEstimatePage(currentPage) ? (
                 <Step5Part2 
                   repairEstimateData={formData.repairEstimateData}
+                  sections={formData.recommendationSections && formData.recommendationSections.length > 0
+                    ? formData.recommendationSections.map(s => ({ title: s.title, rows: s.rows }))
+                    : undefined}
                   section1={{
                     title: formData.recommendationSection1Title || 'Repair Estimate#1',
                     rows: formData.repairEstimateData?.rows || []

@@ -20,13 +20,20 @@ type RecommendationSection = {
   rows: RepairEstimateRow[];
 };
 
+type EstimatePage = {
+  sections: RecommendationSection[];
+  showSummary: boolean;
+  showNotes: boolean;
+};
+
 interface Step5Part2Props {
   isPDF?: boolean;
   currentEstimatePage?: number;
   repairEstimateData?: RepairEstimateData;
   updateRepairEstimateData?: (data: RepairEstimateData) => void;
-  section1?: RecommendationSection;
-  section2?: RecommendationSection;
+  section1?: RecommendationSection; // Keep for backward compatibility
+  section2?: RecommendationSection; // Keep for backward compatibility
+  sections?: RecommendationSection[]; // New: array of sections
   notes?: string;
   dataSourceUrl?: string;
 }
@@ -43,34 +50,116 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
   updateRepairEstimateData,
   section1,
   section2,
+  sections, // New prop for array of sections
   notes,
   dataSourceUrl
 }) => {
   const [localData, setLocalData] = useState<RepairEstimateData>(repairEstimateData);
   const tableRef = useRef<HTMLDivElement>(null);
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+  
+  // State for dragging tables (preview mode only)
+  const [draggingTableId, setDraggingTableId] = useState<string | null>(null);
+  const [dragStart, setDragStart] = useState({ y: 0 });
+  const [customPositions, setCustomPositions] = useState<Record<string, number>>({});
 
   // Sync local state with prop changes
   useEffect(() => {
     setLocalData(repairEstimateData);
   }, [repairEstimateData]);
   
-  // Both tables on same page with dynamic heights and individual totals
+  // Build sections array: use sections prop if provided, otherwise fall back to section1/section2 for backward compatibility
+  const allSections: RecommendationSection[] = sections && sections.length > 0
+    ? sections
+    : (() => {
   const effectiveSection1: RecommendationSection = {
-    title: section1?.title ?? 'Recommendations',
+          title: section1?.title ?? 'Repair Estimate#1',
     rows: (section1?.rows && section1.rows.length > 0)
       ? section1.rows
       : (repairEstimateData?.rows || [])
   };
+        const sectionsArray: RecommendationSection[] = [effectiveSection1];
+        if (section2 && section2.rows && section2.rows.length > 0) {
+          sectionsArray.push(section2);
+        }
+        return sectionsArray;
+      })();
+  
+  // For backward compatibility, keep effectiveSection1 and effectiveSection2
+  const effectiveSection1: RecommendationSection = allSections[0] || {
+    title: 'Repair Estimate#1',
+    rows: repairEstimateData?.rows || []
+  };
+  const effectiveSection2: RecommendationSection | undefined = allSections.length > 1 ? allSections[1] : undefined;
 
-  const effectiveSection2: RecommendationSection | undefined = (section2 && section2.rows && section2.rows.length > 0)
-    ? section2
-    : undefined;
+  // Build deterministic pagination structure
+  const buildEstimatePages = (sections: RecommendationSection[], hasNotes: boolean): EstimatePage[] => {
+    const SECTIONS_PER_PAGE = 3;
+    const pages: EstimatePage[] = [];
+    const totalSections = sections.length;
+    const hasMultipleSections = totalSections > 1;
+    
+    if (totalSections === 0) {
+      // No sections - just notes page if notes exist
+      if (hasNotes) {
+        pages.push({
+          sections: [],
+          showSummary: false,
+          showNotes: true
+        });
+      }
+      return pages;
+    }
+    
+    // Calculate how many pages we need for sections
+    const sectionPages = Math.ceil(totalSections / SECTIONS_PER_PAGE);
+    
+    // Determine when summary+notes should appear together
+    // Rules:
+    // - 1-2 sections: summary+notes on same page as sections
+    // - 3 sections: summary+notes on separate page (page 2)
+    // - 4-5 sections: summary+notes on last section page (page 2)
+    // - 6+ sections: summary+notes on separate page after all sections
+    const summaryNotesOnLastSectionPage = totalSections <= 2 || (totalSections >= 4 && totalSections <= 5);
+    const summaryNotesOnSeparatePage = totalSections === 3 || totalSections >= 6;
+    
+    // Add pages for sections (up to 3 per page)
+    for (let i = 0; i < sectionPages; i++) {
+      const startIndex = i * SECTIONS_PER_PAGE;
+      const endIndex = Math.min(startIndex + SECTIONS_PER_PAGE, totalSections);
+      const pageSections = sections.slice(startIndex, endIndex);
+      const isLastSectionPage = i === sectionPages - 1;
+      
+      pages.push({
+        sections: pageSections,
+        showSummary: hasMultipleSections && isLastSectionPage && summaryNotesOnLastSectionPage,
+        showNotes: hasNotes && ((isLastSectionPage && summaryNotesOnLastSectionPage) || (!hasMultipleSections && totalSections === 1))
+      });
+    }
+    
+    // Add summary + notes page if needed (for 3, 6+ sections)
+    if (hasMultipleSections && summaryNotesOnSeparatePage) {
+      pages.push({
+        sections: [],
+        showSummary: true,
+        showNotes: hasNotes
+      });
+    }
+    
+    return pages;
+  };
+  
+  const estimatePages = buildEstimatePages(allSections, !!notes);
+  const currentPage = estimatePages[currentEstimatePage - 1] || estimatePages[0] || { sections: [], showSummary: false, showNotes: false };
+  const sectionsOnCurrentPage = currentPage.sections;
+  const showSummaryOnCurrentPage = currentPage.showSummary;
+  const showNotesOnCurrentPage = currentPage.showNotes;
 
-  // Calculate dynamic table heights
+  // Calculate dynamic table heights (still needed for rendering, but not for pagination)
   const calculateTableHeight = (rows: RepairEstimateRow[]) => {
     if (rows.length === 0) return 0;
     const headerHeight = 20; // Header row height
-    let totalRowHeight = 0;
+    let dataRowsHeight = 0;
     
     // Calculate height for each row based on content
     rows.forEach(row => {
@@ -104,14 +193,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
       
       const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
       const rowHeight = 20 * maxRowsNeeded; // 20px per content row
-      totalRowHeight += rowHeight;
+      dataRowsHeight += rowHeight;
     });
     
-    return headerHeight + totalRowHeight;
+    // Include total row height (20px) if there are rows
+    const totalRowHeight = rows.length > 0 ? 20 : 0;
+    return headerHeight + dataRowsHeight + totalRowHeight;
   };
 
-  const section1Height = calculateTableHeight(effectiveSection1.rows);
-  const section2Height = effectiveSection2 ? calculateTableHeight(effectiveSection2.rows) : 0;
+  // Heights are calculated in sectionHeights array above
 
   // Calculate dynamic Total column width based on maximum total value for a section
   const calculateTotalColumnWidth = (rows: RepairEstimateRow[]) => {
@@ -148,26 +238,20 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
     return Math.max(valueWidth, minWidth);
   };
 
-  // Calculate Total column width for summary table (combines both sections)
+  // Calculate Total column width for summary table (combines all sections)
   const calculateSummaryTotalColumnWidth = () => {
     const minWidth = 60;
     const charWidth = 8;
     const padding = 16;
     
-    // Calculate totals for both sections
-    const sum1 = (effectiveSection1.rows || []).reduce((sum, row) => {
+    // Calculate grand total for all sections
+    const grandTotal = allSections.reduce((sum, section) => {
+      return sum + (section.rows || []).reduce((sectionSum, row) => {
       const unitPrice = parseFloat(row.unit) || 0;
       const price = parseFloat(row.price) || 0;
-      return sum + (unitPrice * price);
+        return sectionSum + (unitPrice * price);
     }, 0);
-    
-    const sum2 = (effectiveSection2?.rows || []).reduce((sum, row) => {
-      const unitPrice = parseFloat(row.unit) || 0;
-      const price = parseFloat(row.price) || 0;
-      return sum + (unitPrice * price);
     }, 0);
-    
-    const grandTotal = sum1 + sum2;
     
     // Format the number and calculate width needed
     const formattedValue = grandTotal.toFixed(2);
@@ -177,67 +261,200 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
     return Math.max(valueWidth, minWidth);
   };
   
-  const section1TotalWidth = calculateTotalColumnWidth(effectiveSection1.rows);
-  const section2TotalWidth = effectiveSection2 ? calculateTotalColumnWidth(effectiveSection2.rows) : 60;
-  const summaryTotalWidth = calculateSummaryTotalColumnWidth();
+  // Calculate widths and heights for all sections
+  const sectionHeights = allSections.map(section => calculateTableHeight(section.rows));
+  const sectionTotalWidths = allSections.map(section => calculateTotalColumnWidth(section.rows));
+  const sectionPriceWidths = sectionTotalWidths.map(width => Math.max(60, Math.ceil(width / 2)));
   
-  // Price column width is half of total column width for each section
-  const section1PriceWidth = Math.max(60, Math.ceil(section1TotalWidth / 2));
-  const section2PriceWidth = Math.max(60, Math.ceil(section2TotalWidth / 2));
+  // For backward compatibility
+  const section1TotalWidth = sectionTotalWidths[0] || 60;
+  const section2TotalWidth = sectionTotalWidths[1] || 60;
+  const section1PriceWidth = sectionPriceWidths[0] || 60;
+  const section2PriceWidth = sectionPriceWidths[1] || 60;
+  const section1Height = sectionHeights[0] || 0;
+  const section2Height = sectionHeights[1] || 0;
+  
+  const summaryTotalWidth = calculateSummaryTotalColumnWidth();
   const summaryPriceWidth = Math.max(60, Math.ceil(summaryTotalWidth / 2));
   const GAP_BETWEEN_TABLES = 80; // Base gap between tables
 
-  // Dynamic positions
-  const section1Top = 150;
-  // If only one section, start table at 170px (no title, but space from header)
-  // If section 2 exists, start at 180px (30px gap for title)
-  const section1TableTop = effectiveSection2 ? 180 : 170;
+  // Calculate positions for all sections dynamically
+  // Note: Positions are calculated globally, but pagination will reset positions per page
+  const calculateSectionPositions = () => {
+    const positions: Array<{ top: number; tableTop: number }> = [];
+    let currentTop = 150;
+    
+    allSections.forEach((section, index) => {
+      const showTitle = allSections.length > 1; // Show title if more than one section
+      const sectionTop = currentTop;
+      const sectionTableTop = showTitle ? sectionTop + 30 : sectionTop + 20; // 30px gap for title, 20px if no title
+      
+      positions.push({ top: sectionTop, tableTop: sectionTableTop });
+      
+      // Calculate next section position
+      if (index < allSections.length - 1) {
+        const extraSpacing = Math.min(section.rows.length * 2, 30);
+        currentTop = sectionTableTop + sectionHeights[index] + GAP_BETWEEN_TABLES + extraSpacing;
+      }
+    });
+    
+    return positions;
+  };
   
-  // When Section 2 exists, position it below Section 1 with dynamic spacing
-  const extraSpacing = Math.min(effectiveSection1.rows.length * 2); // Max 30px extra spacing
-  const section2Top = effectiveSection2 ? (section1Top + section1Height + GAP_BETWEEN_TABLES + extraSpacing) : 150;
-  const section2TableTop = section2Top + 30; // 30px gap between title and table
+  const sectionPositions = calculateSectionPositions();
   
-  // Summary table position (only when both sections exist)
-  const summaryTop = effectiveSection2 ? (section2Top + section2Height + GAP_BETWEEN_TABLES + extraSpacing + 10) : 0;
-  const summaryTableTop = summaryTop + 30; // 30px gap between title and table
+  // For backward compatibility (used in legacy rendering)
+  const section1Top = sectionPositions[0]?.top || 150;
+  const section1TableTop = sectionPositions[0]?.tableTop || (allSections.length > 1 ? 180 : 170);
+  const section2Top = sectionPositions[1]?.top || 150;
+  const section2TableTop = sectionPositions[1]?.tableTop || 180;
   
-  // Check if summary table needs to be moved to next page
-  const SUMMARY_PAGE_THRESHOLD = 580; // Move summary to next page if it would exceed this
-  const summaryNeedsNewPage = summaryTop > SUMMARY_PAGE_THRESHOLD;
+  // Calculate positions for sections on current page (for rendering only)
+  const currentPageSectionPositions: Array<{
+    section: RecommendationSection;
+    position: { top: number; tableTop: number };
+    height: number;
+    totalWidth: number;
+    priceWidth: number;
+    tableId: string;
+  }> = [];
   
-  // Calculate summary table height (fixed height for summary table)
-  const SUMMARY_TABLE_HEIGHT = 80; // Approximate height of summary table (3 rows + header)
+  const showTitle = allSections.length > 1;
+  let currentPageTop = 150; // Start from top of page
   
-  // Determine if summary should be shown on current page
-  const showSummaryOnCurrentPage = effectiveSection2 && !summaryNeedsNewPage;
+  sectionsOnCurrentPage.forEach((section, localIndex) => {
+    // Find global index of this section
+    const globalIndex = allSections.findIndex(s => s === section);
+    const tableId = `section-${globalIndex}`;
+    
+    // Use custom position if available (preview mode only), otherwise use calculated position
+    // Custom position stores the table top position (not section top)
+    const customTableTop = !isPDF && customPositions[tableId] !== undefined ? customPositions[tableId] : null;
+    let sectionTop = currentPageTop;
+    let sectionTableTop = showTitle ? sectionTop + 30 : sectionTop + 20;
+    
+    if (customTableTop !== null) {
+      // Custom position is for table top, calculate section top from it
+      sectionTableTop = customTableTop;
+      sectionTop = showTitle ? sectionTableTop - 30 : sectionTableTop - 20;
+    }
+    
+    currentPageSectionPositions.push({
+      section,
+      position: { top: sectionTop, tableTop: sectionTableTop },
+      height: sectionHeights[globalIndex] || 0,
+      totalWidth: sectionTotalWidths[globalIndex] || 60,
+      priceWidth: sectionPriceWidths[globalIndex] || 60,
+      tableId
+    });
+    
+    // Calculate next section position on this page (if there is one)
+    if (localIndex < sectionsOnCurrentPage.length - 1) {
+      const extraSpacing = Math.min(section.rows.length * 2, 30);
+      // If using custom position, calculate next position from this table's bottom
+      // Otherwise use calculated position
+      currentPageTop = sectionTableTop + (sectionHeights[globalIndex] || 0) + GAP_BETWEEN_TABLES + extraSpacing;
+    }
+  });
   
-  // Determine if this is a summary-only page
-  const isSummaryOnlyPage = effectiveSection2 && summaryNeedsNewPage && (currentEstimatePage || 1) > 1;
+  // Calculate positions for summary and notes (for rendering only)
+  // Calculate actual summary table height based on number of sections
+  // Summary table has: header (20px) + one row per section (20px each) + grand total row (20px)
+  // Adding extra buffer for preview mode where flex display might add slight extra height
+  const actualSummaryTableHeight = allSections.length > 1 
+    ? 20 + (allSections.length * 20) + 20 + (isPDF ? 0 : Math.max(0, allSections.length - 5) * 2) // header + section rows + grand total + buffer for many sections
+    : 0;
   
-  // Notes section pagination logic - Notes are always visible when present
-  const NOTES_HEIGHT = notes ? (Math.ceil((notes.length || 0) / 80) * 20 + 40) : 0; // Approximate height based on text length
+  const summaryTableId = 'summary-table';
+  const notesTableId = 'notes-section';
   
-  // Calculate notes position based on what's shown on current page
+  let summaryTop = 0;
+  let summaryTableTop = 0;
   let notesTop = 0;
-  if (showSummaryOnCurrentPage) {
-    // Notes below summary table
-    notesTop = summaryTableTop + SUMMARY_TABLE_HEIGHT + 25;
-  } else if (isSummaryOnlyPage) {
-    // Notes below summary table on separate page
-    notesTop = 270; // Position below summary table on separate page
+  
+  if (showSummaryOnCurrentPage || showNotesOnCurrentPage) {
+    if (sectionsOnCurrentPage.length > 0) {
+      // Summary/notes below last section on this page
+      const lastPos = currentPageSectionPositions[currentPageSectionPositions.length - 1];
+      const lastSectionBottom = lastPos.position.tableTop + lastPos.height;
+      // Use custom position if available (preview mode only)
+      const customSummaryTop = !isPDF && customPositions[summaryTableId] !== undefined 
+        ? customPositions[summaryTableId] 
+        : lastSectionBottom + GAP_BETWEEN_TABLES;
+      summaryTop = customSummaryTop;
   } else {
-    // Notes below Section 2 or Section 1 if no Section 2
-    const lastSectionTop = effectiveSection2 ? section2Top : section1Top;
-    const lastSectionHeight = effectiveSection2 ? section2Height : section1Height;
-    notesTop = lastSectionTop + lastSectionHeight + GAP_BETWEEN_TABLES + 30;
+      // Summary/notes only page (no sections)
+      const customSummaryTop = !isPDF && customPositions[summaryTableId] !== undefined 
+        ? customPositions[summaryTableId] 
+        : 150;
+      summaryTop = customSummaryTop;
+    }
+    summaryTableTop = summaryTop + 30; // 30px gap for summary title
+    
+    // Use custom notes position if available
+    const customNotesTop = !isPDF && customPositions[notesTableId] !== undefined 
+      ? customPositions[notesTableId] 
+      : null;
+    
+    notesTop = customNotesTop !== null
+      ? customNotesTop
+      : (showSummaryOnCurrentPage 
+        ? summaryTableTop + actualSummaryTableHeight + (allSections.length > 9 ? 40 : 25) // Below summary (using actual height, more space for many sections)
+        : summaryTop); // At top if no summary
   }
   
-  const NOTES_PAGE_THRESHOLD = 720; // Move notes to next page if it would exceed this
-  const notesNeedsNewPage = notes && notesTop > NOTES_PAGE_THRESHOLD;
-  
-  // Determine if this is a notes-only page (when notes don't fit with other content)
-  const isNotesOnlyPage = notes && notesNeedsNewPage && (currentEstimatePage || 1) > 1;
+  const isSummaryOnlyPage = sectionsOnCurrentPage.length === 0 && (showSummaryOnCurrentPage || showNotesOnCurrentPage);
+
+  // Drag handlers for tables (preview mode only)
+  const handleTableMouseDown = (e: React.MouseEvent, tableId: string, currentTop: number) => {
+    if (isPDF) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingTableId(tableId);
+    const rect = pageContainerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setDragStart({
+        y: e.clientY - rect.top - currentTop
+      });
+    }
+  };
+
+  // Global mouse move handler for dragging tables
+  useEffect(() => {
+    if (!draggingTableId || isPDF) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!pageContainerRef.current || !draggingTableId) return;
+      const rect = pageContainerRef.current.getBoundingClientRect();
+      
+      const newTop = e.clientY - rect.top - dragStart.y;
+      
+      // Constrain to page bounds
+      const minTop = 100; // Below header
+      const maxTop = 750; // Above bottom
+      
+      const constrainedTop = Math.max(minTop, Math.min(maxTop, newTop));
+      
+      setCustomPositions(prev => ({
+        ...prev,
+        [draggingTableId]: constrainedTop
+      }));
+    };
+
+    const handleMouseUp = () => {
+      if (draggingTableId) {
+        setDraggingTableId(null);
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingTableId, dragStart, isPDF]);
 
   // Helper to sync local and parent data
   const updateLocalData = (newData: RepairEstimateData) => {
@@ -249,7 +466,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
 
   // Single return for both PDF and preview
   return (
-    <div className={styles.page}>
+    <div className={styles.page} ref={pageContainerRef}>
       <div className={styles.overlapWrapper}>
         <div className={styles.overlap}>
           {/* Header Section */}
@@ -270,30 +487,52 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
       
     
 
-          {/* Render Section 1 - Only show if not summary-only page or notes-only page */}
-          {!isSummaryOnlyPage && !isNotesOnlyPage && effectiveSection1.rows.length > 0 && (
-            <>
-              {/* Section 1 Title - Only show if there are 2 sections */}
-              {effectiveSection2 && (
-                <div style={{ position: 'absolute', top: `${section1Top}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
-                  {effectiveSection1.title}
+          {/* Render all sections on current page */}
+          {sectionsOnCurrentPage.length > 0 && currentPageSectionPositions.map((sectionData, localIndex) => {
+            const section = sectionData.section;
+            const pos = sectionData.position;
+            const sectionHeight = sectionData.height;
+            const sectionTotalWidth = sectionData.totalWidth;
+            const sectionPriceWidth = sectionData.priceWidth;
+            const showTitle = allSections.length > 1;
+            
+            return (
+              <React.Fragment key={section.title || `section-${localIndex}`}>
+                {/* Section Title - Only show if there are multiple sections - Moves with table when dragged */}
+                {showTitle && (
+                  <div 
+                    style={{ 
+                      position: 'absolute', 
+                      top: `${pos.top}px`, 
+                      left: '29px', 
+                      right: '29px', 
+                      fontSize: '14px', 
+                      fontWeight: 600,
+                      pointerEvents: 'none' // Don't interfere with table dragging
+                    }}
+                  >
+                    {section.title}
                 </div>
               )}
 
-              {/* Section 1 Table */}
-          <div style={{ 
+                {/* Section Table - Draggable in preview mode */}
+          <div 
+            style={{ 
             position: 'absolute', 
-                top: `${section1TableTop}px`, 
+              top: `${pos.tableTop}px`, 
             left: '29px', 
             right: '29px',    
             fontSize: '12px',
-            fontFamily: 'Inter, Arial, sans-serif'
-          }}>
+              fontFamily: 'Inter, Arial, sans-serif',
+              cursor: !isPDF ? (draggingTableId === sectionData.tableId ? 'grabbing' : 'grab') : 'default'
+            }}
+            onMouseDown={!isPDF ? (e) => handleTableMouseDown(e, sectionData.tableId, pos.tableTop) : undefined}
+          >
             <div 
-              ref={tableRef}
+                    ref={localIndex === 0 ? tableRef : null}
               style={{ 
                 display: 'grid',
-                gridTemplateColumns: `3fr 50px ${section1PriceWidth}px ${section1TotalWidth}px`,
+                      gridTemplateColumns: `3fr 50px ${sectionPriceWidth}px ${sectionTotalWidth}px`,
                 gap: '0px',
                 backgroundColor:'#722420 ',
               }}
@@ -402,7 +641,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 }}>Total</div>
               </div>
               {/* Data Rows */}
-                  {effectiveSection1.rows.map((row, index) => {
+                    {section.rows.map((row: RepairEstimateRow, rowIndex: number) => {
                 const unitPrice = parseFloat(row.unit) || 0;
                 const price = parseFloat(row.price) || 0;
                 const total = unitPrice * price;
@@ -413,23 +652,19 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   const wordCount = text.split(' ').length;
                   const charCount = text.length;
                   
-                  // Calculate rows needed based on multiple factors
                   let rowsNeeded = 1;
                   
-                  // Factor in line breaks
                   if (lines > 1) {
                     rowsNeeded = Math.max(rowsNeeded, lines);
                   }
                   
-                  // Factor in character count (roughly 50 chars per row)
                   const charRows = Math.ceil(charCount / baseLength);
                   rowsNeeded = Math.max(rowsNeeded, charRows);
                   
-                  // Factor in word count (roughly 8 words per row)
                   const wordRows = Math.ceil(wordCount / 8);
                   rowsNeeded = Math.max(rowsNeeded, wordRows);
                   
-                  return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                        return Math.min(rowsNeeded, 4);
                 };
                 
                 const descriptionRows = calculateRowsNeeded(row.description);
@@ -439,18 +674,12 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
                 const isLongContent = maxRowsNeeded > 1;
                 const rowSpan = maxRowsNeeded;
-
-                // Calculate proper height for PDF rendering to prevent overlaps
-                const baseRowHeight = isPDF ? 14 : 14;
-                const calculatedHeight = baseRowHeight * rowSpan;
-                
-                // Special height calculation for description column (taller for better text display)
                 const descriptionHeight = isPDF ? (20 * rowSpan) : (20 * rowSpan);
 
                 return (
                   <div key={row.id} style={{ display: 'contents' }}>
                     <div style={{
-                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                            backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: `${descriptionHeight}px`,
@@ -483,7 +712,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       {row.description}
                     </div>
                     <div style={{
-                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                            backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: `${descriptionHeight}px`,
@@ -515,10 +744,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       {row.unit}
                     </div>
                     <div style={{
-                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                            backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
-                      minHeight: `${calculatedHeight}px`,
+                            minHeight: `${descriptionHeight}px`,
                       padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
@@ -547,10 +776,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       {row.price}
                     </div>
                     <div style={{
-                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                            backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: '600',
-                      minHeight: `${calculatedHeight}px`,
+                            minHeight: `${descriptionHeight}px`,
                       padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
@@ -587,8 +816,8 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 );
               })}
 
-                  {/* Section 1 Total */}
-                  {effectiveSection1.rows.length > 0 && (
+                    {/* Section Total */}
+                    {section.rows.length > 0 && (
                     <div style={{ display: 'contents' }}>
                       <div style={{
                         backgroundColor: '#722420',
@@ -677,7 +906,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         fontSize: '12px',
                         whiteSpace: 'nowrap'
                       }}>
-                        ${(effectiveSection1.rows || []).reduce((sum, row) => {
+                          ${(section.rows || []).reduce((sum: number, row: RepairEstimateRow) => {
                           const unitPrice = parseFloat(row.unit) || 0;
                           const price = parseFloat(row.price) || 0;
                           return sum + (unitPrice * price);
@@ -687,11 +916,432 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   )}
                 </div>
               </div>
+              </React.Fragment>
+            );
+          })}
+
+          {/* Legacy Section 1 - Keep for backward compatibility, only show if no new sections */}
+          {(!sections || sections.length === 0) && !isSummaryOnlyPage && effectiveSection1.rows.length > 0 && (
+            <>
+              {/* Section 1 Title - Only show if there are 2 sections */}
+              {effectiveSection2 && (
+                <div style={{ position: 'absolute', top: `${section1Top}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
+                  {effectiveSection1.title}
+              </div>
+              )}
+
+              {/* Section 1 Table */}
+              <div style={{ 
+                position: 'absolute', 
+                top: `${section1TableTop}px`, 
+                left: '29px', 
+                right: '29px',    
+                fontSize: '12px',
+                fontFamily: 'Inter, Arial, sans-serif'
+              }}>
+                <div 
+              ref={tableRef}
+                  style={{ 
+                    display: 'grid',
+                gridTemplateColumns: `3fr 50px ${section1PriceWidth}px ${section1TotalWidth}px`,
+                    gap: '0px',
+                    backgroundColor:'#722420 ',
+                  }}
+                >
+                  {/* Header Row */}
+                  <div style={{ display: 'contents' }}>
+                    <div style={{
+                      backgroundColor: '#722420',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      minHeight: isPDF ? '20px' : '20px',
+                      padding: isPDF ? '0px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        height: '20px',
+                        boxSizing: 'border-box',
+                        lineHeight: '1.0'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                  borderBottom: '1px solid #722420',
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal'
+                    }}>Description</div>
+                    <div style={{
+                      backgroundColor: '#722420',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      minHeight: isPDF ? '20px' : '20px',
+                      padding: isPDF ? '0px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        height: '20px',
+                        boxSizing: 'border-box',
+                        lineHeight: '1.0'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                  borderBottom: '1px solid #722420',
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal'
+                    }}>Unit</div>
+                    <div style={{
+                      backgroundColor: '#722420',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      minHeight: isPDF ? '20px' : '20px',
+                      padding: isPDF ? '0px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        height: '20px',
+                        boxSizing: 'border-box',
+                        lineHeight: '1.0'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                  borderBottom: '1px solid #722420',
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal'
+                    }}>Price</div>
+                    <div style={{
+                      backgroundColor: '#722420',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      minHeight: isPDF ? '20px' : '20px',
+                      padding: isPDF ? '0px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        height: '20px',
+                        boxSizing: 'border-box',
+                        lineHeight: '1.0'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                  borderBottom: '1px solid #722420',
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal'
+                    }}>Total</div>
+                  </div>
+                  {/* Data Rows */}
+                  {effectiveSection1.rows.map((row, index) => {
+                    const unitPrice = parseFloat(row.unit) || 0;
+                    const price = parseFloat(row.price) || 0;
+                    const total = unitPrice * price;
+                    
+                    // Calculate how many rows are needed based on content length
+                    const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                      const lines = text.split('\n').length;
+                      const wordCount = text.split(' ').length;
+                      const charCount = text.length;
+                      
+                      // Calculate rows needed based on multiple factors
+                      let rowsNeeded = 1;
+                      
+                      // Factor in line breaks
+                      if (lines > 1) {
+                        rowsNeeded = Math.max(rowsNeeded, lines);
+                      }
+                      
+                      // Factor in character count (roughly 50 chars per row)
+                      const charRows = Math.ceil(charCount / baseLength);
+                      rowsNeeded = Math.max(rowsNeeded, charRows);
+                      
+                      // Factor in word count (roughly 8 words per row)
+                      const wordRows = Math.ceil(wordCount / 8);
+                      rowsNeeded = Math.max(rowsNeeded, wordRows);
+                      
+                      return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                    };
+                    
+                    const descriptionRows = calculateRowsNeeded(row.description);
+                    const unitRows = calculateRowsNeeded(row.unit, 10);
+                    const priceRows = calculateRowsNeeded(row.price, 10);
+                    
+                    const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
+                    const isLongContent = maxRowsNeeded > 1;
+                    const rowSpan = maxRowsNeeded;
+
+                    // Calculate proper height for PDF rendering to prevent overlaps
+                    const baseRowHeight = isPDF ? 14 : 14;
+                    const calculatedHeight = baseRowHeight * rowSpan;
+                    
+                    // Special height calculation for description column (taller for better text display)
+                    const descriptionHeight = isPDF ? (20 * rowSpan) : (20 * rowSpan);
+
+                    return (
+                      <div key={row.id} style={{ display: 'contents' }}>
+                        <div style={{
+                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                          color: '#000000',
+                          fontWeight: 'normal',
+                          minHeight: `${descriptionHeight}px`,
+                          padding: isPDF ? '0px 8px' : '4px 8px',
+                          ...(isPDF ? {
+                            display: 'table-cell',
+                            verticalAlign: 'top',
+                            textAlign: 'left',
+                            lineHeight: '1.0',
+                            rowSpan: rowSpan,
+                            height: `${descriptionHeight}px`,
+                            boxSizing: 'border-box',
+                            paddingTop: '2px'
+                          } : {
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                        justifyContent: 'flex-start',
+                            textAlign: 'left',
+                            paddingTop: '2px'
+                          }),
+                          fontSize: '12px',
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          hyphens: 'auto',
+                          wordBreak: 'normal'
+                        }}>
+                          {row.description}
+                        </div>
+                        <div style={{
+                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                          color: '#000000',
+                          fontWeight: 'normal',
+                          minHeight: `${descriptionHeight}px`,
+                          padding: isPDF ? '0px 8px' : '4px 8px',
+                          ...(isPDF ? {
+                            display: 'table-cell',
+                            verticalAlign: 'middle',
+                            textAlign: 'center',
+                            height: `${descriptionHeight}px`,
+                            lineHeight: '1.0',
+                            boxSizing: 'border-box',
+                            paddingTop: '2px',
+                            rowSpan: rowSpan
+                          } : {
+                            display:  'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'center',
+                            textAlign: 'center'
+                          }),
+                          fontSize: '12px',
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          hyphens: 'auto',
+                          wordBreak: 'normal'
+                        }}>
+                          {row.unit}
+                        </div>
+                        <div style={{
+                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                          color: '#000000',
+                          fontWeight: 'normal',
+                          minHeight: `${calculatedHeight}px`,
+                          padding: isPDF ? '8px 8px' : '4px 8px',
+                          ...(isPDF ? {
+                            display: 'table-cell',
+                            verticalAlign: 'middle',
+                            textAlign: 'center',
+                            lineHeight: '1.0',
+                            height: `${descriptionHeight}px`,
+                            boxSizing: 'border-box',
+                            paddingTop: '2px',
+                            rowSpan: rowSpan
+                          } : {
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'center',
+                            textAlign: 'center'
+                          }),
+                          fontSize: '12px',
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          hyphens: 'auto',
+                          wordBreak: 'normal'
+                        }}>
+                          {row.price}
+                        </div>
+                        <div style={{
+                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                          color: '#000000',
+                          fontWeight: '600',
+                          minHeight: `${calculatedHeight}px`,
+                          padding: isPDF ? '8px 8px' : '4px 8px',
+                          ...(isPDF ? {
+                            display: 'table-cell',
+                            verticalAlign: 'middle',
+                            textAlign: 'center',
+                            lineHeight: '1.0',
+                            height: `${descriptionHeight}px`,
+                            boxSizing: 'border-box',
+                            paddingTop: '2px',
+                            rowSpan: rowSpan
+                          } : {
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'center',
+                            textAlign: 'center'
+                          }),
+                          fontSize: '12px',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                          overflow: 'hidden'
+                        }}>
+                          {total.toFixed(2)}
+                        </div>
+                        {/* Add empty rows for merged cells */}
+                        {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
+                          <div key={`empty-${i}`} style={{ display: 'contents' }}>
+                            <div style={{ display: 'none' }}></div>
+                            <div style={{ display: 'none' }}></div>
+                            <div style={{ display: 'none' }}></div>
+                            <div style={{ display: 'none' }}></div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+
+                  {/* Section 1 Total */}
+                  {effectiveSection1.rows.length > 0 && (
+                   <div style={{ display: 'contents' }}>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                     minHeight: isPDF ? '20px' : '20px',
+                     padding: '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: `${20}px`,
+                       boxSizing: 'border-box',
+                       paddingTop: '2px',
+                     } : {
+                       display: 'flex',
+                       alignItems: 'flex-start',
+                       justifyContent: 'center',
+                       textAlign: 'center'
+                     }),
+                     fontSize: '12px',
+                     wordWrap: 'break-word',
+                     overflowWrap: 'break-word',
+                     whiteSpace: 'normal'
+                   }}></div>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                       minHeight: isPDF ? '20px' : '20px',
+                     padding: '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: `${20}px`,
+                       boxSizing: 'border-box',
+                       paddingTop: '2px',
+                     } : {}),
+                   }}></div>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                     minHeight: isPDF ? '20px' : '20px',
+                     padding: isPDF ? '0px 8px' : '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: '20px',
+                       boxSizing: 'border-box',
+                       lineHeight: '1.0'
+                     } : {
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       textAlign: 'center'
+                     }),
+                     fontSize: '12px',
+                     wordWrap: 'break-word',
+                     overflowWrap: 'break-word',
+                     whiteSpace: 'normal'
+                   }}>
+                     TOTAL:
+                   </div>
+                   <div style={{
+                     backgroundColor: '#722420',
+                     color: 'white',
+                     fontWeight: 'bold',
+                     minHeight: isPDF ? '20px' : '20px',
+                     padding: isPDF ? '0px 8px' : '4px 8px',
+                     ...(isPDF ? {
+                       display: 'table-cell',
+                       verticalAlign: 'middle',
+                       textAlign: 'center',
+                       height: '20px',
+                       boxSizing: 'border-box',
+                       lineHeight: '1.0'
+                     } : {
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       textAlign: 'center'
+                     }),
+                     fontSize: '12px',
+                     whiteSpace: 'nowrap'
+                   }}>
+                        ${(effectiveSection1.rows || []).reduce((sum, row) => {
+                       const unitPrice = parseFloat(row.unit) || 0;
+                       const price = parseFloat(row.price) || 0;
+                       return sum + (unitPrice * price);
+                     }, 0).toFixed(2)}
+                   </div>
+                 </div>
+              )}
+            </div>
+          </div>
             </>
           )}
 
-          {/* Render Section 2 - Only show if not summary-only page or notes-only page */}
-          {!isSummaryOnlyPage && !isNotesOnlyPage && effectiveSection2 && effectiveSection2.rows.length > 0 && (
+          {/* Legacy Section 2 - Keep for backward compatibility, only show if no new sections */}
+          {(!sections || sections.length === 0) && !isSummaryOnlyPage && effectiveSection2 && effectiveSection2.rows.length > 0 && (
             <>
               {/* Section 2 Title */}
               <div style={{ position: 'absolute', top: `${section2Top}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
@@ -709,10 +1359,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               }}>
                 <div 
                   style={{ 
-                    display: 'grid',
+                  display: 'grid',
                     gridTemplateColumns: `3fr 50px ${section2PriceWidth}px ${section2TotalWidth}px`,
-                    gap: '0px',
-                    backgroundColor:'#722420 ',
+                  gap: '0px',
+                  backgroundColor:'#722420 ',
                   }}
                 >
                   {/* Header Row */}
@@ -862,10 +1512,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
 
                     return (
                       <div key={row.id} style={{ display: 'contents' }}>
-                        <div style={{
+                    <div style={{
                           backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
-                          color: '#000000',
-                          fontWeight: 'normal',
+                      color: '#000000',
+                      fontWeight: 'normal',
                           minHeight: `${descriptionHeight}px`,
                           padding: isPDF ? '0px 8px' : '4px 8px',
                           ...(isPDF ? {
@@ -1046,29 +1696,29 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                      backgroundColor: '#722420',
                      color: 'white',
                      fontWeight: 'bold',
-                     minHeight: isPDF ? '20px' : '20px',
-                     padding: isPDF ? '0px 8px' : '4px 8px',
-                     ...(isPDF ? {
-                       display: 'table-cell',
-                       verticalAlign: 'middle',
-                       textAlign: 'center',
-                       height: '20px',
-                       boxSizing: 'border-box',
-                       lineHeight: '1.0'
-                     } : {
-                       display: 'flex',
-                       alignItems: 'center',
-                       justifyContent: 'center',
-                       textAlign: 'center'
-                     }),
-                     fontSize: '12px',
-                     wordWrap: 'break-word',
-                     overflowWrap: 'break-word',
-                     whiteSpace: 'normal'
-                   }}>
+                      minHeight: isPDF ? '20px' : '20px',
+                      padding: isPDF ? '0px 8px' : '4px 8px',
+                      ...(isPDF ? {
+                        display: 'table-cell',
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        height: '20px',
+                        boxSizing: 'border-box',
+                        lineHeight: '1.0'
+                      } : {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }),
+                      fontSize: '12px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'normal'
+                    }}>
                      TOTAL:
-                   </div>
-                   <div style={{
+                    </div>
+                    <div style={{
                      backgroundColor: '#722420',
                      color: 'white',
                      fontWeight: 'bold',
@@ -1103,11 +1753,22 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
             </>
           )}
 
-          {/* Summary Table - Only show when both sections exist and fits on current page */}
-          {showSummaryOnCurrentPage && (
+          {/* Summary Table - Only show when more than one section exists, at the end after all tables */}
+          {showSummaryOnCurrentPage && allSections.length > 1 && (
             <>
-              {/* Summary Title */}
-              <div style={{ position: 'absolute', top: `${summaryTop}px`, left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
+              {/* Summary Title - Draggable in preview mode */}
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  top: `${summaryTop}px`, 
+                  left: '29px', 
+                  right: '29px', 
+                  fontSize: '14px', 
+                  fontWeight: 600,
+                  cursor: !isPDF ? (draggingTableId === summaryTableId ? 'grabbing' : 'grab') : 'default'
+                }}
+                onMouseDown={!isPDF ? (e) => handleTableMouseDown(e, summaryTableId, summaryTop) : undefined}
+              >
                 Summary
               </div>
 
@@ -1226,118 +1887,19 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     }}>Total</div>
                   </div>
 
-                  {/* Section 1 Total Row */}
-                  <div style={{ display: 'contents' }}>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: 'normal',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }),
-                      fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
-                    }}>
-                      {effectiveSection1.title} 
-                    </div>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: 'normal',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }),
-                      fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
-                    }}></div>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: 'normal',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }),
-                      fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
-                    }}></div>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: '600',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }),
-                      fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
-                    }}>
-                      ${(effectiveSection1.rows || []).reduce((sum, row) => {
+                  {/* Render all sections dynamically */}
+                  {allSections.map((section, sectionIndex) => {
+                    const sectionTotal = (section.rows || []).reduce((sum, row) => {
                         const unitPrice = parseFloat(row.unit) || 0;
                         const price = parseFloat(row.price) || 0;
                         return sum + (unitPrice * price);
-                      }, 0).toFixed(2)}
-                    </div>
-                  </div>
+                    }, 0);
+                    const isEven = sectionIndex % 2 === 0;
 
-                  {/* Section 2 Total Row */}
-                  <div style={{ display: 'contents' }}>
+                    return (
+                      <div key={sectionIndex} style={{ display: 'contents' }}>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1345,25 +1907,25 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'middle',
-                        textAlign: 'center',
+                            textAlign: 'left',
                         height: '20px',
                         boxSizing: 'border-box',
                         lineHeight: '1.0'
                       } : {
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
+                            justifyContent: 'flex-start',
+                            textAlign: 'left'
                       }),
                       fontSize: '12px',
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word',
                       whiteSpace: 'normal'
                     }}>
-                      {effectiveSection2?.title || 'Section 2'} 
+                          {section.title} 
                     </div>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1387,7 +1949,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       whiteSpace: 'normal'
                     }}></div>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1411,7 +1973,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       whiteSpace: 'normal'
                     }}></div>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: '600',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1432,13 +1994,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
-                      ${(effectiveSection2?.rows || []).reduce((sum, row) => {
-                        const unitPrice = parseFloat(row.unit) || 0;
-                        const price = parseFloat(row.price) || 0;
-                        return sum + (unitPrice * price);
-                      }, 0).toFixed(2)}
+                          ${sectionTotal.toFixed(2)}
                     </div>
                   </div>
+                    );
+                  })}
 
                   {/* Grand Total Row */}
                   <div style={{ display: 'contents' }}>
@@ -1538,29 +2098,22 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
-                      ${(() => {
-                        const sum1 = (effectiveSection1.rows || []).reduce((sum, row) => {
+                      ${allSections.reduce((sum, section) => {
+                        return sum + (section.rows || []).reduce((sectionSum, row) => {
                           const unitPrice = parseFloat(row.unit) || 0;
                           const price = parseFloat(row.price) || 0;
-                          return sum + (unitPrice * price);
+                          return sectionSum + (unitPrice * price);
                         }, 0);
-                        const sum2 = (effectiveSection2?.rows || []).reduce((sum, row) => {
-                          const unitPrice = parseFloat(row.unit) || 0;
-                          const price = parseFloat(row.price) || 0;
-                          return sum + (unitPrice * price);
-                        }, 0);
-                        return (sum1 + sum2).toFixed(2);
-                      })()}
+                      }, 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
               </div>
-            </>
-          )}
 
-          {/* Notes Section - Show when notes fit on current page */}
-          {notes && !notesNeedsNewPage && !isNotesOnlyPage && (
-            <div style={{ 
+              {/* Notes Section - Grouped with Summary - Draggable in preview mode */}
+              {notes && showNotesOnCurrentPage && (
+            <div 
+              style={{ 
               position: 'absolute', 
               top: `${notesTop}px`,
               left: '29px', 
@@ -1568,8 +2121,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               fontSize: '12px',
               fontFamily: 'Inter, Arial, sans-serif',
               color: '#000000',
-              lineHeight: '1.4'
-            }}>
+                lineHeight: '1.4',
+                cursor: !isPDF ? (draggingTableId === notesTableId ? 'grabbing' : 'grab') : 'default'
+              }}
+              onMouseDown={!isPDF ? (e) => handleTableMouseDown(e, notesTableId, notesTop) : undefined}
+            >
               <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
                 Notes:
               </div>
@@ -1583,20 +2139,33 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 })()}
               </div>
             </div>
+              )}
+            </>
           )}
 
-          {/* Summary Table on Separate Page - When summary doesn't fit on main page */}
-          {isSummaryOnlyPage && (
+          {/* Summary Table on Separate Page - When summary+notes don't fit on main page */}
+          {isSummaryOnlyPage && showSummaryOnCurrentPage && (
             <>
-              {/* Summary Title */}
-              <div style={{ position: 'absolute', top: '150px', left: '29px', right: '29px', fontSize: '14px', fontWeight: 600 }}>
+              {/* Summary Title - Draggable in preview mode */}
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  top: `${!isPDF && customPositions[summaryTableId] !== undefined ? customPositions[summaryTableId] : 150}px`, 
+                  left: '29px', 
+                  right: '29px', 
+                  fontSize: '14px', 
+                  fontWeight: 600,
+                  cursor: !isPDF ? (draggingTableId === summaryTableId ? 'grabbing' : 'grab') : 'default'
+                }}
+                onMouseDown={!isPDF ? (e) => handleTableMouseDown(e, summaryTableId, customPositions[summaryTableId] || 150) : undefined}
+              >
                 Summary
               </div>
 
               {/* Summary Table */}
               <div style={{ 
                 position: 'absolute', 
-                top: '180px', 
+                top: `${(!isPDF && customPositions[summaryTableId] !== undefined ? customPositions[summaryTableId] : 150) + 30}px`, 
                 left: '29px', 
                 right: '29px',    
                 fontSize: '12px',
@@ -1708,116 +2277,19 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     }}>Total</div>
                   </div>
 
-                  {/* Section 1 Total Row */}
-                  <div style={{ display: 'contents' }}>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: 'normal',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'left',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        textAlign: 'left'
-                      }),
-                      fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
-                    }}>
-                      {effectiveSection1.title} 
-                    </div>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: 'normal',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }),
-                      fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
-                    }}></div>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: 'normal',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }),
-                      fontSize: '12px',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      whiteSpace: 'normal'
-                    }}></div>
-                    <div style={{
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      fontWeight: '600',
-                      minHeight: isPDF ? '20px' : '20px',
-                      padding: isPDF ? '0px 8px' : '4px 8px',
-                      ...(isPDF ? {
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        height: '20px',
-                        boxSizing: 'border-box',
-                        lineHeight: '1.0'
-                      } : {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textAlign: 'center'
-                      }),
-                      fontSize: '12px',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      ${(effectiveSection1.rows || []).reduce((sum, row) => {
+                  {/* Render all sections dynamically */}
+                  {allSections.map((section, sectionIndex) => {
+                    const sectionTotal = (section.rows || []).reduce((sum, row) => {
                         const unitPrice = parseFloat(row.unit) || 0;
                         const price = parseFloat(row.price) || 0;
                         return sum + (unitPrice * price);
-                      }, 0).toFixed(2)}
-                    </div>
-                  </div>
+                    }, 0);
+                    const isEven = sectionIndex % 2 === 0;
 
-                  {/* Section 2 Total Row */}
-                  <div style={{ display: 'contents' }}>
+                    return (
+                      <div key={sectionIndex} style={{ display: 'contents' }}>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1840,10 +2312,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       overflowWrap: 'break-word',
                       whiteSpace: 'normal'
                     }}>
-                      {effectiveSection2?.title || 'Section 2'} 
+                          {section.title} 
                     </div>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1867,7 +2339,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       whiteSpace: 'normal'
                     }}></div>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: 'normal',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1891,7 +2363,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       whiteSpace: 'normal'
                     }}></div>
                     <div style={{
-                      backgroundColor: '#f8f9fa',
+                          backgroundColor: isEven ? '#ffffff' : '#f8f9fa',
                       color: '#000000',
                       fontWeight: '600',
                       minHeight: isPDF ? '20px' : '20px',
@@ -1912,13 +2384,11 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
-                      ${(effectiveSection2?.rows || []).reduce((sum, row) => {
-                        const unitPrice = parseFloat(row.unit) || 0;
-                        const price = parseFloat(row.price) || 0;
-                        return sum + (unitPrice * price);
-                      }, 0).toFixed(2)}
+                          ${sectionTotal.toFixed(2)}
                     </div>
                   </div>
+                    );
+                  })}
 
                   {/* Grand Total Row */}
                   <div style={{ display: 'contents' }}>
@@ -2018,38 +2488,36 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       fontSize: '12px',
                       whiteSpace: 'nowrap'
                     }}>
-                      ${(() => {
-                        const sum1 = (effectiveSection1.rows || []).reduce((sum, row) => {
+                      ${allSections.reduce((sum, section) => {
+                        return sum + (section.rows || []).reduce((sectionSum, row) => {
                           const unitPrice = parseFloat(row.unit) || 0;
                           const price = parseFloat(row.price) || 0;
-                          return sum + (unitPrice * price);
+                          return sectionSum + (unitPrice * price);
                         }, 0);
-                        const sum2 = (effectiveSection2?.rows || []).reduce((sum, row) => {
-                          const unitPrice = parseFloat(row.unit) || 0;
-                          const price = parseFloat(row.price) || 0;
-                          return sum + (unitPrice * price);
-                        }, 0);
-                        return (sum1 + sum2).toFixed(2);
-                      })()}
+                      }, 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
               </div>
-            </>
-          )}
 
-          {/* Notes Section - Show when summary is on separate page and notes fit */}
-          {isSummaryOnlyPage && notes && !notesNeedsNewPage && (
-            <div style={{ 
+              {/* Notes Section - Grouped with Summary on separate page - Draggable in preview mode */}
+              {notes && showNotesOnCurrentPage && (
+            <div 
+              style={{ 
               position: 'absolute', 
-              top: '270px', // Position below summary table on separate page
+                top: `${!isPDF && customPositions[notesTableId] !== undefined 
+                  ? customPositions[notesTableId] 
+                  : 180 + actualSummaryTableHeight + (allSections.length > 9 ? 40 : 25)}px`, // Position below summary table (using actual height, more space for many sections)
               left: '29px', 
               right: '29px',
               fontSize: '12px',
               fontFamily: 'Inter, Arial, sans-serif',
               color: '#000000',
-              lineHeight: '1.4'
-            }}>
+                lineHeight: '1.4',
+                cursor: !isPDF ? (draggingTableId === notesTableId ? 'grabbing' : 'grab') : 'default'
+              }}
+              onMouseDown={!isPDF ? (e) => handleTableMouseDown(e, notesTableId, customPositions[notesTableId] || (180 + actualSummaryTableHeight + (allSections.length > 9 ? 40 : 25))) : undefined}
+            >
               <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#722420' }}>
                 Notes:
               </div>
@@ -2063,13 +2531,15 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 })()}
               </div>
             </div>
+              )}
+            </>
           )}
 
-          {/* Notes Section - Show when notes need their own page */}
-          {isNotesOnlyPage && notes && (
+          {/* Notes Section - Show when no tables or only one section (no summary) */}
+          {notes && !isSummaryOnlyPage && !showSummaryOnCurrentPage && showNotesOnCurrentPage && (
             <div style={{ 
               position: 'absolute', 
-              top: '150px', // Position at top of page
+              top: `${notesTop}px`,
               left: '29px', 
               right: '29px',
               fontSize: '12px',
