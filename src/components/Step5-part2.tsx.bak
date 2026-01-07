@@ -698,9 +698,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         alignItems: 'flex-start',
                         justifyContent: 'flex-start',
                         textAlign: 'left',
-                        paddingTop: '2px',
-                        height: `${descriptionHeight}px`,
-                        boxSizing: 'border-box'
+                        paddingTop: '2px'
                       }),
                       fontSize: '12px',
                       wordWrap: 'break-word',
@@ -732,10 +730,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         display:  'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'center',
-                        textAlign: 'center',
-                        height: `${descriptionHeight}px`,
-                        boxSizing: 'border-box',
-                        paddingTop: '2px'
+                        textAlign: 'center'
                       }),
                       fontSize: '12px',
                       wordWrap: 'break-word',
@@ -753,7 +748,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       color: '#000000',
                       fontWeight: 'normal',
                             minHeight: `${descriptionHeight}px`,
-                      padding: '8px 8px',
+                      padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'middle',
@@ -767,10 +762,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'center',
-                        textAlign: 'center',
-                        height: `${descriptionHeight}px`,
-                        boxSizing: 'border-box',
-                        paddingTop: '2px'
+                        textAlign: 'center'
                       }),
                       fontSize: '12px',
                       wordWrap: 'break-word',
@@ -788,7 +780,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       color: '#000000',
                       fontWeight: '600',
                             minHeight: `${descriptionHeight}px`,
-                      padding: '8px 8px',
+                      padding: isPDF ? '8px 8px' : '4px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'middle',
@@ -802,10 +794,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'center',
-                        textAlign: 'center',
-                        height: `${descriptionHeight}px`,
-                        boxSizing: 'border-box',
-                        paddingTop: '2px'
+                        textAlign: 'center'
                       }),
                       fontSize: '12px',
                       whiteSpace: 'nowrap',
@@ -1180,7 +1169,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: 'normal',
                           minHeight: `${calculatedHeight}px`,
-                          padding: '8px 8px',
+                          padding: isPDF ? '8px 8px' : '4px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',
@@ -1212,7 +1201,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: '600',
                           minHeight: `${calculatedHeight}px`,
-                          padding: '8px 8px',
+                          padding: isPDF ? '8px 8px' : '4px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',
@@ -1593,7 +1582,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: 'normal',
                           minHeight: `${calculatedHeight}px`,
-                          padding: '8px 8px',
+                          padding: isPDF ? '8px 8px' : '4px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',
@@ -1625,7 +1614,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: '600',
                           minHeight: `${calculatedHeight}px`,
-                          padding: '8px 8px',
+                          padding: isPDF ? '8px 8px' : '4px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',

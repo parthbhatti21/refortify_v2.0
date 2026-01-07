@@ -2890,7 +2890,10 @@ const MultiStepForm: React.FC = () => {
       pageNumber > 4 + totalInvoicePages && pageNumber <= 4 + totalInvoicePages + totalRepairEstimatePages ?
       React.createElement(Step5Part2, { 
         isPDF: true, 
-        repairEstimateData: formData.repairEstimateData, 
+        repairEstimateData: formData.repairEstimateData,
+        sections: formData.recommendationSections && formData.recommendationSections.length > 0
+          ? formData.recommendationSections.map(s => ({ title: s.title, rows: s.rows }))
+          : undefined,
         section1: { title: formData.recommendationSection1Title || 'Repair Estimate#1', rows: formData.repairEstimateData?.rows || [] },
         section2: formData.showRecommendationSection2 ? { title: formData.recommendationSection2Title || 'Repair Estimate#2', rows: formData.recommendationSection2?.rows || [] } : undefined,
         currentEstimatePage: pageNumber - 4 - totalInvoicePages,
