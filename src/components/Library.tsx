@@ -31,11 +31,13 @@ const Library: React.FC = () => {
   // Supabase-driven client -> reports by date selection
   const [clients, setClients] = useState<Array<{ id: string; full_name: string; address?: string }>>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [reportDates, setReportDates] = useState<string[]>([]); // ISO date strings (YYYY-MM-DD)
+  const [reportDates, setReportDates] = useState<Array<{ date: string; pdfUploaded: boolean; pdfUrl: string | null }>>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [loadingSupabase, setLoadingSupabase] = useState(false);
   const selectedClient = clients.find(c => c.id === selectedClientId) || null;
   const [isEditing, setIsEditing] = useState(false);
+  // Draft reports for selected date
+  const [draftReports, setDraftReports] = useState<Array<{ id: string; created_at: string; pdf_uploaded: boolean }>>([]);
   // Sorting controls
   const [clientSort, setClientSort] = useState<'az' | 'za'>('az');
   const [dateSort, setDateSort] = useState<'recent' | 'oldest'>('recent');
@@ -184,7 +186,7 @@ const Library: React.FC = () => {
         
         const { data, error } = await supabase
           .from('reports')
-          .select('created_at, id, client_name')
+          .select('created_at, id, client_name, pdf_uploaded, pdf_url')
           .eq('client_id', selectedClientId)
           .order('created_at', { ascending: false });
         if (error) {
@@ -200,31 +202,42 @@ const Library: React.FC = () => {
           return;
         }
         
-        // Extract dates more robustly - handle both timestamp and date string formats
-        const uniqueDates = Array.from(new Set(
-          (data || [])
-            .map(r => {
-              const createdAt = (r as any).created_at;
-              if (!createdAt) {
-                console.warn('Report with null created_at:', r);
-                return null;
-              }
-              // Handle ISO string format
-              if (typeof createdAt === 'string') {
-                return createdAt.slice(0, 10);
-              }
-              // Handle Date object
-              if (createdAt instanceof Date) {
-                return createdAt.toISOString().slice(0, 10);
-              }
-              console.warn('Unexpected created_at format:', typeof createdAt, createdAt);
-              return null;
-            })
-            .filter(Boolean)
-        )) as string[];
+        // Group by date and track PDF upload status
+        const dateMap = new Map<string, { pdfUploaded: boolean; pdfUrl: string | null }>();
+        (data || []).forEach(r => {
+          const createdAt = (r as any).created_at;
+          if (!createdAt) {
+            console.warn('Report with null created_at:', r);
+            return;
+          }
+          
+          let dateStr: string;
+          if (typeof createdAt === 'string') {
+            dateStr = createdAt.slice(0, 10);
+          } else if (createdAt instanceof Date) {
+            dateStr = createdAt.toISOString().slice(0, 10);
+          } else {
+            console.warn('Unknown date format:', createdAt);
+            return;
+          }
+          
+          // Store the first report's PDF status for each date
+          if (!dateMap.has(dateStr)) {
+            dateMap.set(dateStr, {
+              pdfUploaded: (r as any).pdf_uploaded || false,
+              pdfUrl: (r as any).pdf_url || null
+            });
+          }
+        });
         
-        console.log('Unique dates extracted:', uniqueDates);
-        setReportDates(uniqueDates);
+        const datesWithStatus = Array.from(dateMap.entries()).map(([date, status]) => ({
+          date,
+          pdfUploaded: status.pdfUploaded,
+          pdfUrl: status.pdfUrl
+        }));
+        
+        console.log('Dates with PDF status:', datesWithStatus);
+        setReportDates(datesWithStatus);
       } catch (e: any) {
         console.error('Error loading report dates:', e);
         setError(e?.message || 'Unable to load report dates');
@@ -239,14 +252,16 @@ const Library: React.FC = () => {
   const fetchReportsByDate = async (dateISO: string) => {
     if (!dateISO) return;
     // Guard: only proceed if Supabase has yielded this date
-    if (!reportDates.includes(dateISO)) return;
+    if (!reportDates.find(r => r.date === dateISO)) return;
     const client = clients.find(c => c.id === selectedClientId);
     if (!client) return;
     const clientSlug = slugifyClientName(client.full_name || 'client');
     const prefix = `${clientSlug}/${dateISO}/`;
     setLoading(true);
     setError(null);
+    
     try {
+      // Fetch S3 files (complete reports with PDFs)
       const url = `${API_BASE}/directories?prefix=${encodeURIComponent(prefix)}`;
       const res = await fetch(url, { headers: { 'X-API-Key': API_KEY } });
       if (!res.ok) throw new Error(`Failed to load reports for ${dateISO}: ${res.status}`);
@@ -259,15 +274,61 @@ const Library: React.FC = () => {
       const filesResp = Array.isArray(data?.files) ? data.files : [];
       setFiles(filesResp as FileItem[]);
       setItems([]);
+      
+      // Fetch draft reports from Supabase for this date
+      // dateISO format is "YYYY-MM-DD" (e.g., "2026-01-11")
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (dateISO.includes('-')) {
+        // Format: "YYYY-MM-DD"
+        const [year, month, day] = dateISO.split('-');
+        startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        endDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day) + 1);
+      } else if (dateISO.includes('/')) {
+        // Format: "M/D/YYYY" (backward compatibility)
+        const [month, day, year] = dateISO.split('/');
+        startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        endDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day) + 1);
+      } else {
+        console.error('Unknown date format:', dateISO);
+        setDraftReports([]);
+        return;
+      }
+      
+      console.log('Parsing date:', dateISO);
+      console.log('Date range:', { 
+        start: startDate.toISOString(), 
+        end: endDate.toISOString(),
+        startValid: !isNaN(startDate.getTime()),
+        endValid: !isNaN(endDate.getTime())
+      });
+      
+      const { data: drafts, error: draftsError } = await supabase
+        .from('reports')
+        .select('id, created_at, pdf_uploaded')
+        .eq('client_id', selectedClientId)
+        .gte('created_at', startDate.toISOString())
+        .lt('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false });
+      
+      if (draftsError) {
+        console.error('Error fetching draft reports:', draftsError);
+        setDraftReports([]);
+      } else {
+        console.log('Draft reports fetched:', drafts);
+        setDraftReports(drafts || []);
+      }
     } catch (e: any) {
       setError(e?.message || 'Unable to load reports for date');
+      setDraftReports([]);
     } finally {
       setLoading(false);
     }
   };
 
   // Edit: verify report exists for selected client/date, then route to editor with context (no local cache of steps)
-  const handleEditReport = async () => {
+  const handleEditReport = async (reportId?: string) => {
     if (!selectedClientId || !selectedDate) return;
     setIsEditing(true);
     setError(null);
@@ -277,24 +338,33 @@ const Library: React.FC = () => {
       const userId = userData?.user?.id;
       if (!userId) throw new Error('Not signed in');
 
-      const start = new Date(selectedDate + 'T00:00:00Z').toISOString();
-      const end = new Date(new Date(selectedDate).getTime() + 24*60*60*1000).toISOString();
+      let finalReportId = reportId;
+      
+      // If no reportId provided, find the first report for the date (backward compatibility)
+      if (!finalReportId) {
+        const start = new Date(selectedDate + 'T00:00:00Z').toISOString();
+        const end = new Date(new Date(selectedDate).getTime() + 24*60*60*1000).toISOString();
 
-      const { data: reportsData, error: repErr } = await supabase
-        .from('reports')
-        .select('id, client_name, created_at')
-        .eq('client_id', selectedClientId)
-        .gte('created_at', start)
-        .lt('created_at', end)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (repErr) throw repErr;
-      const report = (reportsData || [])[0];
-      if (!report) throw new Error('Report not found for selected date');
-      const reportId = report.id as string;
+        const { data: reportsData, error: repErr } = await supabase
+          .from('reports')
+          .select('id, client_name, created_at')
+          .eq('client_id', selectedClientId)
+          .gte('created_at', start)
+          .lt('created_at', end)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (repErr) throw repErr;
+        const report = (reportsData || [])[0];
+        if (!report) throw new Error('Report not found for selected date');
+        finalReportId = report.id as string;
+      }
 
       // Only store minimal context; loader in form will fetch and map data
-      localStorage.setItem('edit_context', JSON.stringify({ clientId: selectedClientId, date: selectedDate }));
+      localStorage.setItem('edit_context', JSON.stringify({ 
+        clientId: selectedClientId, 
+        date: selectedDate,
+        reportId: finalReportId 
+      }));
       window.dispatchEvent(new CustomEvent('app:navigate', { detail: { to: '/' } }));
     } catch (e: any) {
       setError(e?.message || 'Failed to prepare report for editing');
@@ -368,8 +438,8 @@ const Library: React.FC = () => {
       : b.full_name.localeCompare(a.full_name)
     );
   const filteredDates = reportDates
-    .filter(d => d.includes(search))
-    .sort((a, b) => dateSort === 'recent' ? (a < b ? 1 : a > b ? -1 : 0) : (a < b ? -1 : a > b ? 1 : 0));
+    .filter(r => r.date.includes(search))
+    .sort((a, b) => dateSort === 'recent' ? (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) : (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   const filteredFiles = files
     .filter(f => f.key.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
@@ -507,16 +577,25 @@ const Library: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {filteredDates.map((d) => (
+                {filteredDates.map((dateObj) => {
+                  const hasPdf = dateObj.pdfUploaded ?? false;
+                  
+                  return (
                   <button
-                    key={d}
-                    onClick={() => { setSelectedDate(d); fetchReportsByDate(d); }}
-                    className={`p-3 rounded border text-sm text-left ${selectedDate === d ? 'border-[#722420] bg-[#f6eae9] text-[#722420]' : 'border-gray-200 hover:border-[#722420] hover:bg-[#f6eae9]'}`}
+                    key={dateObj.date}
+                    onClick={() => { setSelectedDate(dateObj.date); fetchReportsByDate(dateObj.date); }}
+                    className={`p-3 rounded border text-sm text-left ${selectedDate === dateObj.date ? 'border-[#722420] bg-[#f6eae9] text-[#722420]' : 'border-gray-200 hover:border-[#722420] hover:bg-[#f6eae9]'}`}
                     disabled={loadingSupabase}
                   >
-                    <div className="font-medium">{d}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium">{dateObj.date}</div>
+                      <div className={`text-xs px-2 py-0.5 rounded ${hasPdf ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {hasPdf ? '✓ PDF' : 'Draft'}
+                      </div>
+                    </div>
                   </button>
-                ))}
+                  );
+                })}
                 {filteredDates.length === 0 && (
                   <div className="text-sm text-gray-500">No report dates.</div>
                 )}
@@ -534,61 +613,129 @@ const Library: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Removed backend folder render section */}
-
-          {filteredFiles.length > 0 && (
+          {/* Show reports section when date is selected */}
+          {selectedDate && (
             <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-gray-900">Reports</h3>
                 <div className="flex items-center gap-3">
-                  <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5">
-                    <span className="font-medium">Sort</span>
-                    <select
-                      aria-label="Sort reports"
-                      value={fileSort}
-                      onChange={(e) => setFileSort(e.target.value as any)}
-                      className="bg-white text-gray-700 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#722420]"
-                    >
-                      <option value="recent">Recent first</option>
-                      <option value="oldest">Oldest first</option>
-                      <option value="az">A–Z</option>
-                      <option value="za">Z–A</option>
-                    </select>
-                  </div>
-                <span className="text-xs text-gray-500">{filteredFiles.length} file{filteredFiles.length === 1 ? '' : 's'}</span>
+                  {filteredFiles.length > 0 && (
+                    <>
+                      <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5">
+                        <span className="font-medium">Sort</span>
+                        <select
+                          aria-label="Sort reports"
+                          value={fileSort}
+                          onChange={(e) => setFileSort(e.target.value as any)}
+                          className="bg-white text-gray-700 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#722420]"
+                        >
+                          <option value="recent">Recent first</option>
+                          <option value="oldest">Oldest first</option>
+                          <option value="az">A–Z</option>
+                          <option value="za">Z–A</option>
+                        </select>
+                      </div>
+                      <span className="text-xs text-gray-500">{filteredFiles.length} file{filteredFiles.length === 1 ? '' : 's'}</span>
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="space-y-3">
-                {filteredFiles.map((f) => (
-                  <div key={f.key} className="p-3 border border-gray-200 rounded flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{f.key.split('/').slice(-1)[0]}</div>
-                      <div className="text-xs text-gray-500">{new Date(f.last_modified).toLocaleString()} • {(f.size / (1024 * 1024)).toFixed(2)} MB</div>
+              
+              {/* Show files if they exist (complete reports with PDFs) */}
+              {filteredFiles.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredFiles.map((f) => {
+                    // Get PDF upload status for selected date
+                    const dateInfo = reportDates.find(rd => rd.date === selectedDate);
+                    const hasPdfUploaded = dateInfo?.pdfUploaded ?? false;
+                    
+                    return (
+                    <div key={f.key} className="p-3 border border-gray-200 rounded flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 truncate">{f.key.split('/').slice(-1)[0]}</div>
+                        <div className="text-xs text-gray-500">{new Date(f.last_modified).toLocaleString()} • {(f.size / (1024 * 1024)).toFixed(2)} MB</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditReport()}
+                          className="px-3 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                          disabled={!selectedClientId || !selectedDate}
+                        >
+                          Edit
+                        </button>
+                        {hasPdfUploaded && (
+                          <>
+                            <button
+                              onClick={() => openPreview(f)}
+                              className="px-3 py-2 text-sm rounded-md border border-[#722420] text-[#722420] hover:bg-[#f6eae9]"
+                            >
+                              Preview
+                            </button>
+                            <button
+                              onClick={() => handleDownload(f)}
+                              className="px-3 py-2 text-sm rounded-md bg-[#722420] text-white hover:bg-[#5a1d1a]"
+                            >
+                              Download
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleEditReport}
-                        className="px-3 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        disabled={!selectedClientId || !selectedDate}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => openPreview(f)}
-                        className="px-3 py-2 text-sm rounded-md border border-[#722420] text-[#722420] hover:bg-[#f6eae9]"
-                      >
-                        Preview
-                      </button>
-                      <button
-                        onClick={() => handleDownload(f)}
-                        className="px-3 py-2 text-sm rounded-md bg-[#722420] text-white hover:bg-[#5a1d1a]"
-                      >
-                        Download
-                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Show draft reports when no S3 files exist */
+                <div className="space-y-3">
+                  {draftReports.length > 0 ? (
+                    draftReports.map((draft, index) => {
+                      // Safe date parsing with fallback
+                      let draftTime = 'Unknown time';
+                      let draftDate = '';
+                      try {
+                        const date = new Date(draft.created_at);
+                        if (!isNaN(date.getTime())) {
+                          draftTime = date.toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          });
+                          draftDate = date.toLocaleDateString('en-US');
+                        }
+                      } catch (e) {
+                        console.error('Error parsing date:', draft.created_at, e);
+                      }
+                      
+                      return (
+                        <div key={draft.id} className="p-3 border border-gray-200 rounded flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-gray-50">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium text-gray-900">Draft Report #{index + 1}</div>
+                              <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">No PDF</span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Created at {draftTime} • Report data saved • No PDF generated yet
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditReport(draft.id)}
+                              className="px-3 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                              disabled={!selectedClientId || !selectedDate}
+                            >
+                              Edit & Complete
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      No reports found for this date.
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </>

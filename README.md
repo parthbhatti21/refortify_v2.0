@@ -10,7 +10,7 @@ A comprehensive React-based application for generating professional chimney serv
 - **Step 3**: Service Report - Detailed service information and timeline
 - **Step 4**: Chimney Type - Masonry or prefabricated chimney selection
 - **Step 5**: Invoice Management - Dynamic invoice generation with multiple pages
-- **Step 6**: Project Images - Image selection and management (max 4 images)
+- **Step 6**: Project Images - Image selection and management (max 4 images) + **Device Upload** 📤
 - **Step 7**: Repair Estimate - Comprehensive repair cost estimation
 - **Step 8**: Inspection Images - Additional inspection image display
 - **Step 9**: Documentation - Chimney-specific documentation (3-4 parts based on chimney type)
@@ -19,18 +19,26 @@ A comprehensive React-based application for generating professional chimney serv
 ### Key Capabilities
 - **Data Scraping**: Automated data extraction from various sources
 - **Image Management**: Upload, crop, and organize service images
+- **Device Image Upload**: Upload images directly from your device in Step 6 ✨ NEW
+- **Auto-Save**: Automatic form data saving on every page navigation 💾 NEW
+- **Draft Management**: Save and resume incomplete reports 📝 NEW
+- **PDF Status Tracking**: Track which reports have PDFs uploaded 📊 NEW
 - **PDF Generation**: Professional PDF report generation with proper formatting
+- **Report Library**: View, edit, preview, and download all reports with smart filtering
 - **Responsive Design**: Mobile-friendly interface with adaptive layouts
 - **Real-time Preview**: Live preview of all steps before PDF generation
 - **Multi-page Support**: Dynamic page generation for invoices and documentation
+- **Supabase Integration**: Cloud database for report and client data storage
 
 ## Technology Stack
 
 - **React 18** with TypeScript
 - **Tailwind CSS** for styling
+- **Supabase** for database and authentication
 - **html2canvas** for PDF generation
 - **jsPDF** for PDF creation
 - **React Router** for navigation
+- **AWS S3** for PDF file storage
 - **Custom Components** for specialized functionality
 
 ## Project Structure
@@ -46,7 +54,7 @@ src/
 │   ├── Step4.module.css       # Chimney Type styles
 │   ├── Step5.tsx              # Invoice Management
 │   ├── Step5.module.css       # Invoice styles
-│   ├── Step6.tsx              # Project Images
+│   ├── Step6.tsx              # Project Images (with device upload)
 │   ├── Step6.module.css       # Image selection styles
 │   ├── Step7.tsx              # Repair Estimate
 │   ├── Step7.module.css       # Repair estimate styles
@@ -60,7 +68,10 @@ src/
 │   ├── MultiStepForm.tsx      # Main application logic
 │   ├── DataScraper.tsx        # Data extraction component
 │   ├── ImageCropper.tsx       # Image editing component
+│   ├── Library.tsx            # Report library and management
 │   └── FormInputs.tsx         # Reusable form components
+├── lib/
+│   └── supabaseClient.ts      # Supabase configuration
 ├── App.tsx                    # Main application component
 ├── App.css                    # Global styles
 ├── index.tsx                  # Application entry point
@@ -80,12 +91,38 @@ src/
    npm install
    ```
 
-3. **Start the development server**
+3. **Configure Environment Variables**
+   Create a `.env` file in the root directory:
+   ```env
+   # Supabase Configuration
+   REACT_APP_SUPABASE_URL=your_supabase_url
+   REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+   
+   # AWS S3 Configuration (for PDF storage)
+   REACT_APP_API_BASE=your_backend_api_url
+   REACT_APP_API_KEY=your_backend_api_key
+   
+   # Optional: Google Sheets Integration
+   REACT_APP_GOOGLE_SHEETS_API_KEY=your_google_sheets_api_key
+   REACT_APP_GOOGLE_SHEET_ID=your_google_sheet_id
+   REACT_APP_GOOGLE_SHEET_RANGE=Sheet1!A:C
+   
+   # Optional: PDF Settings
+   REACT_APP_PDF_QUALITY=0.78
+   ```
+
+4. **Run Database Migrations**
+   Execute the SQL migration in Supabase SQL Editor:
+   ```bash
+   # Run the contents of add_pdf_upload_status.sql
+   ```
+
+5. **Start the development server**
    ```bash
    npm start
    ```
 
-4. **Open your browser**
+6. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## Available Scripts
@@ -108,12 +145,57 @@ Ejects from Create React App to get full control over build configuration.
 ### Basic Workflow
 
 1. **Data Extraction**: Start by scraping client data or manually entering information
-2. **Step Navigation**: Use the step-by-step interface to complete all required information
-3. **Image Management**: Upload and organize service images (maximum 4 for project images)
-4. **Invoice Creation**: Generate detailed invoices with line items and pricing
-5. **Repair Estimates**: Create comprehensive repair cost estimates
-6. **Documentation**: Review chimney-specific documentation based on chimney type
-7. **PDF Generation**: Generate professional PDF reports for client delivery
+2. **Report Creation**: Report is automatically created in database after data extraction ✨ NEW
+3. **Step Navigation**: Use the step-by-step interface to complete all required information
+4. **Auto-Save**: Form data automatically saves when navigating between pages 💾 NEW
+5. **Image Management**: Upload from scraped data OR upload directly from device (maximum 4 total)
+6. **Invoice Creation**: Generate detailed invoices with line items and pricing
+7. **Repair Estimates**: Create comprehensive repair cost estimates
+8. **Documentation**: Review chimney-specific documentation based on chimney type
+9. **PDF Generation**: Generate professional PDF reports for client delivery
+10. **Report Library**: Access all reports, with draft and complete status indicators
+
+### New Features in v1.4
+
+#### 🖼️ Device Image Upload (Step 6)
+- Click "Upload from device" button to select images from your computer
+- Supports JPEG, PNG, WebP formats
+- Max 4 images total (scraped + uploaded combined)
+- Full crop, drag, and resize functionality
+- Remove unwanted images with one click
+- Images stored as base64 in database
+
+#### 💾 Auto-Save Functionality
+- **Automatic saving** on every page navigation
+- Works for Steps 1, 3, 5, 6, 7, 8
+- Console logs show save progress: "Auto-saving Step X data..." and "✓ Step X data saved"
+- Non-blocking - navigation continues even if save is in progress
+- Requires user authentication
+- Only works after report is created (post-data scraping)
+
+#### 📝 Draft Management
+- Reports created immediately after data scraping
+- Continue working on incomplete reports
+- All draft reports saved with timestamps
+- View all drafts in Library with "Draft" badge
+- Each draft editable individually
+
+#### 📊 PDF Status Tracking
+- Library shows visual badges:
+  - **Green "✓ PDF"**: Report has uploaded PDF
+  - **Gray "Draft"**: Report is incomplete (no PDF)
+- Smart button display:
+  - **Drafts**: Show "Edit & Complete" button only
+  - **Complete Reports**: Show Edit, Preview, and Download buttons
+- Multiple drafts per date supported
+- Each draft shows creation time (e.g., "Created at 3:30 PM")
+
+#### 📚 Enhanced Library
+- Filter reports by client and date
+- View all draft reports for a selected date
+- Individual editing of each draft
+- Preview and download complete reports
+- Responsive design with sort controls
 
 ### PDF Generation Features
 
@@ -122,144 +204,73 @@ Ejects from Create React App to get full control over build configuration.
 - **Image Optimization**: Compressed images for optimal file size
 - **Professional Formatting**: Consistent styling and layout across all pages
 - **Chimney Type Support**: Different documentation for masonry vs prefabricated chimneys
+- **Cloud Storage**: PDFs uploaded to AWS S3 with tracking in database
 
 ### Image Management
 
-- **Upload Support**: Drag-and-drop or click to upload images
+- **Scraped Images**: Automatically extracted from data scraping
+- **Device Upload**: Click to upload from your computer ✨ NEW
 - **Crop Functionality**: Built-in image cropping tool
 - **Format Support**: JPEG, PNG, and WebP formats
 - **Size Optimization**: Automatic compression for PDF generation
 - **Preview Mode**: Real-time preview of selected images
+- **Remove Feature**: One-click removal of unwanted images
 
 ## Configuration
 
 ### Environment Variables
-Create a `.env` file in the root directory for any environment-specific configurations:
+Create a `.env` file in the root directory for environment-specific configurations:
 
 ```env
-REACT_APP_API_URL=your_api_url_here
-REACT_APP_PDF_QUALITY=0.78
+# Supabase Configuration (Required)
+REACT_APP_SUPABASE_URL=your_supabase_url
+REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# AWS S3 Backend API (Required for PDF upload/download)
+REACT_APP_API_BASE=https://your-backend-url.com
+REACT_APP_API_KEY=your_backend_api_key
+
+# Google Sheets Integration (Optional)
 REACT_APP_GOOGLE_SHEETS_API_KEY=your_google_sheets_api_key
 REACT_APP_GOOGLE_SHEET_ID=your_google_sheet_id
 REACT_APP_GOOGLE_SHEET_RANGE=Sheet1!A:C
+
+# PDF Generation Settings (Optional)
+REACT_APP_PDF_QUALITY=0.78
 ```
 
-#### Google Sheets Integration Setup
+### Database Setup
 
-The application includes autocomplete functionality for repair estimate table entries (description, unit, price) that pulls data from a Google Sheet.
+#### Required Tables
+The application uses the following Supabase tables:
 
-**Two Authentication Methods Available:**
+1. **clients** - Client information
+2. **reports** - Main report table with PDF tracking
+3. **step1_json** - Step 1 form data
+4. **step3_json** - Step 3 form data
+5. **step5_invoice_json** - Invoice data
+6. **step5_part2_json** - Additional invoice data
+7. **step6_json** - Image data (base64)
+8. **step7_json** - Repair estimate data
+9. **step8_json** - Inspection image data
 
-##### Method 1: Backend Proxy with Service Account (Recommended)
+#### SQL Migration
+Run this SQL in Supabase SQL Editor to add PDF tracking:
 
-This method uses `credentials.json` on your backend server, keeping credentials secure.
+```sql
+-- Add PDF upload status tracking columns
+ALTER TABLE reports
+  ADD COLUMN IF NOT EXISTS pdf_uploaded BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS pdf_url TEXT,
+  ADD COLUMN IF NOT EXISTS pdf_uploaded_at TIMESTAMPTZ;
 
-**Backend Setup (Python/Node.js example):**
-
-1. **Place `credentials.json` in your backend project** (keep it secure, never commit to git)
-
-2. **Create a backend endpoint** `/google-sheets`:
-
-   **Python (Flask/FastAPI example):**
-   ```python
-   from google.oauth2 import service_account
-   from googleapiclient.discovery import build
-   import json
-   
-   # Load credentials
-   SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
-   credentials = service_account.Credentials.from_service_account_file(
-       'credentials.json', scopes=SCOPES
-   )
-   service = build('sheets', 'v4', credentials=credentials)
-   
-   @app.route('/google-sheets', methods=['GET'])
-   def get_google_sheet():
-       sheet_id = request.args.get('sheetId')
-       range_name = request.args.get('range', 'Sheet1!A:C')
-       
-       result = service.spreadsheets().values().get(
-           spreadsheetId=sheet_id,
-           range=range_name
-       ).execute()
-       
-       return jsonify({'values': result.get('values', [])})
-   ```
-
-   **Node.js (Express example):**
-   ```javascript
-   const { google } = require('googleapis');
-   const credentials = require('./credentials.json');
-   
-   const auth = new google.auth.GoogleAuth({
-     credentials,
-     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-   });
-   
-   app.get('/google-sheets', async (req, res) => {
-     const { sheetId, range = 'Sheet1!A:C' } = req.query;
-     const sheets = google.sheets({ version: 'v4', auth });
-     
-     const response = await sheets.spreadsheets.values.get({
-       spreadsheetId: sheetId,
-       range,
-     });
-     
-     res.json({ values: response.data.values || [] });
-   });
-   ```
-
-3. **Share your Google Sheet with the service account email**:
-   - Open your `credentials.json`
-   - Find the `client_email` field
-   - Share your Google Sheet with that email address (Viewer permission is enough)
-
-4. **Configure Environment Variables**:
-   ```env
-   REACT_APP_API_BASE=https://your-backend-url.com
-   REACT_APP_API_KEY=your_backend_api_key  # If your backend requires API key
-   REACT_APP_GOOGLE_SHEET_ID=your_sheet_id
-   REACT_APP_GOOGLE_SHEET_RANGE=Sheet1!A:C  # Optional
-   ```
-
-##### Method 2: Direct API Key (Simpler, but less secure)
-
-1. **Create a Google Sheet** with the following structure:
-   - Column A: Description
-   - Column B: Unit
-   - Column C: Price
-   - First row can be headers (will be automatically detected)
-
-2. **Share the Google Sheet**:
-   - Open your Google Sheet
-   - Click "Share" button
-   - Set sharing to "Anyone with the link can view"
-
-3. **Get the Sheet ID**:
-   - From the Google Sheet URL: `https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit`
-   - Copy the `SHEET_ID` part
-
-4. **Get Google Sheets API Key**:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select an existing one
-   - Enable the "Google Sheets API"
-   - Create credentials (API Key)
-   - Restrict the API key to "Google Sheets API" for security
-
-5. **Configure Environment Variables**:
-   ```env
-   REACT_APP_GOOGLE_SHEETS_API_KEY=your_api_key
-   REACT_APP_GOOGLE_SHEET_ID=your_sheet_id
-   REACT_APP_GOOGLE_SHEET_RANGE=Sheet1!A:C  # Optional
-   ```
-
-**Features:**
-- Autocomplete dropdown appears when typing in description, unit, or price fields
-- Selecting from description field auto-fills all three fields (description, unit, price)
-- Fields remain fully editable after selection
-- Keyboard navigation (Arrow keys, Enter, Escape) supported
-- Searches are case-insensitive and match partial text
-- Automatically falls back to API key method if backend proxy is unavailable
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_reports_client_date 
+  ON reports(client_id, created_at);
+  
+CREATE INDEX IF NOT EXISTS idx_reports_pdf_status 
+  ON reports(pdf_uploaded);
+```
 
 ### Customization
 - **Styling**: Modify Tailwind CSS classes or add custom CSS
@@ -267,6 +278,60 @@ This method uses `credentials.json` on your backend server, keeping credentials 
 - **PDF Settings**: Adjust PDF generation parameters in `MultiStepForm.tsx`
 
 ## Recent Updates
+
+### v1.4.0 - Draft Management & Auto-Save (January 2026) ✨ LATEST
+
+#### Major Features Added:
+1. **Device Image Upload** 📤
+   - Upload images directly from device in Step 6
+   - Full crop, drag, resize functionality
+   - Remove button for each image
+   - Max 4 images total (scraped + uploaded)
+
+2. **Auto-Save Functionality** 💾
+   - Automatic saving on page navigation
+   - Works for Steps 1, 3, 5, 6, 7, 8
+   - Console logging for debugging
+   - Non-blocking async operations
+
+3. **Early Report Creation** 📝
+   - Reports created immediately after data scraping
+   - Enables draft management
+   - Better state tracking with currentReportId
+
+4. **PDF Status Tracking** 📊
+   - Visual badges: "✓ PDF" (complete) or "Draft" (incomplete)
+   - Smart button display based on status
+   - Database columns: pdf_uploaded, pdf_url, pdf_uploaded_at
+
+5. **Multiple Drafts Support** 🗂️
+   - Display all draft reports for selected date
+   - Individual editing of each draft
+   - Creation timestamps for each draft
+   - Numbered draft cards: "Draft Report #1", "#2", etc.
+
+#### Bug Fixes:
+- Fixed date parsing error for draft reports
+- Fixed "Invalid time value" error in Library
+- Added support for both YYYY-MM-DD and M/D/YYYY date formats
+- Added safe date rendering with error handling
+
+#### Technical Improvements:
+- Enhanced Library.tsx with draft fetching
+- Improved handleEditReport to accept specific report IDs
+- Added comprehensive error handling
+- Enhanced debug logging
+
+#### Documentation Added:
+- `SUPABASE_STORAGE_DOCUMENTATION.md` - Database architecture
+- `REPORT_CREATION_FLOW.md` - Report creation workflow
+- `AUTO_SAVE_NAVIGATION.md` - Auto-save implementation
+- `PDF_UPLOAD_STATUS_COMPLETE.md` - PDF tracking feature
+- `DRAFT_REPORTS_FIX.md` - Draft display solution
+- `MULTIPLE_DRAFTS_DISPLAY.md` - Multiple drafts feature
+- `DATE_PARSING_FIX.md` - Date parsing bug fix
+- `TESTING_GUIDE.md` - Complete testing instructions
+- `COMPLETE_SUMMARY.md` - All features summary
 
 ### v2.0.0 - Major Refactoring
 - **Renamed Components**: All "Page" components renamed to "Step" for consistency
@@ -296,14 +361,105 @@ This method uses `credentials.json` on your backend server, keeping credentials 
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+
+### Development Guidelines
+- Follow existing code style and conventions
+- Add tests for new features
+- Update documentation for significant changes
+- Use TypeScript for type safety
+- Write meaningful commit messages
+
+## Troubleshooting
+
+### Common Issues
+
+#### Draft Reports Not Appearing
+**Problem:** Library shows date but no draft reports  
+**Solution:** 
+- Check browser console for "Draft reports fetched" log
+- Verify SQL migration was run
+- Ensure reports exist in database: `SELECT * FROM reports WHERE pdf_uploaded = false;`
+
+#### Auto-Save Not Working
+**Problem:** No auto-save console logs appear  
+**Solution:**
+- Verify user is authenticated
+- Check that report was created (after data scraping)
+- Look for errors in browser console
+- Verify currentReportId state exists
+
+#### "Invalid time value" Error
+**Problem:** Error when viewing drafts  
+**Solution:** Already fixed in v1.4.0 with safe date parsing
+
+#### Images Not Uploading
+**Problem:** Device image upload fails  
+**Solution:**
+- Check file format (JPEG, PNG, WebP only)
+- Verify file size is reasonable (<10MB recommended)
+- Check browser console for errors
+
+### Debug Mode
+
+Enable detailed logging by checking browser console:
+- Auto-save logs: "Auto-saving Step X data..."
+- Draft fetching: "Draft reports fetched: [...]"
+- Date parsing: "Parsing date: ..."
+
+## Documentation
+
+Comprehensive documentation is available in the project root:
+
+- **COMPLETE_SUMMARY.md** - Complete feature overview
+- **TESTING_GUIDE.md** - Step-by-step testing instructions
+- **CHANGES_SUMMARY.md** - Quick reference of all changes
+- **SUPABASE_STORAGE_DOCUMENTATION.md** - Database architecture
+- **REPORT_CREATION_FLOW.md** - Report creation workflow
+- **AUTO_SAVE_NAVIGATION.md** - Auto-save details
+- **PDF_UPLOAD_STATUS_COMPLETE.md** - PDF tracking implementation
+- **MULTIPLE_DRAFTS_DISPLAY.md** - Multiple drafts feature
+- **DATE_PARSING_FIX.md** - Date parsing solution
+- **DRAFT_REPORTS_FIX.md** - Draft display fix
+
+## Architecture
+
+### Data Flow
+```
+1. Data Scraping → Report Created (pdf_uploaded=false)
+2. Form Filling → Auto-save on navigation → Step JSON tables
+3. PDF Generation → Review in Step 9
+4. Approval → Upload to S3 → Update report (pdf_uploaded=true)
+5. Library → Display based on pdf_uploaded status
+```
+
+### Database Schema
+- **reports**: Main table (id, client_id, pdf_uploaded, pdf_url, created_at)
+- **clients**: Client information
+- **step*_json**: Form data for each step (JSONB format)
+
+### State Management
+- React hooks for local state
+- localStorage for edit context
+- Supabase for persistent data
+- currentReportId tracks active report
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Support
 
-For support and questions, please contact the development team or create an issue in the repository.
+For support and questions:
+- Check documentation files in project root
+- Review console logs for debugging
+- Create an issue in the repository
+- Contact the development team
 
 ---
+
+**Current Version:** 1.4.0  
+**Last Updated:** January 11, 2026  
+**Status:** Production Ready ✅  
+**Bundle Size:** 179.25 kB (gzipped)
 
 **Note**: This application is specifically designed for chimney service companies and includes industry-specific terminology and workflows. Customization may be required for other service industries.

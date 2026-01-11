@@ -1439,6 +1439,50 @@ const MultiStepForm: React.FC = () => {
     setFormData(prev => ({ ...prev, selectedImages }));
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentSelection = formData.selectedImages || [];
+    const availableSlots = 4 - currentSelection.length;
+
+    if (availableSlots <= 0) {
+      alert('Maximum 4 images can be selected. Please remove some images first.');
+      return;
+    }
+
+    const newImages: ImageItem[] = [];
+    let processedCount = 0;
+    const filesToProcess = Array.from(files).slice(0, availableSlots);
+
+    filesToProcess.forEach((file, index) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newImage: ImageItem = {
+            id: `uploaded-${Date.now()}-${index}`,
+            url: event.target?.result as string,
+            alt: file.name
+          };
+          newImages.push(newImage);
+          processedCount++;
+
+          if (processedCount === filesToProcess.length) {
+            const updatedSelection = [...currentSelection, ...newImages];
+            setFormData(prev => ({ ...prev, selectedImages: updatedSelection }));
+          }
+        };
+        reader.readAsDataURL(file);
+      } else {
+        processedCount++;
+      }
+    });
+
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
   const handleCustomRecommendationChange = (customRecommendation: string) => {
     const pages = [...(formData.repairEstimatePages || [])];
     if (pages[currentRecommendationPageIndex]) {
@@ -1447,7 +1491,7 @@ const MultiStepForm: React.FC = () => {
     }
   };
 
-  const handleDataExtracted = (data: {
+  const handleDataExtracted = async (data: {
     clientName: string;
     clientAddress: string;
     chimneyType: string;
@@ -1456,6 +1500,7 @@ const MultiStepForm: React.FC = () => {
     scrapedImages: ImageItem[];
     dataSourceUrl?: string;
   }) => {
+    // Update form data first
     setFormData({
       ...formData,
       clientName: data.clientName,
@@ -1470,7 +1515,78 @@ const MultiStepForm: React.FC = () => {
       inspectionImagesOrder: [], // Reset image order
       uploadedInspectionImages: [] // Reset uploaded images
     });
-    setCurrentReportId(null); // Reset report ID for new report
+    
+    // Create report in database immediately after data extraction
+    try {
+      // Check if user is authenticated
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user?.id) {
+        console.warn('User not authenticated, skipping report creation');
+        setCurrentReportId(null);
+        setCurrentStep('form');
+        return;
+      }
+      
+      const userId = userData.user.id;
+      const clientName = (data.clientName || '').trim();
+      
+      // 1) Ensure client exists (reuse by full_name if present)
+      let clientId: string | null = null;
+      if (clientName) {
+        // Try to find existing client by name
+        const { data: existingClients, error: findClientError } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('full_name', clientName)
+          .limit(1);
+        
+        if (findClientError) {
+          console.error('Error finding client:', findClientError);
+        } else if (existingClients && existingClients.length > 0) {
+          clientId = existingClients[0].id;
+        } else {
+          // Create new client
+          const newClientId = crypto.randomUUID();
+          const { data: insertedClient, error: insertClientError } = await supabase
+            .from('clients')
+            .insert({ id: newClientId, full_name: clientName, created_by: userId })
+            .select('id')
+            .single();
+          
+          if (insertClientError) {
+            console.error('Error creating client:', insertClientError);
+          } else {
+            clientId = insertedClient?.id || newClientId;
+          }
+        }
+      }
+      
+      // 2) Create new report
+      const newReportId = crypto.randomUUID();
+      const { data: reportRow, error: reportErr } = await supabase
+        .from('reports')
+        .insert({ 
+          id: newReportId, 
+          client_name: clientName || null, 
+          client_id: clientId, 
+          created_by: userId 
+        })
+        .select('id')
+        .single();
+      
+      if (reportErr) {
+        console.error('Error creating report:', reportErr);
+        setCurrentReportId(null);
+      } else {
+        const reportId = reportRow?.id || newReportId;
+        setCurrentReportId(reportId);
+        console.log('Report created successfully:', reportId);
+      }
+    } catch (error) {
+      console.error('Failed to create report:', error);
+      setCurrentReportId(null);
+    }
+    
     setCurrentStep('form');
   };
 
@@ -1829,9 +1945,10 @@ const MultiStepForm: React.FC = () => {
 
     try {
       // Step 1: Save report and step-wise data to Supabase
+      let savedReportId: string | null = null;
       try {
       setGenerationStatus('saving');
-      await saveReportToSupabase();
+      savedReportId = await saveReportToSupabase();
     } catch (err: any) {
       console.error('Failed saving to Supabase:', err);
       alert(`Failed saving to database: ${err?.message || 'Unknown error'}`);
@@ -1839,10 +1956,31 @@ const MultiStepForm: React.FC = () => {
       }
 
       // Step 2: Upload PDF to backend
+      let pdfUrl: string | null = null;
       try {
         setGenerationStatus('uploading');
-        const pdfUrl = await uploadReportPdf(generatedPdfBlob, generatedPdfFileName, formData.clientName || 'client');
+        pdfUrl = await uploadReportPdf(generatedPdfBlob, generatedPdfFileName, formData.clientName || 'client');
         setUploadedPdfUrl(pdfUrl);
+        
+        // Step 2.1: Update report with PDF upload status
+        if (savedReportId || currentReportId) {
+          const reportId = savedReportId || currentReportId;
+          try {
+            await supabase
+              .from('reports')
+              .update({
+                pdf_uploaded: true,
+                pdf_url: pdfUrl,
+                pdf_uploaded_at: new Date().toISOString()
+              })
+              .eq('id', reportId);
+            console.log('✓ Report marked as PDF uploaded');
+          } catch (updateError) {
+            console.error('Failed to update PDF upload status:', updateError);
+            // Don't throw - this is not critical
+          }
+        }
+        
         alert('Report saved and uploaded successfully.');
       } catch (uploadError: any) {
         const message = uploadError?.message || 'Unknown error';
@@ -1944,6 +2082,7 @@ const MultiStepForm: React.FC = () => {
   const ITEMS_PER_PAGE = Math.max(1, maxRowsPerPage); // At least 1 row per page
   
   // Persist the report and step-wise data to Supabase
+  // Note: Report is already created in handleDataExtracted, this function updates it with all step data
   const saveReportToSupabase = async (): Promise<string | null> => {
     // Require authenticated user for RLS-backed writes
     const { data: userData, error: userErr } = await supabase.auth.getUser();
@@ -1979,10 +2118,10 @@ const MultiStepForm: React.FC = () => {
       }
     }
 
-    // 2) Create or update report (one client -> many reports)
+    // 2) Update existing report (report was created in handleDataExtracted)
     let reportId: string;
     if (currentReportId) {
-      // Update existing report
+      // Update existing report with latest client info
       const { data: reportRow, error: reportErr } = await supabase
         .from('reports')
         .update({ client_name: clientName || null, client_id: clientId })
@@ -1992,7 +2131,8 @@ const MultiStepForm: React.FC = () => {
       if (reportErr) throw reportErr;
       reportId = reportRow?.id || currentReportId;
     } else {
-      // Create new report
+      // Fallback: Create new report if somehow currentReportId is not set
+      console.warn('Report ID not found, creating new report');
       const newReportId = crypto.randomUUID();
       const { data: reportRow, error: reportErr } = await supabase
         .from('reports')
@@ -2544,8 +2684,11 @@ const MultiStepForm: React.FC = () => {
   };
 
   // Function to navigate to a specific step
-  const navigateToStep = (targetStep: number) => {
+  const navigateToStep = async (targetStep: number) => {
     if (targetStep < 1 || targetStep > 10) return;
+    
+    // Auto-save current step data before navigating
+    await saveCurrentStepToDatabase();
     
     // Mark the target step as completed when navigating to it
     markStepCompleted(targetStep);
@@ -2577,7 +2720,160 @@ const MultiStepForm: React.FC = () => {
     }
   };
 
-  const handleNextPage = () => {
+  // Save current step data to database (auto-save on navigation)
+  const saveCurrentStepToDatabase = async () => {
+    // Only save if we have a report ID and user is authenticated
+    if (!currentReportId) {
+      console.log('No report ID, skipping auto-save');
+      return;
+    }
+
+    try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user?.id) {
+        console.log('User not authenticated, skipping auto-save');
+        return;
+      }
+
+      const logicalStep = getLogicalStep(currentPage);
+      console.log(`Auto-saving Step ${logicalStep} data to database...`);
+
+      // Save based on logical step
+      switch (logicalStep) {
+        case 1: {
+          // Step 1 - Client Info & Timeline Cover
+          const step1Json = {
+            'Client Name': formData.clientName || '',
+            'Client Address': formData.clientAddress || '',
+            'Chimney Type': (formData.chimneyType || '').trim(),
+            'Report Date': formData.reportDate || '',
+            'House Image Link': formData.timelineCoverImage || ''
+          };
+          await supabase.from('step1_json').upsert(
+            { report_id: currentReportId, data: step1Json },
+            { onConflict: 'report_id' }
+          );
+          console.log('✓ Step 1 data saved');
+          break;
+        }
+
+        case 3: {
+          // Step 3 - Client Name
+          const step3Json = { 'Client Name': formData.clientName || '' };
+          await supabase.from('step3_json').upsert(
+            { report_id: currentReportId, data: step3Json },
+            { onConflict: 'report_id' }
+          );
+          console.log('✓ Step 3 data saved');
+          break;
+        }
+
+        case 5: {
+          // Step 5 - Invoice & Repair Estimates
+          const invoice = formData.invoiceData || { rows: [] } as any;
+          const step5InvoiceJson = {
+            'Invoice Number': invoice.invoiceNumber || '',
+            'Method of Payment': invoice.paymentMethod || '',
+            'Payment No': invoice.paymentNumber || '',
+            'Notes': invoice.notes || '',
+            'Invoice Table': invoice.rows || []
+          };
+          await supabase.from('step5_invoice_json').upsert(
+            { report_id: currentReportId, data: step5InvoiceJson },
+            { onConflict: 'report_id' }
+          );
+
+          const step5Part2Json = {
+            'Estimate Number': formData.repairEstimateData?.estimateNumber || '',
+            'Method of Payment': formData.repairEstimateData?.paymentMethod || '',
+            'Payment No': formData.repairEstimateData?.paymentNumber || '',
+            'Section 1 Title': (formData as any).recommendationSection1Title || 'Repair Estimate 1',
+            'Section 1 Rows': formData.repairEstimateData?.rows || [],
+            ...((formData as any).showRecommendationSection2 ? {
+              'Section 2 Title': (formData as any).recommendationSection2Title || 'Repair Estimate 2',
+              'Section 2 Rows': ((formData as any).recommendationSection2?.rows) || []
+            } : {}),
+            'Notes': formData.notes || ''
+          };
+          await supabase.from('step5_part2_json').upsert(
+            { report_id: currentReportId, data: step5Part2Json },
+            { onConflict: 'report_id' }
+          );
+          console.log('✓ Step 5 data saved');
+          break;
+        }
+
+        case 6: {
+          // Step 6 - Selected/Uploaded Images
+          const step6Json = {
+            'Selected Images': (formData.selectedImages || []).map(img => ({
+              id: img.id,
+              url: img.url,
+              positionX: img.positionX,
+              positionY: img.positionY,
+              width: img.width,
+              height: img.height
+            })),
+            'Text Position': {
+              x: formData.step6TextPositionX,
+              y: formData.step6TextPositionY
+            }
+          };
+          await supabase.from('step6_json').upsert(
+            { report_id: currentReportId, data: step6Json },
+            { onConflict: 'report_id' }
+          );
+          console.log('✓ Step 6 data saved (images)');
+          break;
+        }
+
+        case 7: {
+          // Step 7 - Recommendations
+          const step7Json = {
+            'Recommendations': (formData.repairEstimatePages || []).map((p: any, idx: number) => ({
+              index: idx + 1,
+              reviewImage: p.reviewImage,
+              rows: (p.repairEstimateData?.rows) || []
+            }))
+          };
+          await supabase.from('step7_json').upsert(
+            { report_id: currentReportId, data: step7Json },
+            { onConflict: 'report_id' }
+          );
+          console.log('✓ Step 7 data saved');
+          break;
+        }
+
+        case 8: {
+          // Step 8 - Inspection Images
+          const inspectionImages = getUnusedImages().map((img: any) => ({ id: img.id, url: img.url }));
+          const step8Json = {
+            'Inspection Images': inspectionImages,
+            'Inspection Images Order': formData.inspectionImagesOrder || [],
+            'Uploaded Images': formData.uploadedInspectionImages || []
+          };
+          await supabase.from('step8_json').upsert(
+            { report_id: currentReportId, data: step8Json },
+            { onConflict: 'report_id' }
+          );
+          console.log('✓ Step 8 data saved');
+          break;
+        }
+
+        default:
+          // Steps 2, 4, 9, 10 are static pages, no data to save
+          console.log(`Step ${logicalStep} is static, no data to save`);
+      }
+    } catch (error) {
+      console.error('Failed to auto-save step data:', error);
+      // Don't throw - allow navigation to continue even if save fails
+    }
+  };
+
+  const handleNextPage = async () => {
+    // Auto-save current step data before navigating
+    await saveCurrentStepToDatabase();
+    
     // Persist step-wise labeled snapshot (if applicable), and latest snapshot
     try {
       const logicalStep = getLogicalStep(currentPage);
@@ -2677,7 +2973,10 @@ const MultiStepForm: React.FC = () => {
     }
   };
 
-  const handlePrevPage = () => {
+  const handlePrevPage = async () => {
+    // Auto-save current step data before navigating
+    await saveCurrentStepToDatabase();
+    
     if (isImagePage(currentPage)) {
       // If we're on image pages, navigate through image pages
       const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
@@ -4659,11 +4958,21 @@ const MultiStepForm: React.FC = () => {
                   <h4 className="text-lg font-semibold text-gray-800 mb-2">
                     Select Project Images (Max 4)
                   </h4>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 mb-3">
                     Selected: {formData.selectedImages?.length || 0}/4
                   </p>
+                  
                 </div>
                 
+                {/* Scraped Images Section */}
+                <div className="space-y-3 border border-gray-200 p-4 rounded-lg" >
+                  <h5 className="text-md font-semibold text-gray-700 flex items-center space-x-2">
+                    <svg className="w-5 h-5 text-[#722420]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>Images from Inspection</span>
+                  </h5>
+                  
                 {(formData.scrapedImages?.length || 0) > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                     {formData.scrapedImages?.map((image) => {
@@ -4735,17 +5044,119 @@ const MultiStepForm: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-64 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+                  <div className="flex items-center justify-center h-48 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
                     <div className="text-center">
                       <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
                       </svg>
-                      <p className="text-lg mb-2">No images available</p>
-                      <p className="text-sm">Images will appear here after data scraping</p>
+                      <p className="text-sm mb-1">No scraped images available</p>
+                      <p className="text-xs text-gray-400">Images will appear here after data scraping</p>
                     </div>
                   </div>
                 )}
-
+                </div>
+                <h5 className="text-md font-semibold text-gray-700 flex items-center space-x-2">
+                    {/* <svg className="w-5 h-5 text-[#722420]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg> */}
+                    <span> Upload Images</span>
+                  </h5>
+                <div className="space-y-3 border border-gray-200 p-4 rounded-lg" >
+                  
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={(formData.selectedImages || []).length >= 4}
+                    className={`w-full sm:w-auto px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 shadow-md flex items-center justify-center space-x-2 ${
+                      (formData.selectedImages || []).length >= 4
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-[#722420] text-white hover:bg-[#5a1d1a] hover:shadow-lg'
+                    }`}
+                  >
+                     
+                    <span>
+                      {(formData.selectedImages || []).length >= 4 
+                        ? '📤 All Slots Full (4/4)' 
+                        : `📤 Upload from Device (${4 - (formData.selectedImages || []).length} slot${4 - (formData.selectedImages || []).length !== 1 ? 's' : ''} available)`}
+                    </span>
+                  </button>
+             
+                {/* Uploaded Images Section */}
+                {(() => {
+                  const uploadedImages = (formData.selectedImages || []).filter(img => img.id.startsWith('uploaded-'));
+                  return uploadedImages.length > 0 && (
+                    <div className="space-y-3 border-t border-gray-200 pt-4">
+                      <h5 className="text-md font-semibold text-gray-700 flex items-center space-x-2">
+                        
+                        <span>Uploaded Images ({uploadedImages.length})</span>
+                      </h5>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {uploadedImages.map((image, index) => {
+                          const isSelected = formData.selectedImages?.some(img => img.id === image.id) || false;
+                          
+                          return (
+                            <div
+                              key={image.id}
+                              className="relative rounded-lg overflow-hidden border-2 border-[#722420] shadow-md"
+                            >
+                              <div className="aspect-square bg-gray-100">
+                                <img
+                                  src={image.url}
+                                  alt={image.alt || 'Uploaded image'}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                              
+                              {/* Remove button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newSelection = (formData.selectedImages || []).filter(img => img.id !== image.id);
+                                  handleImageSelection(newSelection);
+                                }}
+                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shadow-lg transition-colors"
+                                title="Remove this image"
+                              >
+                                ✕
+                              </button>
+                              
+                              {/* Crop button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCropInvoiceImage(image.id);
+                                }}
+                                className="absolute top-2 left-2 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded px-2 py-1 text-xs font-medium transition-colors shadow-lg"
+                                title="Crop this image"
+                              >
+                                ✂️ Crop
+                              </button>
+                              
+                              {isSelected && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-[#722420] text-white text-xs p-1 text-center">
+                                  Selected #{(formData.selectedImages?.findIndex(img => img.id === image.id) || 0) + 1}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+   </div>
                 {(formData.selectedImages?.length || 0) > 0 && (
                   <div className="mt-4 space-y-4">
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -4783,13 +5194,8 @@ const MultiStepForm: React.FC = () => {
                             <div className="absolute top-1 left-1 bg-[#722420] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                               {index + 1}
                             </div>
-                            <button
-                              onClick={() => handleCropInvoiceImage(image.id)}
-                              className="absolute top-1 right-1 bg-[#722420] hover:bg-[#5a1d1a] text-white rounded px-2 py-1 text-xs font-medium transition-colors"
-                              title="Crop this image"
-                            >
-                              ✂️ Crop
-                            </button>
+                            
+                            
                             
                           </div>
                         ))}
