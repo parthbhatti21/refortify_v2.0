@@ -165,26 +165,40 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
     rows.forEach(row => {
       // Calculate how many rows are needed based on content length
       const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+        if (!text || text.trim().length === 0) return 1;
+        
         const lines = text.split('\n').length;
         const wordCount = text.split(' ').length;
         const charCount = text.length;
         
-        let rowsNeeded = 1;
+        // Priority 1: Explicit line breaks (from Enter key) take highest priority
+        // Each line break creates a new visual line
+        let rowsNeeded = lines;
         
-        // Factor in line breaks
-        if (lines > 1) {
-          rowsNeeded = Math.max(rowsNeeded, lines);
+        // Priority 2: For URLs or long strings without spaces, use character count
+        // URLs typically wrap at around 40-45 chars in a narrow column
+        const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+        const effectiveBaseLength = isURL ? 40 : baseLength;
+        
+        // For each line, calculate if it needs to wrap
+        const textLines = text.split('\n');
+        let totalCharRows = 0;
+        textLines.forEach(line => {
+          const lineCharRows = Math.ceil(line.length / effectiveBaseLength);
+          totalCharRows += Math.max(1, lineCharRows);
+        });
+        
+        // Use the maximum of explicit lines or character-based wrapping
+        rowsNeeded = Math.max(rowsNeeded, totalCharRows);
+        
+        // Priority 3: For text with spaces, also consider word count (but only if no explicit line breaks)
+        if (lines === 1 && wordCount > 1) {
+          const wordRows = Math.ceil(wordCount / 8);
+          rowsNeeded = Math.max(rowsNeeded, wordRows);
         }
         
-        // Factor in character count (roughly 50 chars per row)
-        const charRows = Math.ceil(charCount / baseLength);
-        rowsNeeded = Math.max(rowsNeeded, charRows);
-        
-        // Factor in word count (roughly 8 words per row)
-        const wordRows = Math.ceil(wordCount / 8);
-        rowsNeeded = Math.max(rowsNeeded, wordRows);
-        
-        return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+        // Ensure minimum of 1 row
+        return Math.max(rowsNeeded, 1);
       };
       
       const descriptionRows = calculateRowsNeeded(row.description);
@@ -192,7 +206,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
       const priceRows = calculateRowsNeeded(row.price, 10);
       
       const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
-      const rowHeight = 20 * maxRowsNeeded; // 20px per content row
+      const rowHeight = 15 * maxRowsNeeded; // 15px per content row
       dataRowsHeight += rowHeight;
     });
     
@@ -533,6 +547,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               style={{ 
                 display: 'grid',
                       gridTemplateColumns: `3fr 50px ${sectionPriceWidth}px ${sectionTotalWidth}px`,
+                gridAutoRows: 'minmax(15px, auto)',
                 gap: '0px',
                 backgroundColor:'#722420 ',
               }}
@@ -648,23 +663,40 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 
                 // Calculate how many rows are needed based on content length
                 const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                  if (!text || text.trim().length === 0) return 1;
+                  
                   const lines = text.split('\n').length;
                   const wordCount = text.split(' ').length;
                   const charCount = text.length;
                   
-                  let rowsNeeded = 1;
+                  // Priority 1: Explicit line breaks (from Enter key) take highest priority
+                  // Each line break creates a new visual line
+                  let rowsNeeded = lines;
                   
-                  if (lines > 1) {
-                    rowsNeeded = Math.max(rowsNeeded, lines);
+                  // Priority 2: For URLs or long strings without spaces, use character count
+                  // URLs typically wrap at around 40-45 chars in a narrow column
+                  const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+                  const effectiveBaseLength = isURL ? 40 : baseLength;
+                  
+                  // For each line, calculate if it needs to wrap
+                  const textLines = text.split('\n');
+                  let totalCharRows = 0;
+                  textLines.forEach(line => {
+                    const lineCharRows = Math.ceil(line.length / effectiveBaseLength);
+                    totalCharRows += Math.max(1, lineCharRows);
+                  });
+                  
+                  // Use the maximum of explicit lines or character-based wrapping
+                  rowsNeeded = Math.max(rowsNeeded, totalCharRows);
+                  
+                  // Priority 3: For text with spaces, also consider word count (but only if no explicit line breaks)
+                  if (lines === 1 && wordCount > 1) {
+                    const wordRows = Math.ceil(wordCount / 8);
+                    rowsNeeded = Math.max(rowsNeeded, wordRows);
                   }
                   
-                  const charRows = Math.ceil(charCount / baseLength);
-                  rowsNeeded = Math.max(rowsNeeded, charRows);
-                  
-                  const wordRows = Math.ceil(wordCount / 8);
-                  rowsNeeded = Math.max(rowsNeeded, wordRows);
-                  
-                        return Math.min(rowsNeeded, 4);
+                  // Ensure minimum of 1 row
+                  return Math.max(rowsNeeded, 1);
                 };
                 
                 const descriptionRows = calculateRowsNeeded(row.description);
@@ -674,7 +706,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 const maxRowsNeeded = Math.max(descriptionRows, unitRows, priceRows);
                 const isLongContent = maxRowsNeeded > 1;
                 const rowSpan = maxRowsNeeded;
-                const descriptionHeight = isPDF ? (20 * rowSpan) : (20 * rowSpan);
+                const descriptionHeight = isPDF ? (15 * rowSpan) : (15 * rowSpan);
 
                 return (
                   <div key={row.id} style={{ display: 'contents' }}>
@@ -709,7 +741,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'normal'
+                      wordBreak: (row.description.includes('http://') || row.description.includes('https://') || row.description.includes('www.')) ? 'break-all' : 'break-word'
                     }}>
                       {row.description}
                     </div>
@@ -814,15 +846,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     }}>
                       {total.toFixed(2)}
                     </div>
-                    {/* Add empty rows for merged cells */}
-                    {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
-                      <div key={`empty-${i}`} style={{ display: 'contents' }}>
-                        <div style={{ display: 'none' }}></div>
-                        <div style={{ display: 'none' }}></div>
-                        <div style={{ display: 'none' }}></div>
-                        <div style={{ display: 'none' }}></div>
-                      </div>
-                    ))}
                   </div>
                 );
               })}
@@ -955,6 +978,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   style={{ 
                     display: 'grid',
                 gridTemplateColumns: `3fr 50px ${section1PriceWidth}px ${section1TotalWidth}px`,
+                gridAutoRows: 'minmax(15px, auto)',
                     gap: '0px',
                     backgroundColor:'#722420 ',
                   }}
@@ -1070,27 +1094,40 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     
                     // Calculate how many rows are needed based on content length
                     const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                      if (!text || text.trim().length === 0) return 1;
+                      
                       const lines = text.split('\n').length;
                       const wordCount = text.split(' ').length;
                       const charCount = text.length;
                       
-                      // Calculate rows needed based on multiple factors
-                      let rowsNeeded = 1;
+                      // Priority 1: Explicit line breaks (from Enter key) take highest priority
+                      // Each line break creates a new visual line
+                      let rowsNeeded = lines;
                       
-                      // Factor in line breaks
-                      if (lines > 1) {
-                        rowsNeeded = Math.max(rowsNeeded, lines);
+                      // Priority 2: For URLs or long strings without spaces, use character count
+                      // URLs typically wrap at around 40-45 chars in a narrow column
+                      const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+                      const effectiveBaseLength = isURL ? 40 : baseLength;
+                      
+                      // For each line, calculate if it needs to wrap
+                      const textLines = text.split('\n');
+                      let totalCharRows = 0;
+                      textLines.forEach(line => {
+                        const lineCharRows = Math.ceil(line.length / effectiveBaseLength);
+                        totalCharRows += Math.max(1, lineCharRows);
+                      });
+                      
+                      // Use the maximum of explicit lines or character-based wrapping
+                      rowsNeeded = Math.max(rowsNeeded, totalCharRows);
+                      
+                      // Priority 3: For text with spaces, also consider word count (but only if no explicit line breaks)
+                      if (lines === 1 && wordCount > 1) {
+                        const wordRows = Math.ceil(wordCount / 8);
+                        rowsNeeded = Math.max(rowsNeeded, wordRows);
                       }
                       
-                      // Factor in character count (roughly 50 chars per row)
-                      const charRows = Math.ceil(charCount / baseLength);
-                      rowsNeeded = Math.max(rowsNeeded, charRows);
-                      
-                      // Factor in word count (roughly 8 words per row)
-                      const wordRows = Math.ceil(wordCount / 8);
-                      rowsNeeded = Math.max(rowsNeeded, wordRows);
-                      
-                      return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                      // Ensure minimum of 1 row
+                      return Math.max(rowsNeeded, 1);
                     };
                     
                     const descriptionRows = calculateRowsNeeded(row.description);
@@ -1106,7 +1143,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     const calculatedHeight = baseRowHeight * rowSpan;
                     
                     // Special height calculation for description column (taller for better text display)
-                    const descriptionHeight = isPDF ? (20 * rowSpan) : (20 * rowSpan);
+                    const descriptionHeight = isPDF ? (15 * rowSpan) : (15 * rowSpan);
 
                     return (
                       <div key={row.id} style={{ display: 'contents' }}>
@@ -1139,7 +1176,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           maxWidth: '100%',
                           overflow: 'hidden',
                           hyphens: 'auto',
-                          wordBreak: 'normal'
+                          wordBreak: (row.description.includes('http://') || row.description.includes('https://') || row.description.includes('www.')) ? 'break-all' : 'break-word'
                         }}>
                           {row.description}
                         </div>
@@ -1372,6 +1409,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   style={{ 
                   display: 'grid',
                     gridTemplateColumns: `3fr 50px ${section2PriceWidth}px ${section2TotalWidth}px`,
+                  gridAutoRows: 'minmax(15px, auto)',
                   gap: '0px',
                   backgroundColor:'#722420 ',
                   }}
@@ -1483,27 +1521,40 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     
                     // Calculate how many rows are needed based on content length
                     const calculateRowsNeeded = (text: string, baseLength: number = 50) => {
+                      if (!text || text.trim().length === 0) return 1;
+                      
                       const lines = text.split('\n').length;
                       const wordCount = text.split(' ').length;
                       const charCount = text.length;
                       
-                      // Calculate rows needed based on multiple factors
-                      let rowsNeeded = 1;
+                      // Priority 1: Explicit line breaks (from Enter key) take highest priority
+                      // Each line break creates a new visual line
+                      let rowsNeeded = lines;
                       
-                      // Factor in line breaks
-                      if (lines > 1) {
-                        rowsNeeded = Math.max(rowsNeeded, lines);
+                      // Priority 2: For URLs or long strings without spaces, use character count
+                      // URLs typically wrap at around 40-45 chars in a narrow column
+                      const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+                      const effectiveBaseLength = isURL ? 40 : baseLength;
+                      
+                      // For each line, calculate if it needs to wrap
+                      const textLines = text.split('\n');
+                      let totalCharRows = 0;
+                      textLines.forEach(line => {
+                        const lineCharRows = Math.ceil(line.length / effectiveBaseLength);
+                        totalCharRows += Math.max(1, lineCharRows);
+                      });
+                      
+                      // Use the maximum of explicit lines or character-based wrapping
+                      rowsNeeded = Math.max(rowsNeeded, totalCharRows);
+                      
+                      // Priority 3: For text with spaces, also consider word count (but only if no explicit line breaks)
+                      if (lines === 1 && wordCount > 1) {
+                        const wordRows = Math.ceil(wordCount / 8);
+                        rowsNeeded = Math.max(rowsNeeded, wordRows);
                       }
                       
-                      // Factor in character count (roughly 50 chars per row)
-                      const charRows = Math.ceil(charCount / baseLength);
-                      rowsNeeded = Math.max(rowsNeeded, charRows);
-                      
-                      // Factor in word count (roughly 8 words per row)
-                      const wordRows = Math.ceil(wordCount / 8);
-                      rowsNeeded = Math.max(rowsNeeded, wordRows);
-                      
-                      return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                      // Ensure minimum of 1 row
+                      return Math.max(rowsNeeded, 1);
                     };
                     
                     const descriptionRows = calculateRowsNeeded(row.description);
@@ -1519,7 +1570,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     const calculatedHeight = baseRowHeight * rowSpan;
                     
                     // Special height calculation for description column (taller for better text display)
-                    const descriptionHeight = isPDF ? (20 * rowSpan) : (20 * rowSpan);
+                    const descriptionHeight = isPDF ? (15 * rowSpan) : (15 * rowSpan);
 
                     return (
                       <div key={row.id} style={{ display: 'contents' }}>
@@ -1552,7 +1603,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           maxWidth: '100%',
                           overflow: 'hidden',
                           hyphens: 'auto',
-                          wordBreak: 'normal'
+                          wordBreak: (row.description.includes('http://') || row.description.includes('https://') || row.description.includes('www.')) ? 'break-all' : 'break-word'
                         }}>
                           {row.description}
                         </div>
@@ -1795,6 +1846,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 <div style={{ 
                   display: 'grid',
                   gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
+                  gridAutoRows: 'minmax(15px, auto)',
                   gap: '0px',
                   backgroundColor:'#722420 ',
                 }}>
@@ -2185,6 +2237,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 <div style={{ 
                   display: 'grid',
                   gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
+                  gridAutoRows: 'minmax(15px, auto)',
                   gap: '0px',
                   backgroundColor:'#722420 ',
                 }}>

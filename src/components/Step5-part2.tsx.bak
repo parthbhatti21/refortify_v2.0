@@ -176,15 +176,23 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
           rowsNeeded = Math.max(rowsNeeded, lines);
         }
         
-        // Factor in character count (roughly 50 chars per row)
-        const charRows = Math.ceil(charCount / baseLength);
+        // For URLs or long strings without spaces, use character count
+        // URLs typically wrap at around 40-45 chars in a narrow column
+        const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+        const effectiveBaseLength = isURL ? 40 : baseLength;
+        
+        // Factor in character count
+        const charRows = Math.ceil(charCount / effectiveBaseLength);
         rowsNeeded = Math.max(rowsNeeded, charRows);
         
-        // Factor in word count (roughly 8 words per row)
-        const wordRows = Math.ceil(wordCount / 8);
-        rowsNeeded = Math.max(rowsNeeded, wordRows);
+        // Factor in word count (roughly 8 words per row) - only if text has spaces
+        if (wordCount > 1) {
+          const wordRows = Math.ceil(wordCount / 8);
+          rowsNeeded = Math.max(rowsNeeded, wordRows);
+        }
         
-        return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+        // Remove the cap to allow very long content
+        return Math.max(rowsNeeded, 1);
       };
       
       const descriptionRows = calculateRowsNeeded(row.description);
@@ -533,6 +541,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
               style={{ 
                 display: 'grid',
                       gridTemplateColumns: `3fr 50px ${sectionPriceWidth}px ${sectionTotalWidth}px`,
+                gridAutoRows: 'minmax(20px, auto)',
                 gap: '0px',
                 backgroundColor:'#722420 ',
               }}
@@ -658,13 +667,23 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     rowsNeeded = Math.max(rowsNeeded, lines);
                   }
                   
-                  const charRows = Math.ceil(charCount / baseLength);
+                  // For URLs or long strings without spaces, use character count
+                  // URLs typically wrap at around 40-45 chars in a narrow column
+                  const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+                  const effectiveBaseLength = isURL ? 40 : baseLength;
+                  
+                  const charRows = Math.ceil(charCount / effectiveBaseLength);
                   rowsNeeded = Math.max(rowsNeeded, charRows);
                   
-                  const wordRows = Math.ceil(wordCount / 8);
-                  rowsNeeded = Math.max(rowsNeeded, wordRows);
+                  // For text with spaces, also consider word count
+                  if (wordCount > 1) {
+                    const wordRows = Math.ceil(wordCount / 8);
+                    rowsNeeded = Math.max(rowsNeeded, wordRows);
+                  }
                   
-                        return Math.min(rowsNeeded, 4);
+                  // Remove the cap to allow very long content
+                  // But ensure minimum of 1 row
+                  return Math.max(rowsNeeded, 1);
                 };
                 
                 const descriptionRows = calculateRowsNeeded(row.description);
@@ -698,7 +717,9 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         alignItems: 'flex-start',
                         justifyContent: 'flex-start',
                         textAlign: 'left',
-                        paddingTop: '2px'
+                        paddingTop: '2px',
+                        height: `${descriptionHeight}px`,
+                        boxSizing: 'border-box'
                       }),
                       fontSize: '12px',
                       wordWrap: 'break-word',
@@ -707,7 +728,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       maxWidth: '100%',
                       overflow: 'hidden',
                       hyphens: 'auto',
-                      wordBreak: 'normal'
+                      wordBreak: (row.description.includes('http://') || row.description.includes('https://') || row.description.includes('www.')) ? 'break-all' : 'break-word'
                     }}>
                       {row.description}
                     </div>
@@ -730,7 +751,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         display:  'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'center',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        height: `${descriptionHeight}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       }),
                       fontSize: '12px',
                       wordWrap: 'break-word',
@@ -748,7 +772,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       color: '#000000',
                       fontWeight: 'normal',
                             minHeight: `${descriptionHeight}px`,
-                      padding: isPDF ? '8px 8px' : '4px 8px',
+                      padding: '8px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'middle',
@@ -762,7 +786,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'center',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        height: `${descriptionHeight}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       }),
                       fontSize: '12px',
                       wordWrap: 'break-word',
@@ -780,7 +807,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                       color: '#000000',
                       fontWeight: '600',
                             minHeight: `${descriptionHeight}px`,
-                      padding: isPDF ? '8px 8px' : '4px 8px',
+                      padding: '8px 8px',
                       ...(isPDF ? {
                         display: 'table-cell',
                         verticalAlign: 'middle',
@@ -794,7 +821,10 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'center',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        height: `${descriptionHeight}px`,
+                        boxSizing: 'border-box',
+                        paddingTop: '2px'
                       }),
                       fontSize: '12px',
                       whiteSpace: 'nowrap',
@@ -803,15 +833,6 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                     }}>
                       {total.toFixed(2)}
                     </div>
-                    {/* Add empty rows for merged cells */}
-                    {isLongContent && Array.from({ length: rowSpan - 1 }, (_, i) => (
-                      <div key={`empty-${i}`} style={{ display: 'contents' }}>
-                        <div style={{ display: 'none' }}></div>
-                        <div style={{ display: 'none' }}></div>
-                        <div style={{ display: 'none' }}></div>
-                        <div style={{ display: 'none' }}></div>
-                      </div>
-                    ))}
                   </div>
                 );
               })}
@@ -944,6 +965,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   style={{ 
                     display: 'grid',
                 gridTemplateColumns: `3fr 50px ${section1PriceWidth}px ${section1TotalWidth}px`,
+                gridAutoRows: 'minmax(20px, auto)',
                     gap: '0px',
                     backgroundColor:'#722420 ',
                   }}
@@ -1071,15 +1093,23 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         rowsNeeded = Math.max(rowsNeeded, lines);
                       }
                       
-                      // Factor in character count (roughly 50 chars per row)
-                      const charRows = Math.ceil(charCount / baseLength);
+                      // For URLs or long strings without spaces, use character count
+                      // URLs typically wrap at around 40-45 chars in a narrow column
+                      const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+                      const effectiveBaseLength = isURL ? 40 : baseLength;
+                      
+                      // Factor in character count
+                      const charRows = Math.ceil(charCount / effectiveBaseLength);
                       rowsNeeded = Math.max(rowsNeeded, charRows);
                       
-                      // Factor in word count (roughly 8 words per row)
-                      const wordRows = Math.ceil(wordCount / 8);
-                      rowsNeeded = Math.max(rowsNeeded, wordRows);
+                      // Factor in word count (roughly 8 words per row) - only if text has spaces
+                      if (wordCount > 1) {
+                        const wordRows = Math.ceil(wordCount / 8);
+                        rowsNeeded = Math.max(rowsNeeded, wordRows);
+                      }
                       
-                      return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                      // Remove the cap to allow very long content
+                      return Math.max(rowsNeeded, 1);
                     };
                     
                     const descriptionRows = calculateRowsNeeded(row.description);
@@ -1128,7 +1158,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           maxWidth: '100%',
                           overflow: 'hidden',
                           hyphens: 'auto',
-                          wordBreak: 'normal'
+                          wordBreak: (row.description.includes('http://') || row.description.includes('https://') || row.description.includes('www.')) ? 'break-all' : 'break-word'
                         }}>
                           {row.description}
                         </div>
@@ -1169,7 +1199,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: 'normal',
                           minHeight: `${calculatedHeight}px`,
-                          padding: isPDF ? '8px 8px' : '4px 8px',
+                          padding: '8px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',
@@ -1201,7 +1231,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: '600',
                           minHeight: `${calculatedHeight}px`,
-                          padding: isPDF ? '8px 8px' : '4px 8px',
+                          padding: '8px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',
@@ -1361,6 +1391,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                   style={{ 
                   display: 'grid',
                     gridTemplateColumns: `3fr 50px ${section2PriceWidth}px ${section2TotalWidth}px`,
+                  gridAutoRows: 'minmax(20px, auto)',
                   gap: '0px',
                   backgroundColor:'#722420 ',
                   }}
@@ -1484,15 +1515,23 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                         rowsNeeded = Math.max(rowsNeeded, lines);
                       }
                       
-                      // Factor in character count (roughly 50 chars per row)
-                      const charRows = Math.ceil(charCount / baseLength);
+                      // For URLs or long strings without spaces, use character count
+                      // URLs typically wrap at around 40-45 chars in a narrow column
+                      const isURL = text.includes('http://') || text.includes('https://') || text.includes('www.');
+                      const effectiveBaseLength = isURL ? 40 : baseLength;
+                      
+                      // Factor in character count
+                      const charRows = Math.ceil(charCount / effectiveBaseLength);
                       rowsNeeded = Math.max(rowsNeeded, charRows);
                       
-                      // Factor in word count (roughly 8 words per row)
-                      const wordRows = Math.ceil(wordCount / 8);
-                      rowsNeeded = Math.max(rowsNeeded, wordRows);
+                      // Factor in word count (roughly 8 words per row) - only if text has spaces
+                      if (wordCount > 1) {
+                        const wordRows = Math.ceil(wordCount / 8);
+                        rowsNeeded = Math.max(rowsNeeded, wordRows);
+                      }
                       
-                      return Math.min(rowsNeeded, 4); // Cap at 4 rows maximum
+                      // Remove the cap to allow very long content
+                      return Math.max(rowsNeeded, 1);
                     };
                     
                     const descriptionRows = calculateRowsNeeded(row.description);
@@ -1541,7 +1580,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           maxWidth: '100%',
                           overflow: 'hidden',
                           hyphens: 'auto',
-                          wordBreak: 'normal'
+                          wordBreak: (row.description.includes('http://') || row.description.includes('https://') || row.description.includes('www.')) ? 'break-all' : 'break-word'
                         }}>
                           {row.description}
                         </div>
@@ -1582,7 +1621,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: 'normal',
                           minHeight: `${calculatedHeight}px`,
-                          padding: isPDF ? '8px 8px' : '4px 8px',
+                          padding: '8px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',
@@ -1614,7 +1653,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                           color: '#000000',
                           fontWeight: '600',
                           minHeight: `${calculatedHeight}px`,
-                          padding: isPDF ? '8px 8px' : '4px 8px',
+                          padding: '8px 8px',
                           ...(isPDF ? {
                             display: 'table-cell',
                             verticalAlign: 'middle',
@@ -1784,6 +1823,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 <div style={{ 
                   display: 'grid',
                   gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
+                  gridAutoRows: 'minmax(20px, auto)',
                   gap: '0px',
                   backgroundColor:'#722420 ',
                 }}>
@@ -2174,6 +2214,7 @@ const Step5Part2: FunctionComponent<Step5Part2Props> = ({
                 <div style={{ 
                   display: 'grid',
                   gridTemplateColumns: `3fr 50px ${summaryPriceWidth}px ${summaryTotalWidth}px`,
+                  gridAutoRows: 'minmax(20px, auto)',
                   gap: '0px',
                   backgroundColor:'#722420 ',
                 }}>
