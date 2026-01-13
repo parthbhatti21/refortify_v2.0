@@ -147,6 +147,7 @@ export interface ImageItem {
   positionY?: number;
   width?: number;
   height?: number;
+  pageNumber?: number; // Page number this image belongs to (1-indexed) for Step6
 }
 
 export interface FormData {
@@ -160,6 +161,8 @@ export interface FormData {
   selectedImages?: ImageItem[]; // Selected images for Page6
   step6TextPositionX?: number; // Text position X for Step 6
   step6TextPositionY?: number; // Text position Y for Step 6
+  step6CurrentPage?: number; // Current page number for Step6 (1-indexed)
+  step6TotalPages?: number; // Total number of pages for Step6
   dataSourceUrl?: string; // Data source URL from DataScraper
   invoiceData?: {
     invoiceNumber: string;
@@ -1436,7 +1439,109 @@ const MultiStepForm: React.FC = () => {
   };
 
   const handleImageSelection = (selectedImages: ImageItem[]) => {
-    setFormData(prev => ({ ...prev, selectedImages }));
+    // Calculate total pages based on highest page number assigned to any image
+    const maxPageNumber = selectedImages.length > 0 
+      ? Math.max(...selectedImages.map(img => img.pageNumber || 1), 1)
+      : 1;
+    const totalPages = Math.max(1, maxPageNumber);
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      selectedImages,
+      step6TotalPages: totalPages
+    }));
+  };
+  
+  // Move image to different page
+  const handleMoveImageToPage = (imageId: string, targetPage: number) => {
+    const updatedImages = (formData.selectedImages || []).map(img => 
+      img.id === imageId ? { ...img, pageNumber: targetPage } : img
+    );
+    
+    // Recalculate total pages
+    const maxPageNumber = updatedImages.length > 0
+      ? Math.max(...updatedImages.map(img => img.pageNumber || 1), 1)
+      : 1;
+    const totalPages = Math.max(1, maxPageNumber);
+    
+    updateFormData({ 
+      selectedImages: updatedImages,
+      step6TotalPages: totalPages
+    });
+  };
+  
+  // Add new page for invoice images
+  const handleAddStep6Page = () => {
+    const currentTotalPages = formData.step6TotalPages || 1;
+    const newTotalPages = currentTotalPages + 1;
+    setFormData(prev => ({ 
+      ...prev, 
+      step6TotalPages: newTotalPages,
+      step6CurrentPage: newTotalPages // Navigate to new page
+    }));
+    // Navigate to the new page
+    const step6Start = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+    setCurrentPage(step6Start + newTotalPages - 1);
+  };
+  
+  // Remove page (only if empty)
+  const handleRemoveStep6Page = (pageNum: number) => {
+    const pageImages = (formData.selectedImages || []).filter(img => (img.pageNumber || 1) === pageNum);
+    if (pageImages.length > 0) {
+      alert(`Cannot remove page ${pageNum} because it contains ${pageImages.length} image(s). Please move or remove the images first.`);
+      return;
+    }
+    
+    const currentTotalPages = formData.step6TotalPages || 1;
+    if (currentTotalPages <= 1) {
+      alert('Cannot remove the last page.');
+      return;
+    }
+    
+    // Shift all images from higher pages down
+    const updatedImages = (formData.selectedImages || []).map(img => {
+      const imgPage = img.pageNumber || 1;
+      if (imgPage > pageNum) {
+        return { ...img, pageNumber: imgPage - 1 };
+      }
+      return img;
+    });
+    
+    const newTotalPages = currentTotalPages - 1;
+    const newCurrentPage = Math.min(formData.step6CurrentPage || 1, newTotalPages);
+    
+    updateFormData({ 
+      selectedImages: updatedImages,
+      step6TotalPages: newTotalPages,
+      step6CurrentPage: newCurrentPage
+    });
+    
+    // Navigate to appropriate page if needed
+    const step6Start = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+    setCurrentPage(step6Start + newCurrentPage - 1);
+  };
+  
+  const handleStep6PageChange = (pageNumber: number) => {
+    setFormData(prev => ({ ...prev, step6CurrentPage: pageNumber }));
+  };
+  
+  const handleStep6TotalPagesChange = (totalPages: number) => {
+    setFormData(prev => ({ ...prev, step6TotalPages: totalPages }));
+  };
+  
+  const handleStep6ImagePositionChange = (imageId: string, x: number, y: number, width: number, height: number, pageNumber?: number) => {
+    const updatedImages = (formData.selectedImages || []).map(img =>
+      img.id === imageId
+        ? { ...img, positionX: x, positionY: y, width, height, pageNumber: pageNumber || img.pageNumber || 1 }
+        : img
+    );
+    updateFormData({ selectedImages: updatedImages });
+  };
+  
+  const handleStep6TextPositionChange = (x: number, y: number, pageNumber?: number) => {
+    // For now, we'll store the position for the current page
+    // In the future, we could store per-page positions if needed
+    updateFormData({ step6TextPositionX: x, step6TextPositionY: y });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1444,32 +1549,42 @@ const MultiStepForm: React.FC = () => {
     if (!files || files.length === 0) return;
 
     const currentSelection = formData.selectedImages || [];
-    const availableSlots = 4 - currentSelection.length;
-
-    if (availableSlots <= 0) {
-      alert('Maximum 4 images can be selected. Please remove some images first.');
-      return;
-    }
-
+    const MAX_IMAGES_PER_PAGE = 4;
+    
     const newImages: ImageItem[] = [];
     let processedCount = 0;
-    const filesToProcess = Array.from(files).slice(0, availableSlots);
+    const filesToProcess = Array.from(files);
 
     filesToProcess.forEach((file, index) => {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (event) => {
+          // Distribute images across pages (4 per page)
+          // Calculate which page this image should go to based on total count after adding
+          const totalImagesAfterAdd = currentSelection.length + newImages.length + 1;
+          const targetPage = Math.ceil(totalImagesAfterAdd / MAX_IMAGES_PER_PAGE);
+          
           const newImage: ImageItem = {
             id: `uploaded-${Date.now()}-${index}`,
             url: event.target?.result as string,
-            alt: file.name
+            alt: file.name,
+            pageNumber: targetPage
           };
           newImages.push(newImage);
           processedCount++;
 
           if (processedCount === filesToProcess.length) {
             const updatedSelection = [...currentSelection, ...newImages];
-            setFormData(prev => ({ ...prev, selectedImages: updatedSelection }));
+            // Calculate total pages based on highest page number
+            const maxPageNumber = updatedSelection.length > 0
+              ? Math.max(...updatedSelection.map(img => img.pageNumber || 1), 1)
+              : 1;
+            const totalPages = Math.max(1, maxPageNumber);
+            setFormData(prev => ({ 
+              ...prev, 
+              selectedImages: updatedSelection,
+              step6TotalPages: totalPages
+            }));
           }
         };
         reader.readAsDataURL(file);
@@ -2461,7 +2576,8 @@ const MultiStepForm: React.FC = () => {
     const step9Pages = 3;
     // Step 10 always has 5 pages for both chimney types
     const step10Pages = 5;
-    const totalPages = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + Math.max(1, totalRecommendationPages) + totalImagePages + step9Pages + step10Pages;
+    const step6Pages = formData.step6TotalPages || 1; // Support multiple Step6 pages
+    const totalPages = 4 + totalInvoicePages + totalRepairEstimatePages + step6Pages + Math.max(1, totalRecommendationPages) + totalImagePages + step9Pages + step10Pages;
   
   // Initialize all pages as included by default, but preserve user exclusions when totalPages changes
   useEffect(() => {
@@ -2497,6 +2613,17 @@ const MultiStepForm: React.FC = () => {
     }
   }, [totalPages]);
 
+  // Sync step6CurrentPage when navigating to Step6 pages
+  useEffect(() => {
+    if (isImagePage6(currentPage)) {
+      const step6PageIndex = getStep6PageIndex(currentPage);
+      const step6PageNumber = step6PageIndex + 1; // Convert to 1-indexed
+      if (formData.step6CurrentPage !== step6PageNumber) {
+        handleStep6PageChange(step6PageNumber);
+      }
+    }
+  }, [currentPage, formData.step6TotalPages, totalInvoicePages, totalRepairEstimatePages]);
+
   // Adjust currentPage when totalRepairEstimatePages changes (to prevent navigation to wrong page)
   useEffect(() => {
     const repairEstimateStart = 5 + totalInvoicePages;
@@ -2526,7 +2653,7 @@ const MultiStepForm: React.FC = () => {
     if (pageNum <= 4) return pageNum; // Pages 1-4 are steps 1-4
     if (pageNum <= 4 + totalInvoicePages) return 5; // All invoice pages are step 5
     if (pageNum <= 4 + totalInvoicePages + totalRepairEstimatePages) return 5; // All repair estimate pages are also step 5
-    if (pageNum === 4 + totalInvoicePages + totalRepairEstimatePages + 1) return 6; // Image page is step 6
+    if (isImagePage6(pageNum)) return 6; // All Step6 pages are step 6
     if (isRecommendationPage(pageNum)) return 7; // Recommendation pages are step 7
     if (isImagePage(pageNum)) return 8; // Image pages are step 8
     
@@ -2551,23 +2678,33 @@ const MultiStepForm: React.FC = () => {
     return pageNum > 4 + totalInvoicePages && pageNum <= 4 + totalInvoicePages + totalRepairEstimatePages;
   };
   
-  // Helper function to check if we're on the image page (Step 6)
+  // Helper function to check if we're on an image page (Step 6)
   const isImagePage6 = (pageNum: number): boolean => {
-    return pageNum === 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+    const step6Start = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+    const step6Pages = formData.step6TotalPages || 1;
+    return pageNum >= step6Start && pageNum < step6Start + step6Pages;
+  };
+  
+  // Helper function to get Step6 page index (0-indexed)
+  const getStep6PageIndex = (pageNum: number): number => {
+    const step6Start = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+    return pageNum - step6Start;
   };
   
   // Helper function to check if we're on a recommendation page
   const isRecommendationPage = (pageNum: number): boolean => {
-    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
-    const recommendationPageStart = imagePageNum + 1;
+    const step6Pages = formData.step6TotalPages || 1;
+    const step6End = 4 + totalInvoicePages + totalRepairEstimatePages + step6Pages;
+    const recommendationPageStart = step6End + 1;
     const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
     return pageNum >= recommendationPageStart && pageNum < imagePageStart;
   };
   
   // Helper function to get recommendation page index
   const getRecommendationPageIndex = (pageNum: number): number => {
-    const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
-    const recommendationPageStart = imagePageNum + 1;
+    const step6Pages = formData.step6TotalPages || 1;
+    const step6End = 4 + totalInvoicePages + totalRepairEstimatePages + step6Pages;
+    const recommendationPageStart = step6End + 1;
     const relativePageNum = pageNum - recommendationPageStart; // Pages since start of recommendations
     
     // Find which recommendation this page belongs to
@@ -2926,11 +3063,29 @@ const MultiStepForm: React.FC = () => {
           setCurrentRecommendationSubPage(1); // Reset to page 1 of new recommendation
         } else {
           // If we're on the last recommendation page, go to first image page
-          const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
+          const step6Pages = formData.step6TotalPages || 1;
+        const step6End = 4 + totalInvoicePages + totalRepairEstimatePages + step6Pages;
+        const recommendationPageStart = step6End + 1;
           const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
           setCurrentPage(imagePageStart);
           setCurrentRecommendationPageIndex(0); // Reset for future use
         }
+      }
+    } else if (isImagePage6(currentPage)) {
+      // If we're on Step6 pages, navigate through them
+      const step6Start = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+      const step6Pages = formData.step6TotalPages || 1;
+      const step6End = step6Start + step6Pages - 1;
+      const currentStep6PageIndex = getStep6PageIndex(currentPage);
+      
+      if (currentStep6PageIndex < step6Pages - 1) {
+        // Move to next Step6 page
+        setCurrentPage(currentPage + 1);
+        handleStep6PageChange(currentStep6PageIndex + 2); // Update Step6 current page (1-indexed)
+      } else {
+        // If we're on the last Step6 page, go to first recommendation page
+        const recommendationPageStart = step6End + 1;
+        setCurrentPage(recommendationPageStart);
       }
     } else if (isImagePage(currentPage)) {
       // If we're on image pages, navigate through image pages
@@ -2977,9 +3132,29 @@ const MultiStepForm: React.FC = () => {
     // Auto-save current step data before navigating
     await saveCurrentStepToDatabase();
     
-    if (isImagePage(currentPage)) {
+    if (isImagePage6(currentPage)) {
+      // If we're on Step6 pages, navigate through them
+      const step6Start = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+      const currentStep6PageIndex = getStep6PageIndex(currentPage);
+      
+      if (currentStep6PageIndex > 0) {
+        // Move to previous Step6 page
+        setCurrentPage(currentPage - 1);
+        handleStep6PageChange(currentStep6PageIndex); // Update Step6 current page (1-indexed)
+      } else {
+        // If we're on the first Step6 page, go to last repair estimate page
+        const repairEstimateEnd = 4 + totalInvoicePages + totalRepairEstimatePages;
+        if (repairEstimateEnd >= 5) {
+          setCurrentPage(repairEstimateEnd);
+        } else {
+          setCurrentPage(4); // Go to Step 4 if no repair estimate pages
+        }
+      }
+    } else if (isImagePage(currentPage)) {
       // If we're on image pages, navigate through image pages
-      const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
+      const step6Pages = formData.step6TotalPages || 1;
+      const step6End = 4 + totalInvoicePages + totalRepairEstimatePages + step6Pages;
+      const recommendationPageStart = step6End + 1;
       const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
       const currentImagePageIndex = getImagePageIndex(currentPage);
       
@@ -3010,9 +3185,12 @@ const MultiStepForm: React.FC = () => {
           setCurrentRecommendationPageIndex(currentRecommendationPageIndex - 1);
           setCurrentRecommendationSubPage(1); // Reset to page 1 of new recommendation
         } else {
-          // If we're on the first recommendation page, go to image page
-          const imagePageNum = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
-          setCurrentPage(imagePageNum);
+          // If we're on the first recommendation page, go to last Step6 page
+          const step6Pages = formData.step6TotalPages || 1;
+          const step6Start = 4 + totalInvoicePages + totalRepairEstimatePages + 1;
+          const step6End = step6Start + step6Pages - 1;
+          setCurrentPage(step6End);
+          handleStep6PageChange(step6Pages); // Update Step6 current page
           setCurrentRecommendationPageIndex(0);
         }
       }
@@ -3039,7 +3217,9 @@ const MultiStepForm: React.FC = () => {
         setCurrentPage(currentPage - 1);
       } else {
         // If we're on the first Step 9 page, go to last image page
-        const recommendationPageStart = 4 + totalInvoicePages + totalRepairEstimatePages + 1 + 1;
+        const step6Pages = formData.step6TotalPages || 1;
+        const step6End = 4 + totalInvoicePages + totalRepairEstimatePages + step6Pages;
+        const recommendationPageStart = step6End + 1;
         const imagePageStart = recommendationPageStart + Math.max(1, totalRecommendationPages);
         const lastImagePage = step9Start - 1;
         setCurrentPage(lastImagePage);
@@ -3105,7 +3285,7 @@ const MultiStepForm: React.FC = () => {
       console.log('Generating PDF Page:', pageNum);
       const pageDisplayIndex = pageCount + 1;
       const pageCanvas = await generatePageCanvas(pageNum, pageDisplayIndex, totalIncludedPages);
-      const isStep6ImagePage = getLogicalStep(pageNum) === 6;
+      const isStep6ImagePage = isImagePage6(pageNum);
       
       // For Step 6 (Invoice Images) pages, avoid compression and keep PNG
       let pageImgData: string;
@@ -3199,13 +3379,15 @@ const MultiStepForm: React.FC = () => {
         notes: formData.notes,
         dataSourceUrl: formData.dataSourceUrl
       }) :
-      pageNumber === 4 + totalInvoicePages + totalRepairEstimatePages + 1 ?
+      isImagePage6(pageNumber) ?
       React.createElement(Step6, { 
         isPDF: true, 
         scrapedImages: formData.scrapedImages || [], 
         selectedImages: formData.selectedImages || [],
         textPositionX: formData.step6TextPositionX,
-        textPositionY: formData.step6TextPositionY
+        textPositionY: formData.step6TextPositionY,
+        currentPage: getStep6PageIndex(pageNumber) + 1, // Convert to 1-indexed
+        totalPages: formData.step6TotalPages || 1
       }) :
       isRecommendationPage(pageNumber) ?
       React.createElement(Step7, { 
@@ -4955,13 +5137,60 @@ const MultiStepForm: React.FC = () => {
               // Step 6 - Image Selection Interface
               <div className="space-y-4">
                 <div className="mb-4">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-2">
-                    Select Project Images (Max 4)
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Selected: {formData.selectedImages?.length || 0}/4
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800">
+                      Select Project Images
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleAddStep6Page}
+                        className="px-3 py-1.5 bg-[#722420] text-white rounded text-sm font-medium hover:bg-[#5a1d1a] transition-colors"
+                        title="Add new invoice page"
+                      >
+                        + Add Page
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mb-3">
+                    <p className="text-sm text-gray-600">
+                      Selected: {formData.selectedImages?.length || 0} images
+                      {formData.step6TotalPages && formData.step6TotalPages > 1 && (
+                        <span className="ml-2">({formData.step6TotalPages} pages)</span>
+                      )}
+                    </p>
+                    {formData.step6TotalPages && formData.step6TotalPages > 1 && (
+                      <button
+                        onClick={() => {
+                          const currentStep6Page = formData.step6CurrentPage || 1;
+                          if (currentStep6Page > 1) {
+                            handleRemoveStep6Page(currentStep6Page);
+                          }
+                        }}
+                        disabled={(formData.step6CurrentPage || 1) === 1}
+                        className="px-2 py-1 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Remove current page"
+                      >
+                        Remove Current Page
+                      </button>
+                    )}
+                  </div>
                   
+                  {/* Image management by page */}
+                  {formData.step6TotalPages && formData.step6TotalPages > 1 && (
+                    <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <h5 className="text-sm font-semibold text-gray-700 mb-2">Images by Page:</h5>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {Array.from({ length: formData.step6TotalPages }, (_, i) => i + 1).map(pageNum => {
+                          const pageImages = (formData.selectedImages || []).filter(img => (img.pageNumber || 1) === pageNum);
+                          return (
+                            <div key={pageNum} className="text-xs">
+                              <span className="font-medium">Page {pageNum}:</span> {pageImages.length} image{pageImages.length !== 1 ? 's' : ''}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Scraped Images Section */}
@@ -4977,7 +5206,7 @@ const MultiStepForm: React.FC = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                     {formData.scrapedImages?.map((image) => {
                       const isSelected = formData.selectedImages?.some(img => img.id === image.id) || false;
-                      const canSelect = (formData.selectedImages?.length || 0) < 4 || isSelected;
+                      const currentPage = formData.step6CurrentPage || 1;
                       
                       return (
                         <div
@@ -4986,10 +5215,8 @@ const MultiStepForm: React.FC = () => {
                             isSelected
                               ? 'border-[#722420] shadow-lg scale-105'
                               : 'border-gray-200 hover:border-gray-400'
-                          } ${!canSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          }`}
                           onClick={() => {
-                            if (!canSelect) return;
-                            
                             const currentSelected = formData.selectedImages || [];
                             let newSelection: ImageItem[];
 
@@ -4997,8 +5224,13 @@ const MultiStepForm: React.FC = () => {
                               // Remove image from selection
                               newSelection = currentSelected.filter(img => img.id !== image.id);
                             } else {
-                              // Add image to selection
-                              newSelection = [...currentSelected, image];
+                              // Add image to selection - distribute across pages (4 per page)
+                              const MAX_IMAGES_PER_PAGE = 4;
+                              // Calculate which page this image should go to based on total count
+                              const totalImagesAfterAdd = currentSelected.length + 1;
+                              const targetPage = Math.ceil(totalImagesAfterAdd / MAX_IMAGES_PER_PAGE);
+                              
+                              newSelection = [...currentSelected, { ...image, pageNumber: targetPage }];
                             }
 
                             handleImageSelection(newSelection);
@@ -5035,8 +5267,40 @@ const MultiStepForm: React.FC = () => {
                           )}
                           
                           {isSelected && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-[#722420] text-white text-xs p-1 text-center">
-                              Selected #{(formData.selectedImages?.findIndex(img => img.id === image.id) || 0) + 1}
+                            <div className="absolute bottom-0 left-0 right-0 bg-[#722420] text-white text-xs">
+                              <select
+                                value={(formData.selectedImages?.find(img => img.id === image.id)?.pageNumber || 1)}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleMoveImageToPage(image.id, Number(e.target.value));
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full bg-[#722420] text-white text-xs p-1 text-center border-none cursor-pointer appearance-none focus:outline-none hover:bg-[#8a2e2a]"
+                                title="Move to page"
+                                style={{
+                                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundPosition: 'right 4px center',
+                                  paddingRight: '20px'
+                                }}
+                              >
+                                {(() => {
+                                  // Get list of pages that exist (have images or were manually added)
+                                  const existingPages = new Set<number>();
+                                  (formData.selectedImages || []).forEach(img => {
+                                    existingPages.add(img.pageNumber || 1);
+                                  });
+                                  // Include manually added pages (up to totalPages)
+                                  for (let i = 1; i <= (formData.step6TotalPages || 1); i++) {
+                                    existingPages.add(i);
+                                  }
+                                  return Array.from(existingPages).sort((a, b) => a - b);
+                                })().map(pageNum => (
+                                  <option key={pageNum} value={pageNum} className="bg-white text-gray-800">
+                                    Page {pageNum}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           )}
                         </div>
@@ -5073,18 +5337,11 @@ const MultiStepForm: React.FC = () => {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={(formData.selectedImages || []).length >= 4}
-                    className={`w-full sm:w-auto px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 shadow-md flex items-center justify-center space-x-2 ${
-                      (formData.selectedImages || []).length >= 4
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-[#722420] text-white hover:bg-[#5a1d1a] hover:shadow-lg'
-                    }`}
+                    className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 shadow-md flex items-center justify-center space-x-2 bg-[#722420] text-white hover:bg-[#5a1d1a] hover:shadow-lg"
                   >
                      
                     <span>
-                      {(formData.selectedImages || []).length >= 4 
-                        ? '📤 All Slots Full (4/4)' 
-                        : `📤 Upload from Device (${4 - (formData.selectedImages || []).length} slot${4 - (formData.selectedImages || []).length !== 1 ? 's' : ''} available)`}
+                      📤 Upload from Device
                     </span>
                   </button>
              
@@ -5132,7 +5389,6 @@ const MultiStepForm: React.FC = () => {
                                 ✕
                               </button>
                               
-                              {/* Crop button */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -5145,8 +5401,40 @@ const MultiStepForm: React.FC = () => {
                               </button>
                               
                               {isSelected && (
-                                <div className="absolute bottom-0 left-0 right-0 bg-[#722420] text-white text-xs p-1 text-center">
-                                  Selected #{(formData.selectedImages?.findIndex(img => img.id === image.id) || 0) + 1}
+                                <div className="absolute bottom-0 left-0 right-0 bg-[#722420] text-white text-xs">
+                                  <select
+                                    value={(formData.selectedImages?.find(img => img.id === image.id)?.pageNumber || 1)}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      handleMoveImageToPage(image.id, Number(e.target.value));
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full bg-[#722420] text-white text-xs p-1 text-center border-none cursor-pointer appearance-none focus:outline-none hover:bg-[#8a2e2a]"
+                                    title="Move to page"
+                                    style={{
+                                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                                      backgroundRepeat: 'no-repeat',
+                                      backgroundPosition: 'right 4px center',
+                                      paddingRight: '20px'
+                                    }}
+                                  >
+                                    {(() => {
+                                      // Get list of pages that exist (have images or were manually added)
+                                      const existingPages = new Set<number>();
+                                      (formData.selectedImages || []).forEach(img => {
+                                        existingPages.add(img.pageNumber || 1);
+                                      });
+                                      // Include manually added pages (up to totalPages)
+                                      for (let i = 1; i <= (formData.step6TotalPages || 1); i++) {
+                                        existingPages.add(i);
+                                      }
+                                      return Array.from(existingPages).sort((a, b) => a - b);
+                                    })().map(pageNum => (
+                                      <option key={pageNum} value={pageNum} className="bg-white text-gray-800">
+                                        Page {pageNum}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                               )}
                             </div>
@@ -6103,19 +6391,14 @@ const MultiStepForm: React.FC = () => {
                   selectedImages={formData.selectedImages || []}
                   onImageSelection={handleImageSelection}
                   isPDF={false}
-                  onImagePositionChange={(imageId, x, y, width, height) => {
-                    const updatedImages = (formData.selectedImages || []).map(img =>
-                      img.id === imageId
-                        ? { ...img, positionX: x, positionY: y, width, height }
-                        : img
-                    );
-                    updateFormData({ selectedImages: updatedImages });
-                  }}
+                  onImagePositionChange={handleStep6ImagePositionChange}
                   textPositionX={formData.step6TextPositionX}
                   textPositionY={formData.step6TextPositionY}
-                  onTextPositionChange={(x, y) => {
-                    updateFormData({ step6TextPositionX: x, step6TextPositionY: y });
-                  }}
+                  onTextPositionChange={handleStep6TextPositionChange}
+                  currentPage={formData.step6CurrentPage}
+                  onPageChange={handleStep6PageChange}
+                  totalPages={formData.step6TotalPages}
+                  onTotalPagesChange={handleStep6TotalPagesChange}
                 />
               ) : isRecommendationPage(currentPage) ? (
                 getCurrentRecommendationPage() ? (

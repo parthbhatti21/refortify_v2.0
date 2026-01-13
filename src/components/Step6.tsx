@@ -9,6 +9,7 @@ interface ImageItem {
   positionY?: number;
   width?: number;
   height?: number;
+  pageNumber?: number; // Page number this image belongs to (1-indexed)
 }
 
 interface Page6Props {
@@ -16,11 +17,17 @@ interface Page6Props {
   selectedImages?: ImageItem[];
   onImageSelection?: (images: ImageItem[]) => void;
   isPDF?: boolean;
-  onImagePositionChange?: (imageId: string, x: number, y: number, width: number, height: number) => void;
+  onImagePositionChange?: (imageId: string, x: number, y: number, width: number, height: number, pageNumber?: number) => void;
   textPositionX?: number;
   textPositionY?: number;
-  onTextPositionChange?: (x: number, y: number) => void;
+  onTextPositionChange?: (x: number, y: number, pageNumber?: number) => void;
+  currentPage?: number;
+  onPageChange?: (pageNumber: number) => void;
+  totalPages?: number;
+  onTotalPagesChange?: (totalPages: number) => void;
 }
+
+const MAX_IMAGES_PER_PAGE = 4;
 
 export const Page6: React.FC<Page6Props> = ({
   scrapedImages = [],
@@ -30,10 +37,24 @@ export const Page6: React.FC<Page6Props> = ({
   onImagePositionChange,
   textPositionX,
   textPositionY,
-  onTextPositionChange
+  onTextPositionChange,
+  currentPage: propCurrentPage,
+  onPageChange,
+  totalPages: propTotalPages,
+  onTotalPagesChange
 }) => {
   const [localSelectedImages, setLocalSelectedImages] = useState<ImageItem[]>(selectedImages);
+  const [currentPage, setCurrentPage] = useState<number>(propCurrentPage ?? 1);
+  const [textPositions, setTextPositions] = useState<Record<number, { x: number; y: number }>>({});
   const pageContainerRef = React.useRef<HTMLDivElement>(null);
+  
+  // Calculate total pages needed based on image count
+  const calculateTotalPages = (images: ImageItem[]) => {
+    if (images.length === 0) return 1;
+    return Math.max(1, Math.ceil(images.length / MAX_IMAGES_PER_PAGE));
+  };
+  
+  const [totalPages, setTotalPages] = useState<number>(propTotalPages ?? calculateTotalPages(selectedImages));
   
   // State for dragging/resizing each image
   const [draggingImageId, setDraggingImageId] = useState<string | null>(null);
@@ -49,11 +70,20 @@ export const Page6: React.FC<Page6Props> = ({
   // Get default text position - X is always centered, only Y varies
   const getDefaultTextPosition = React.useMemo(() => {
     const centerX = 273; // Always center (546/2 = 273)
+    const currentPageImages = localSelectedImages.filter(img => (img.pageNumber || 1) === currentPage);
+    const imageCount = currentPageImages.length;
+    
+    // Check if we have saved position for this page
+    if (textPositions[currentPage]) {
+      return textPositions[currentPage];
+    }
+    
+    // Use prop position if available
     if (textPositionY !== undefined) {
       return { x: centerX, y: textPositionY };
     }
-    // Default Y position based on image count
-    const imageCount = localSelectedImages.length;
+    
+    // Default Y position based on image count on current page
     if (imageCount === 1) {
       return { x: centerX, y: isPDF ? 580 : 620 };
     } else if (imageCount === 2) {
@@ -61,17 +91,27 @@ export const Page6: React.FC<Page6Props> = ({
     } else {
       return { x: centerX, y: isPDF ? 690 : 690 };
     }
-  }, [textPositionY, localSelectedImages.length, isPDF]);
+  }, [textPositionY, currentPage, localSelectedImages, textPositions, isPDF]);
   
   const centerX = 273; // Always center
   const [localTextX, setLocalTextX] = useState(centerX);
-  const [localTextY, setLocalTextY] = useState(textPositionY ?? getDefaultTextPosition.y);
+  const [localTextY, setLocalTextY] = useState(() => {
+    const defaultPos = getDefaultTextPosition;
+    return textPositions[currentPage]?.y ?? textPositionY ?? defaultPos.y;
+  });
   
-  // Update local text position when props change - X always stays centered
+  // Update local text position when page or props change - X always stays centered
   useEffect(() => {
     setLocalTextX(centerX); // Always keep X at center
-    if (textPositionY !== undefined) setLocalTextY(textPositionY);
-  }, [textPositionY]);
+    const savedPos = textPositions[currentPage];
+    if (savedPos) {
+      setLocalTextY(savedPos.y);
+    } else if (textPositionY !== undefined) {
+      setLocalTextY(textPositionY);
+    } else {
+      setLocalTextY(getDefaultTextPosition.y);
+    }
+  }, [textPositionY, currentPage, textPositions]);
   
   // Text drag handler - only vertical movement
   const handleTextMouseDown = (e: React.MouseEvent) => {
@@ -111,10 +151,14 @@ export const Page6: React.FC<Page6Props> = ({
     const handleMouseUp = () => {
       if (isDraggingText) {
         setIsDraggingText(false);
-        // Save position (X is always center, Y is the dragged position)
+        // Save position (X is always center, Y is the dragged position) for current page
+        const centerX = 273; // Center of page
+        setTextPositions(prev => ({
+          ...prev,
+          [currentPage]: { x: centerX, y: localTextY }
+        }));
         if (onTextPositionChange) {
-          const centerX = 273; // Center of page
-          onTextPositionChange(centerX, localTextY);
+          onTextPositionChange(centerX, localTextY, currentPage);
         }
       }
     };
@@ -126,11 +170,61 @@ export const Page6: React.FC<Page6Props> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDraggingText, textDragStart, localTextY, onTextPositionChange]);
+  }, [isDraggingText, textDragStart, localTextY, onTextPositionChange, currentPage]);
 
+  // Auto-assign page numbers to images and create pages as needed
   useEffect(() => {
-    setLocalSelectedImages(selectedImages);
+    if (selectedImages.length === 0) {
+      setLocalSelectedImages([]);
+      setTotalPages(1);
+      return;
+    }
+    
+    // Assign page numbers to images (default: distribute evenly, max 4 per page)
+    const imagesWithPages = selectedImages.map((img, index) => {
+      if (img.pageNumber) {
+        return img; // Keep existing page number
+      }
+      // Auto-assign: distribute images across pages (max 4 per page)
+      const pageNum = Math.floor(index / MAX_IMAGES_PER_PAGE) + 1;
+      return { ...img, pageNumber: pageNum };
+    });
+    
+    // Calculate required total pages
+    const maxPageNumber = Math.max(...imagesWithPages.map(img => img.pageNumber || 1));
+    const requiredPages = Math.max(1, maxPageNumber, Math.ceil(imagesWithPages.length / MAX_IMAGES_PER_PAGE));
+    
+    setLocalSelectedImages(imagesWithPages);
+    setTotalPages(requiredPages);
+    
+    // Notify parent of total pages change
+    if (onTotalPagesChange && requiredPages !== totalPages) {
+      onTotalPagesChange(requiredPages);
+    }
+    
+    // Ensure current page is valid
+    if (currentPage > requiredPages) {
+      const newPage = requiredPages;
+      setCurrentPage(newPage);
+      if (onPageChange) {
+        onPageChange(newPage);
+      }
+    }
   }, [selectedImages]);
+  
+  // Sync current page with prop
+  useEffect(() => {
+    if (propCurrentPage !== undefined && propCurrentPage !== currentPage) {
+      setCurrentPage(propCurrentPage);
+    }
+  }, [propCurrentPage]);
+  
+  // Sync total pages with prop
+  useEffect(() => {
+    if (propTotalPages !== undefined && propTotalPages !== totalPages) {
+      setTotalPages(propTotalPages);
+    }
+  }, [propTotalPages]);
 
   // Get default dimensions and position for an image based on count
   const getDefaultImageDimensions = (imageCount: number, index: number) => {
@@ -180,12 +274,13 @@ export const Page6: React.FC<Page6Props> = ({
     return { x: containerLeft, y: containerTop };
   };
 
-  // Get image position and size
+  // Get image position and size (for current page images)
   const getImagePosition = (image: ImageItem, index: number) => {
-    const defaultDims = getDefaultImageDimensions(localSelectedImages.length, index);
+    const currentPageImages = getCurrentPageImages();
+    const defaultDims = getDefaultImageDimensions(currentPageImages.length, index);
     const width = image.width ?? defaultDims.width;
     const height = image.height ?? defaultDims.height;
-    const defaultPos = getDefaultImagePosition(localSelectedImages.length, index, width, height);
+    const defaultPos = getDefaultImagePosition(currentPageImages.length, index, width, height);
     
     return {
       x: image.positionX ?? defaultPos.x,
@@ -205,16 +300,38 @@ export const Page6: React.FC<Page6Props> = ({
       // Remove image from selection
       newSelection = localSelectedImages.filter(img => img.id !== image.id);
     } else {
-      // Add image to selection (max 4)
-      if (localSelectedImages.length < 4) {
-        newSelection = [...localSelectedImages, image];
-      } else {
-        return; // Don't add if already at max
-      }
+      // Add image to selection - always assign to current page (no limit)
+      newSelection = [...localSelectedImages, { ...image, pageNumber: currentPage }];
     }
 
     setLocalSelectedImages(newSelection);
     onImageSelection?.(newSelection);
+  };
+  
+  // Get images for current page
+  const getCurrentPageImages = () => {
+    return localSelectedImages.filter(img => (img.pageNumber || 1) === currentPage);
+  };
+  
+  // Move image to different page
+  const moveImageToPage = (imageId: string, targetPage: number) => {
+    const updatedImages = localSelectedImages.map(img => 
+      img.id === imageId ? { ...img, pageNumber: targetPage } : img
+    );
+    
+    // Recalculate total pages based on all images
+    const maxPageNumber = Math.max(...updatedImages.map(img => img.pageNumber || 1), 1);
+    const calculatedTotalPages = Math.max(1, maxPageNumber);
+    
+    if (calculatedTotalPages !== totalPages) {
+      setTotalPages(calculatedTotalPages);
+      if (onTotalPagesChange) {
+        onTotalPagesChange(calculatedTotalPages);
+      }
+    }
+    
+    setLocalSelectedImages(updatedImages);
+    onImageSelection?.(updatedImages);
   };
 
   const isImageSelected = (image: ImageItem) => {
@@ -230,7 +347,8 @@ export const Page6: React.FC<Page6Props> = ({
     const rect = pageContainerRef.current?.getBoundingClientRect();
     const image = localSelectedImages.find(img => img.id === imageId);
     if (rect && image) {
-      const pos = getImagePosition(image, localSelectedImages.findIndex(img => img.id === imageId));
+      const currentPageImages = getCurrentPageImages();
+      const pos = getImagePosition(image, currentPageImages.findIndex(img => img.id === imageId));
       setDragStart({
         x: e.clientX - rect.left - pos.x,
         y: e.clientY - rect.top - pos.y
@@ -247,7 +365,8 @@ export const Page6: React.FC<Page6Props> = ({
     setResizeType(type);
     const image = localSelectedImages.find(img => img.id === imageId);
     if (image) {
-      const pos = getImagePosition(image, localSelectedImages.findIndex(img => img.id === imageId));
+      const currentPageImages = getCurrentPageImages();
+      const pos = getImagePosition(image, currentPageImages.findIndex(img => img.id === imageId));
       setResizeStart({
         x: e.clientX,
         y: e.clientY,
@@ -268,7 +387,8 @@ export const Page6: React.FC<Page6Props> = ({
       if (draggingImageId) {
         const image = localSelectedImages.find(img => img.id === draggingImageId);
         if (!image) return;
-        const index = localSelectedImages.findIndex(img => img.id === draggingImageId);
+        const currentPageImages = getCurrentPageImages();
+        const index = currentPageImages.findIndex(img => img.id === draggingImageId);
         const currentPos = getImagePosition(image, index);
         
         const newX = e.clientX - rect.left - dragStart.x;
@@ -293,7 +413,8 @@ export const Page6: React.FC<Page6Props> = ({
       } else if (resizingImageId && resizeType) {
         const image = localSelectedImages.find(img => img.id === resizingImageId);
         if (!image) return;
-        const index = localSelectedImages.findIndex(img => img.id === resizingImageId);
+        const currentPageImages = getCurrentPageImages();
+        const index = currentPageImages.findIndex(img => img.id === resizingImageId);
         const currentPos = getImagePosition(image, index);
         
         const deltaX = e.clientX - resizeStart.x;
@@ -327,11 +448,12 @@ export const Page6: React.FC<Page6Props> = ({
           img.id === (draggingImageId || resizingImageId)
         );
         if (image && onImagePositionChange) {
-          const index = localSelectedImages.findIndex(img => 
+          const currentPageImages = getCurrentPageImages();
+          const index = currentPageImages.findIndex(img => 
             img.id === (draggingImageId || resizingImageId)
           );
           const pos = getImagePosition(image, index);
-          onImagePositionChange(image.id, pos.x, pos.y, pos.width, pos.height);
+          onImagePositionChange(image.id, pos.x, pos.y, pos.width, pos.height, currentPage);
         }
         setDraggingImageId(null);
         setResizingImageId(null);
@@ -346,7 +468,7 @@ export const Page6: React.FC<Page6Props> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingImageId, resizingImageId, resizeType, dragStart, resizeStart, localSelectedImages, onImagePositionChange]);
+  }, [draggingImageId, resizingImageId, resizeType, dragStart, resizeStart, localSelectedImages, onImagePositionChange, currentPage]);
 
   return (
     <div 
@@ -401,12 +523,14 @@ export const Page6: React.FC<Page6Props> = ({
             />
           </div>
 
-            {/* Images Display Area - Draggable and resizable images */}
-            {localSelectedImages.length > 0 ? (
-              localSelectedImages.map((image, index) => {
-                const pos = getImagePosition(image, index);
-                const isDragging = draggingImageId === image.id;
-                const isResizing = resizingImageId === image.id;
+            {/* Images Display Area - Draggable and resizable images (current page only) */}
+            {(() => {
+              const currentPageImages = getCurrentPageImages();
+              return currentPageImages.length > 0 ? (
+                currentPageImages.map((image, index) => {
+                  const pos = getImagePosition(image, index);
+                  const isDragging = draggingImageId === image.id;
+                  const isResizing = resizingImageId === image.id;
                 
                 return (
                   <div
@@ -498,7 +622,7 @@ export const Page6: React.FC<Page6Props> = ({
                   </div>
                 );
               })
-            ) : (
+              ) : (
               // Show placeholder when no images selected
               <div 
                 className="absolute top-[200px] bottom-[120px] left-[60px] right-[60px] flex items-center justify-center"
@@ -518,10 +642,11 @@ export const Page6: React.FC<Page6Props> = ({
                   <p className="text-sm">Selected images will appear here</p>
                 </div>
               </div>
-            )}
+            );
+            })()}
 
           {/* Description paragraph below images - Draggable */}
-          {localSelectedImages.length > 0 && (
+          {getCurrentPageImages().length > 0 && (
             <div 
               className="absolute"
               style={{
@@ -551,8 +676,6 @@ export const Page6: React.FC<Page6Props> = ({
             </div>
           )}
 
-          {/* Selection Info (Preview mode only) */}
-          
 
           {/* Frame Border */}
           <div 
