@@ -1164,10 +1164,13 @@ const MultiStepForm: React.FC = () => {
             positionX: img.positionX,
             positionY: img.positionY,
             width: img.width,
-            height: img.height
+            height: img.height,
+            pageNumber: img.pageNumber || 1
           })),
           step6TextPositionX: step6j['Text Position']?.x,
           step6TextPositionY: step6j['Text Position']?.y,
+          step6CurrentPage: step6j['Current Page'] || 1,
+          step6TotalPages: step6j['Total Pages'] || 1,
           // Build scrapedImages from selected (step6) + inspection (step8)
           scrapedImages: (() => {
             const selected = (step6j['Selected Images'] || []).map((img: any) => ({ 
@@ -1176,7 +1179,8 @@ const MultiStepForm: React.FC = () => {
               positionX: img.positionX,
               positionY: img.positionY,
               width: img.width,
-              height: img.height
+              height: img.height,
+              pageNumber: img.pageNumber || 1
             }));
             const inspection = (step8j['Inspection Images'] || step8j['inspectionImages'] || []).map((img: any) => ({ id: img.id || `ins-${Math.random()}`, url: img.url }));
             const uploaded = (step8j['Uploaded Images'] || []).map((img: any) => ({ id: img.id || `uploaded-${Math.random()}`, url: img.url }));
@@ -2312,12 +2316,15 @@ const MultiStepForm: React.FC = () => {
         positionX: img.positionX,
         positionY: img.positionY,
         width: img.width,
-        height: img.height
+        height: img.height,
+        pageNumber: img.pageNumber || 1
       })),
       'Text Position': {
         x: formData.step6TextPositionX,
         y: formData.step6TextPositionY
-      }
+      },
+      'Current Page': formData.step6CurrentPage || 1,
+      'Total Pages': formData.step6TotalPages || 1
     };
     const { error: s6JsonErr } = await supabase.from('step6_json').upsert({ report_id: reportId, data: step6Json }, { onConflict: 'report_id' });
     if (s6JsonErr) throw s6JsonErr;
@@ -2949,12 +2956,15 @@ const MultiStepForm: React.FC = () => {
               positionX: img.positionX,
               positionY: img.positionY,
               width: img.width,
-              height: img.height
+              height: img.height,
+              pageNumber: img.pageNumber || 1
             })),
             'Text Position': {
               x: formData.step6TextPositionX,
               y: formData.step6TextPositionY
-            }
+            },
+            'Current Page': formData.step6CurrentPage || 1,
+            'Total Pages': formData.step6TotalPages || 1
           };
           await supabase.from('step6_json').upsert(
             { report_id: currentReportId, data: step6Json },
