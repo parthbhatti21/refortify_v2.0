@@ -22,6 +22,7 @@ import Step10Part5 from './Step10Part5';
 import DataScraper from './DataScraper';
 import ImageCropper from './ImageCropper';
 import { supabase } from '../lib/supabaseClient';
+import { logger } from '../lib/loggingService';
 
 // Email Modal Component
 interface EmailModalProps {
@@ -574,7 +575,7 @@ const sanitizeFileName = (text: string): string => {
   return sanitized || 'file';
 };
 
-const MultiStepForm: React.FC = () => {
+const MultiStepForm: React.FC<{ userEmail: string }> = ({ userEmail }) => {
   const [currentStep, setCurrentStep] = useState<'scrape' | 'form'>('scrape');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentRecommendationPageIndex, setCurrentRecommendationPageIndex] = useState<number>(0);
@@ -833,6 +834,24 @@ const MultiStepForm: React.FC = () => {
       // Ignore storage errors
     }
   }, []);
+
+  // Track if this is initial mount
+  const isInitialMount = useRef(true);
+
+  // Log step navigation when page changes (but not on initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    // Only log if user is actively working (has entered form step and has data)
+    if (currentPage > 0 && currentStep === 'form' && (currentReportId || formData.clientName)) {
+      const reportId = currentReportId || formData.clientName || 'new_report';
+      const logicalStep = getLogicalStep(currentPage);
+      logger.logStepEntered(userEmail, reportId, logicalStep);
+    }
+  }, [currentPage]);
 
   // Toggle current page inclusion in PDF (simplified - always toggles current page)
   const togglePageInclusion = async () => {
@@ -1562,7 +1581,7 @@ const MultiStepForm: React.FC = () => {
     filesToProcess.forEach((file, index) => {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
           // Distribute images across pages (4 per page)
           // Calculate which page this image should go to based on total count after adding
           const totalImagesAfterAdd = currentSelection.length + newImages.length + 1;
@@ -1589,6 +1608,14 @@ const MultiStepForm: React.FC = () => {
               selectedImages: updatedSelection,
               step6TotalPages: totalPages
             }));
+            
+            // Log image upload
+            const reportId = currentReportId || formData.clientName || 'new_report';
+            await logger.logImageUploaded(userEmail, reportId, 6, 'inspection_images', {
+              file_name: file.name,
+              file_size_kb: Math.round(file.size / 1024),
+              total_images: updatedSelection.length
+            });
           }
         };
         reader.readAsDataURL(file);
@@ -1700,6 +1727,16 @@ const MultiStepForm: React.FC = () => {
         const reportId = reportRow?.id || newReportId;
         setCurrentReportId(reportId);
         console.log('Report created successfully:', reportId);
+        
+        // Log report creation started with actual report ID
+        await logger.logReportCreationStarted(userEmail, reportId, {
+          clientName: data.clientName,
+          clientAddress: data.clientAddress,
+          chimneyType: data.chimneyType,
+          reportDate: data.reportDate,
+          dataSourceUrl: data.dataSourceUrl,
+          imageCount: data.scrapedImages?.length || 0
+        });
       }
     } catch (error) {
       console.error('Failed to create report:', error);
@@ -1738,6 +1775,11 @@ const MultiStepForm: React.FC = () => {
 
   const generatePDF = async () => {
     setIsGenerating(true);
+    const reportId = currentReportId || formData.clientName || 'new_report';
+    
+    // Log PDF generation started
+    await logger.logPdfGenerationStarted(userEmail, reportId);
+    
     try {
       // Find the existing preview div that contains the Page components
       const previewDiv = document.querySelector('[data-preview="true"]');
@@ -1848,11 +1890,25 @@ const MultiStepForm: React.FC = () => {
         setGeneratedPdfBlob(pdfBlob);
         setGeneratedPdfFileName(fileName);
         
+        // Log PDF generation success
+        const reportId = currentReportId || formData.clientName || 'new_report';
+        await logger.logPdfGenerationSuccess(userEmail, reportId, {
+          file_name: fileName,
+          file_size_kb: Math.round(pdfBlob.size / 1024)
+        });
+        
         // Show approval modal instead of immediately uploading
         setShowApprovalModal(true);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating PDF:', error);
+      
+      // Log PDF generation error
+      const reportId = currentReportId || formData.clientName || 'new_report';
+      await logger.logPdfGenerationFailed(userEmail, reportId, error?.message || 'Unknown error', {
+        error_details: error?.toString()
+      });
+      
       alert('Error generating PDF. Please try again. Make sure all components are visible in the preview.');
     } finally {
       setIsGenerating(false);
@@ -2081,6 +2137,13 @@ const MultiStepForm: React.FC = () => {
         pdfUrl = await uploadReportPdf(generatedPdfBlob, generatedPdfFileName, formData.clientName || 'client');
         setUploadedPdfUrl(pdfUrl);
         
+        // Log PDF upload success
+        const reportId = savedReportId || currentReportId || formData.clientName || 'new_report';
+        await logger.logPdfUploadSuccess(userEmail, reportId, {
+          pdf_url: pdfUrl,
+          file_name: generatedPdfFileName
+        });
+        
         // Step 2.1: Update report with PDF upload status
         if (savedReportId || currentReportId) {
           const reportId = savedReportId || currentReportId;
@@ -2103,6 +2166,11 @@ const MultiStepForm: React.FC = () => {
         alert('Report saved and uploaded successfully.');
       } catch (uploadError: any) {
         const message = uploadError?.message || 'Unknown error';
+        
+        // Log PDF upload failure
+        const reportId = savedReportId || currentReportId || formData.clientName || 'new_report';
+        await logger.logBackendError(userEmail, 'PDF_UPLOAD_FAILED', message, uploadError?.stack);
+        
         alert(`Upload failed: ${message}`);
         // Still show email modal even if upload fails (user might want to send later)
       }
@@ -3018,6 +3086,148 @@ const MultiStepForm: React.FC = () => {
   };
 
   const handleNextPage = async () => {
+    const reportId = currentReportId || formData.clientName || 'new_report';
+    const currentLogicalStep = getLogicalStep(currentPage);
+    
+    // Prepare detailed event data based on the step
+    let stepDetails: Record<string, any> = {};
+    
+    switch (currentLogicalStep) {
+      case 5: {
+        // Check if it's invoice or repair estimate
+        if (isInvoicePage(currentPage)) {
+          // Invoice page - only log when leaving the last invoice page
+          const lastInvoicePage = 4 + totalInvoicePages;
+          if (currentPage === lastInvoicePage) {
+            stepDetails = {
+              invoice_no: formData.invoiceData?.invoiceNumber || '',
+              payment_method: formData.invoiceData?.paymentMethod || '',
+              payment_no: formData.invoiceData?.paymentNumber || '',
+              items_added: formData.invoiceData?.rows?.length || 0,
+              note: formData.invoiceData?.notes || ''
+            };
+          }
+        } else if (isRepairEstimatePage(currentPage)) {
+          // Repair estimate - only log when leaving the last repair estimate page
+          const lastRepairEstimatePage = 4 + totalInvoicePages + totalRepairEstimatePages;
+          if (currentPage === lastRepairEstimatePage) {
+            const sections: Record<string, any> = {};
+            
+            // Capture all recommendation sections
+            if (formData.recommendationSections && formData.recommendationSections.length > 0) {
+              formData.recommendationSections.forEach((section, index) => {
+                sections[`section_${index + 1}`] = {
+                  title: section.title,
+                  items_added: section.rows?.length || 0
+                };
+              });
+            }
+            
+            stepDetails = {
+              estimate_no: formData.repairEstimateData?.estimateNumber || '',
+              payment_method: formData.repairEstimateData?.paymentMethod || '',
+              payment_no: formData.repairEstimateData?.paymentNumber || '',
+              total_sections: formData.recommendationSections?.length || 0,
+              sections: sections
+            };
+          }
+        }
+        break;
+      }
+      
+      case 6: {
+        // Step 6 - Inspection images - only log when leaving last page
+        const step6Pages = formData.step6TotalPages || 1;
+        const step6End = 4 + totalInvoicePages + totalRepairEstimatePages + step6Pages;
+        if (currentPage === step6End) {
+          // Get all selected images
+          const selectedImgs = formData.selectedImages || [];
+          
+          // Get IDs of all scraped images
+          const scrapedImageIds = new Set((formData.scrapedImages || []).map(img => img.id));
+          
+          // Count images selected from extracted vs uploaded/added
+          let selectedFromExtracted = 0;
+          let uploadedOrAdded = 0;
+          
+          selectedImgs.forEach(img => {
+            if (scrapedImageIds.has(img.id)) {
+              selectedFromExtracted++;
+            } else {
+              uploadedOrAdded++;
+            }
+          });
+          
+          stepDetails = {
+            selected_from_extracted: selectedFromExtracted,
+            uploaded: uploadedOrAdded,
+            total: selectedImgs.length
+          };
+        }
+        break;
+      }
+      
+      case 7: {
+        // Step 7 - Recommendations - only log when leaving last recommendation page
+        const isLastRecommendation = currentRecommendationPageIndex === (formData.repairEstimatePages?.length || 0) - 1;
+        
+        if (isLastRecommendation) {
+          // Check if this recommendation has multiple pages
+          const currentPageRec = getCurrentRecommendationPage();
+          const currentRows = currentPageRec?.repairEstimateData?.rows || [];
+          const currentRecommendationTotalPages = calculateRecommendationPages(currentRows);
+          
+          // Log when:
+          // - On page 2 of a 2-page recommendation, OR
+          // - On page 1 of a 1-page recommendation
+          const shouldLog = (currentRecommendationTotalPages === 2 && currentRecommendationSubPage === 2) ||
+                           (currentRecommendationTotalPages === 1 && currentRecommendationSubPage === 1);
+          
+          if (shouldLog) {
+            const pages: Record<string, any> = {};
+            formData.repairEstimatePages?.forEach((page, index) => {
+              pages[`page_${index + 1}`] = {
+                image: page.reviewImage || '',
+                custom_recommendation: page.customRecommendation || '',
+                items: page.repairEstimateData?.rows?.length || 0
+              };
+            });
+            stepDetails = pages;
+          }
+        }
+        break;
+      }
+      
+      case 8: {
+        // Step 8 - Image gallery - only log when leaving last image page
+        const lastImagePage = totalPages - 8; // 8 = 3 (step9) + 5 (step10)
+        if (currentPage === lastImagePage) {
+          const pages: Record<string, any> = {};
+          const unusedImages = (formData.selectedImages || []).filter((img: ImageItem) =>
+            !(formData.usedReviewImages || []).includes(img.url)
+          );
+          const totalImagePages = unusedImages.length > 0 ? Math.ceil(unusedImages.length / 9) : 0;
+          
+          for (let i = 0; i < totalImagePages; i++) {
+            const pageImages = unusedImages.slice(i * 9, (i + 1) * 9);
+            pages[`page_${i + 1}`] = {
+              images: pageImages.length,
+              image_ids: pageImages.map(img => img.id)
+            };
+          }
+          stepDetails = {
+            total_pages: totalImagePages,
+            total_images: unusedImages.length,
+            pages: pages
+          };
+        }
+        break;
+      }
+    }
+    
+    // Log step completion with details
+    await logger.logStepCompleted(userEmail, reportId, currentLogicalStep, stepDetails);
+    
     // Auto-save current step data before navigating
     await saveCurrentStepToDatabase();
     
@@ -3055,14 +3265,15 @@ const MultiStepForm: React.FC = () => {
     
     if (currentLogicalStep === 7) {
       // Check if current recommendation has multiple pages (table + image)
-      const currentPage = getCurrentRecommendationPage();
-      const currentRows = currentPage?.repairEstimateData?.rows || [];
+      const currentRecPage = getCurrentRecommendationPage();
+      const currentRows = currentRecPage?.repairEstimateData?.rows || [];
       const currentRecommendationTotalPages = calculateRecommendationPages(currentRows);
       
       // If we're on page 1 of a multi-page recommendation, go to page 2 (image page)
       if (currentRecommendationTotalPages > 1 && currentRecommendationSubPage === 1) {
         // Move to page 2 (image page) of same recommendation
         setCurrentRecommendationSubPage(2);
+        setCurrentPage(currentPage + 1); // Actually increment the page
       } else {
         // We're on page 2 or single page recommendation, move to next recommendation or next step
         setCurrentRecommendationSubPage(1); // Reset sub-page for next recommendation
@@ -3071,6 +3282,7 @@ const MultiStepForm: React.FC = () => {
           // Move to next recommendation page
           setCurrentRecommendationPageIndex(currentRecommendationPageIndex + 1);
           setCurrentRecommendationSubPage(1); // Reset to page 1 of new recommendation
+          setCurrentPage(currentPage + 1); // Actually increment the page
         } else {
           // If we're on the last recommendation page, go to first image page
           const step6Pages = formData.step6TotalPages || 1;
@@ -3650,7 +3862,12 @@ const MultiStepForm: React.FC = () => {
       {/* Content */}
       {currentStep === 'scrape' ? (
         <div className="card p-4 sm:p-8">
-          <DataScraper onDataExtracted={handleDataExtracted} setCurrentStep={setCurrentStep} setFormData={(data) => setFormData({ ...data, notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.' })} />
+          <DataScraper 
+            onDataExtracted={handleDataExtracted} 
+            setCurrentStep={setCurrentStep} 
+            setFormData={(data) => setFormData({ ...data, notes: 'This quote is good for 30 days from date of service. Deposits for scheduled future service is non-refundable.' })} 
+            userEmail={userEmail}
+          />
         </div>
       ) : (
         <>

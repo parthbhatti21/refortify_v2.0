@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchGoogleSheetData } from '../lib/googleSheetsService';
+import { logger } from '../lib/loggingService';
 
 interface ImageItem {
   id: string;
@@ -26,6 +27,7 @@ interface DataScraperProps {
     timelineCoverImage: string;
     scrapedImages: ImageItem[];
   }) => void;
+  userEmail?: string;
 }
 
 interface JobData {
@@ -51,7 +53,7 @@ interface ExtractedData {
   scrapedImages: ImageItem[];
 }
 
-const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentStep, setFormData }) => {
+const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentStep, setFormData, userEmail = 'unknown' }) => {
   const API_BASE = process.env.REACT_APP_API_BASE || 'https://adminbackend.chimneysweeps.com';
   const API_KEY = process.env.REACT_APP_API_KEY || 'bestcompanyever23325';
   const [url, setUrl] = useState('https://app.companycam.com/timeline/ZzQLL3MY3C1dtVjb');
@@ -303,6 +305,14 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   const handleScrape = async () => {
     if (!url) return;
     
+    const reportId = extractedData.clientName || 'extraction_' + Date.now();
+    
+    // Log extraction started
+    await logger.logExtractionStarted(userEmail, reportId, {
+      source: 'companycam',
+      url: url
+    });
+    
     setIsLoading(true);
     try {
       // Fetch the HTML content from the URL
@@ -323,8 +333,22 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
       setExtractedData(parsedData);
       setShowEditForm(true);
       
-    } catch (error) {
+      // Log extraction success
+      await logger.logExtractionSuccess(userEmail, reportId, {
+        client_name: parsedData.clientName,
+        images_count: parsedData.scrapedImages?.length || 0,
+        has_address: !!parsedData.clientAddress
+      });
+      
+    } catch (error: any) {
       console.error('Data extraction failed:', error);
+      
+      // Log extraction failure
+      await logger.logExtractionFailed(userEmail, reportId, error?.message || 'Unknown error', {
+        url: url,
+        error_type: error?.name
+      });
+      
       alert('Data extraction failed. Please verify the URL and try again, or contact IT support if the issue persists.');
     } finally {
       setIsLoading(false);
@@ -394,6 +418,7 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
 
   const handleContinue = () => {
     // Only pass the required data to the parent component
+    // Report creation and logging will happen in MultiStepForm
     onDataExtracted({
       clientName: extractedData.clientName,
       clientAddress: extractedData.clientAddress,

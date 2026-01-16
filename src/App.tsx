@@ -1,23 +1,32 @@
 import React from 'react';
-//
 import MultiStepForm from './components/MultiStepForm';
 import Library from './components/Library';
 import Login from './components/Login';
+import Logs from './components/Logs';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient';
+import { logger } from './lib/loggingService';
 import './App.css';
+
 function App() {
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const [path, setPath] = useState<string>(() => window.location.pathname);
+  const [userEmail, setUserEmail] = useState<string>('');
 
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       setIsAuthed(!!data.session);
+      if (data.session?.user?.email) {
+        setUserEmail(data.session.user.email);
+      }
     };
     getSession();
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthed(!!session);
+      if (session?.user?.email) {
+        setUserEmail(session.user.email);
+      }
     });
     const onPop = () => setPath(window.location.pathname);
     const onNavigate = (e: any) => {
@@ -29,12 +38,46 @@ function App() {
     };
     window.addEventListener('popstate', onPop);
     window.addEventListener('app:navigate', onNavigate as any);
+    
+    // Global error handler
+    const handleError = async (event: ErrorEvent) => {
+      if (userEmail) {
+        await logger.logFrontendError(
+          userEmail,
+          'UNCAUGHT_ERROR',
+          event.message,
+          event.error?.stack,
+          {
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno
+          }
+        );
+      }
+    };
+    
+    const handleUnhandledRejection = async (event: PromiseRejectionEvent) => {
+      if (userEmail) {
+        await logger.logFrontendError(
+          userEmail,
+          'UNHANDLED_REJECTION',
+          event.reason?.message || 'Promise rejected',
+          event.reason?.stack
+        );
+      }
+    };
+    
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
     return () => {
       sub.subscription.unsubscribe();
       window.removeEventListener('popstate', onPop);
       window.removeEventListener('app:navigate', onNavigate as any);
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
-  }, []);
+  }, [userEmail]);
 
   const otpPending = (() => { try { return localStorage.getItem('otp_pending') === '1'; } catch { return false; } })();
 
@@ -58,12 +101,28 @@ function App() {
             <div className="flex items-center space-x-4">
               <span className="text-xs sm:text-sm text-gray-500 text-center"> Quick report generator</span>
               {isAuthed ? (
-                <button
-                  onClick={async () => { await supabase.auth.signOut(); }}
-                  className="px-3 py-1.5 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  Logout
-                </button>
+                <>
+                  
+                  {path !== '/' && (
+                    <button
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('app:navigate', { detail: { to: '/' } }));
+                      }}
+                      className="px-3 py-1.5 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Home
+                    </button>
+                  )}
+                  <button
+                    onClick={async () => { 
+                      await logger.logLogout(userEmail);
+                      await supabase.auth.signOut(); 
+                    }}
+                    className="px-3 py-1.5 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Logout
+                  </button>
+                </>
               ) : null}
             </div>
           </div>
@@ -76,10 +135,12 @@ function App() {
           <div className="text-center text-gray-600">Loading…</div>
         ) : (!isAuthed || otpPending) ? (
           <Login />
+        ) : path === '/logs' ? (
+          <Logs userEmail={userEmail} />
         ) : path === '/library' ? (
-          <Library />
+          <Library userEmail={userEmail} />
         ) : (
-          <MultiStepForm />
+          <MultiStepForm userEmail={userEmail} />
         )}
       </main>
 

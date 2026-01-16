@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { logger } from '../lib/loggingService';
 
 const Login: React.FC = () => {
   const mapError = (msg?: string | null) => {
@@ -73,7 +74,13 @@ const Login: React.FC = () => {
     setError(null);
     setLoadingAction('verify');
     const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: 'email' });
-    if (error) setError(mapError(error.message));
+    if (error) {
+      setError(mapError(error.message));
+      await logger.logLoginFailure(email, error.message);
+    } else {
+      await logger.logLoginSuccess(email);
+      logger.resetSession();
+    }
     setLoadingAction('none');
     if (!error) {
       try { localStorage.removeItem('otp_pending'); } catch {}

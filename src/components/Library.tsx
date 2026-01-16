@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { logger } from '../lib/loggingService';
 
 interface DirectoryItem {
   name: string;
@@ -14,7 +15,7 @@ interface FileItem {
   download_url: string;
 }
 
-const Library: React.FC = () => {
+const Library: React.FC<{ userEmail: string }> = ({ userEmail }) => {
   const API_BASE = process.env.REACT_APP_API_BASE || 'https://adminbackend.chimneysweeps.com';
   const API_KEY = process.env.REACT_APP_API_KEY || 'bestcompanyever23325';
   const [loading, setLoading] = useState(false);
@@ -359,6 +360,18 @@ const Library: React.FC = () => {
         finalReportId = report.id as string;
       }
 
+      // Log report being opened for editing
+      const clientName = selectedClient?.full_name || 'Unknown';
+      await logger.logReportOpenedForEditing(
+        userEmail,
+        finalReportId,
+        {
+          client_name: clientName,
+          date: selectedDate,
+          source: 'library'
+        }
+      );
+
       // Only store minimal context; loader in form will fetch and map data
       localStorage.setItem('edit_context', JSON.stringify({ 
         clientId: selectedClientId, 
@@ -368,6 +381,19 @@ const Library: React.FC = () => {
       window.dispatchEvent(new CustomEvent('app:navigate', { detail: { to: '/' } }));
     } catch (e: any) {
       setError(e?.message || 'Failed to prepare report for editing');
+      
+      // Log failed report open
+      await logger.logFrontendError(
+        userEmail,
+        'REPORT_OPEN_FAILED',
+        e?.message || 'Failed to prepare report for editing',
+        e?.stack,
+        {
+          client_id: selectedClientId,
+          date: selectedDate,
+          source: 'library'
+        }
+      );
     } finally {
       setIsEditing(false);
     }
@@ -404,9 +430,32 @@ const Library: React.FC = () => {
     setPreviewName(file.key.split('/').slice(-1)[0]);
     setPreviewLoading(true);
     setShowPreview(true);
+    
+    // Log PDF preview opened
+    logger.logPdfPreviewOpened(
+      userEmail,
+      file.key.split('/').slice(-1)[0],
+      {
+        file_name: file.key.split('/').slice(-1)[0],
+        file_size_bytes: file.size,
+        client_name: selectedClient?.full_name
+      }
+    );
   };
 
   const handleDownload = (file: FileItem) => {
+    // Log PDF download
+    logger.logPdfDownloaded(
+      userEmail,
+      file.key.split('/').slice(-1)[0],
+      {
+        file_name: file.key.split('/').slice(-1)[0],
+        file_size_bytes: file.size,
+        client_name: selectedClient?.full_name,
+        download_method: 'library'
+      }
+    );
+    
     // Programmatic download to avoid exposing the signed URL in DOM markup
     try {
       const win = window.open(file.download_url, '_blank', 'noopener');
@@ -420,8 +469,18 @@ const Library: React.FC = () => {
         a.click();
         document.body.removeChild(a);
       }
-    } catch (_) {
-      // no-op
+    } catch (e: any) {
+      // Log download failure
+      logger.logFrontendError(
+        userEmail,
+        'PDF_DOWNLOAD_FAILED',
+        e?.message || 'Download failed',
+        e?.stack,
+        {
+          file_name: file.key.split('/').slice(-1)[0],
+          client_name: selectedClient?.full_name
+        }
+      );
     }
   };
 
@@ -524,7 +583,21 @@ const Library: React.FC = () => {
                   {filteredClients.map((c) => (
                     <button
                       key={c.id}
-                      onClick={() => { setSelectedClientId(c.id); setSelectedDate(''); setFiles([]); setItems([]); }}
+                      onClick={() => { 
+                        setSelectedClientId(c.id); 
+                        setSelectedDate(''); 
+                        setFiles([]); 
+                        setItems([]);
+                        // Log client selected
+                        logger.logLibraryClientSelected(
+                          userEmail,
+                          c.full_name,
+                          {
+                            client_name: c.full_name,
+                            has_address: !!c.address
+                          }
+                        );
+                      }}
                       className="text-left p-3 rounded border border-gray-200 hover:border-[#722420] hover:bg-[#f6eae9] transition-colors"
                     >
                       <div className="font-medium text-gray-900">{c.full_name}</div>
@@ -583,7 +656,21 @@ const Library: React.FC = () => {
                   return (
                   <button
                     key={dateObj.date}
-                    onClick={() => { setSelectedDate(dateObj.date); fetchReportsByDate(dateObj.date); }}
+                    onClick={() => { 
+                      setSelectedDate(dateObj.date); 
+                      fetchReportsByDate(dateObj.date);
+                      // Log date selected
+                      logger.logLibraryDateSelected(
+                        userEmail,
+                        selectedClient?.full_name || 'Unknown',
+                        dateObj.date,
+                        {
+                          client_name: selectedClient?.full_name,
+                          date: dateObj.date,
+                          has_pdf: dateObj.pdfUploaded
+                        }
+                      );
+                    }}
                     className={`p-3 rounded border text-sm text-left ${selectedDate === dateObj.date ? 'border-[#722420] bg-[#f6eae9] text-[#722420]' : 'border-gray-200 hover:border-[#722420] hover:bg-[#f6eae9]'}`}
                     disabled={loadingSupabase}
                   >
