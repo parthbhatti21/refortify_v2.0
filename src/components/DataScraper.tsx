@@ -81,7 +81,9 @@ const DataScraper: React.FC<DataScraperProps> = ({ onDataExtracted, setCurrentSt
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [libraryRootDirs, setLibraryRootDirs] = useState<Array<{ name: string; prefix: string }>>([]);
   const [libraryChildDirs, setLibraryChildDirs] = useState<Array<{ name: string; prefix: string }>>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sheetDataLoaded, setSheetDataLoaded] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sheetDataError, setSheetDataError] = useState<string | null>(null);
 
   // Load Google Sheets data on component mount (silent unless there's an error)
