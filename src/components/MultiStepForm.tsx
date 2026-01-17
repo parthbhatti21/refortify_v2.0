@@ -1166,6 +1166,26 @@ const MultiStepForm: React.FC<{ userEmail: string }> = ({ userEmail }) => {
               price: r.price || ''
             }))
           },
+          // Build recommendationSections from all sections in the database
+          recommendationSections: (() => {
+            const sections: Array<{ id: string; title: string; rows: any[] }> = [];
+            let sectionIndex = 1;
+            while (step5p2[`Section ${sectionIndex} Title`] || step5p2[`Section ${sectionIndex} Rows`]) {
+              sections.push({
+                id: String(sectionIndex),
+                title: step5p2[`Section ${sectionIndex} Title`] || `Repair Estimate ${sectionIndex}`,
+                rows: (step5p2[`Section ${sectionIndex} Rows`] || []).map((r: any) => ({
+                  id: r.id || String(Math.random()),
+                  description: r.description || '',
+                  unit: r.unit || '',
+                  price: r.price || ''
+                }))
+              });
+              sectionIndex++;
+            }
+            return sections.length > 0 ? sections : undefined;
+          })(),
+          // Keep old properties for backward compatibility
           recommendationSection1Title: step5p2['Section 1 Title'] || 'Repair Estimate 1',
           showRecommendationSection2: !!step5p2['Section 2 Rows'],
           recommendationSection2Title: step5p2['Section 2 Title'] || '',
@@ -2995,18 +3015,30 @@ const MultiStepForm: React.FC<{ userEmail: string }> = ({ userEmail }) => {
             { onConflict: 'report_id' }
           );
 
-          const step5Part2Json = {
+          // Build step5Part2Json dynamically from recommendationSections
+          const step5Part2Json: any = {
             'Estimate Number': formData.repairEstimateData?.estimateNumber || '',
             'Method of Payment': formData.repairEstimateData?.paymentMethod || '',
             'Payment No': formData.repairEstimateData?.paymentNumber || '',
-            'Section 1 Title': (formData as any).recommendationSection1Title || 'Repair Estimate 1',
-            'Section 1 Rows': formData.repairEstimateData?.rows || [],
-            ...((formData as any).showRecommendationSection2 ? {
-              'Section 2 Title': (formData as any).recommendationSection2Title || 'Repair Estimate 2',
-              'Section 2 Rows': ((formData as any).recommendationSection2?.rows) || []
-            } : {}),
             'Notes': formData.notes || ''
           };
+          
+          // Add all recommendation sections dynamically
+          if (formData.recommendationSections && formData.recommendationSections.length > 0) {
+            formData.recommendationSections.forEach((section, index) => {
+              const sectionNum = index + 1;
+              step5Part2Json[`Section ${sectionNum} Title`] = section.title || `Repair Estimate ${sectionNum}`;
+              step5Part2Json[`Section ${sectionNum} Rows`] = section.rows || [];
+            });
+          } else {
+            // Fallback to old structure if recommendationSections is not available
+            step5Part2Json['Section 1 Title'] = (formData as any).recommendationSection1Title || 'Repair Estimate 1';
+            step5Part2Json['Section 1 Rows'] = formData.repairEstimateData?.rows || [];
+            if ((formData as any).showRecommendationSection2) {
+              step5Part2Json['Section 2 Title'] = (formData as any).recommendationSection2Title || 'Repair Estimate 2';
+              step5Part2Json['Section 2 Rows'] = ((formData as any).recommendationSection2?.rows) || [];
+            }
+          }
           await supabase.from('step5_part2_json').upsert(
             { report_id: currentReportId, data: step5Part2Json },
             { onConflict: 'report_id' }

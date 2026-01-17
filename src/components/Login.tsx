@@ -73,17 +73,19 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError(null);
     setLoadingAction('verify');
-    const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: 'email' });
+    const { error, data } = await supabase.auth.verifyOtp({ email, token: otp, type: 'email' });
     if (error) {
       setError(mapError(error.message));
       await logger.logLoginFailure(email, error.message);
+      setLoadingAction('none');
     } else {
       await logger.logLoginSuccess(email);
       logger.resetSession();
-    }
-    setLoadingAction('none');
-    if (!error) {
       try { localStorage.removeItem('otp_pending'); } catch {}
+      // Wait a moment for auth state to propagate, then redirect
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     }
   };
 
