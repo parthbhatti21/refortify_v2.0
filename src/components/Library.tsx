@@ -625,8 +625,11 @@ const Library: React.FC<{ userEmail: string }> = ({ userEmail }) => {
             <div className="space-y-3">
               {/* Show PDFs if they exist */}
               {filteredFiles.length > 0 ? (
-                filteredFiles.map((file) => {
+                filteredFiles.map((file, index) => {
                   const fileName = file.key.split('/').pop() || '';
+                  // Match PDF to report - use index as fallback
+                  const correspondingReport = selectedDateReports[index] || selectedDateReports[0];
+                  
                   return (
                     <div key={file.key} className="p-3 border border-gray-200 rounded flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="min-w-0">
@@ -636,6 +639,14 @@ const Library: React.FC<{ userEmail: string }> = ({ userEmail }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
+                        {correspondingReport && (
+                          <button
+                            onClick={() => handleEditReport(correspondingReport.id)}
+                            className="px-3 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
+                          >
+                            Edit
+                          </button>
+                        )}
                         <button
                           onClick={() => openPreview(file)}
                           className="px-3 py-2 text-sm rounded-md border border-[#722420] text-[#722420] hover:bg-[#f6eae9]"
